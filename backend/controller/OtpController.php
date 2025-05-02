@@ -10,7 +10,9 @@ class OtpController
 
     public function sendOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
     {
+        //if (!preg_match('/^\d{10}$/', $phone)) {
         if (!preg_match('/^\d{10}$/', $phone)) {
+            http_response_code(401);
             return ["status" => "error", "message" => "Phone must be 10 digits (excluding leading 0)"];
         }
         $phone = '234' . $phone; // Convert to international format
