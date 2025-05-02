@@ -39,6 +39,6 @@ if (!preg_match('/^\d{6}$/', $otp)) {
 }
 
 $userController = new UserController();
-$response = $userController->verifyOtp($data['phone'], $data['otp']);
-
+//$response = $userController->verifyOtp($data['phone'], $data['otp']);
+$response = $userController->verifyOtp($phone, $data['otp']); // Now using $phone with 234 prefix
 echo json_encode($response);
