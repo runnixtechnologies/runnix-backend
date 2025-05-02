@@ -15,7 +15,7 @@ class OtpController
             http_response_code(401);
             return ["status" => "error", "message" => "Phone must be 10 digits (excluding leading 0)"];
         }*/
-       // $phone = '234' . $phone; // Convert to international format
+        $phone = '234' . $phone; // Convert to international format
      
         $otp = rand(100000, 999999);
         $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
@@ -34,7 +34,8 @@ class OtpController
 {
     $url = "https://v3.api.termii.com/api/sms/send";
     $payload = [
-        "to" => $phone,
+        //"to" => $phone,
+        "to" => '234' . ltrim($phone, '0'), // Guaranteed correct format
         "from" => $this->smsSenderName,
         "sms" => $message,
         "type" => "plain",
