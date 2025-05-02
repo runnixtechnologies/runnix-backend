@@ -1,0 +1,56 @@
+<?php
+require_once '../../vendor/autoload.php';
+require_once '../config/cors.php'; // Your custom CORS config
+
+use Controller\OtpController;
+
+header('Content-Type: application/json');
+
+$data = json_decode(file_get_contents("php://input"), true);
+
+if (!isset($data['phone'])) {
+    echo json_encode(["status" => "error", "message" => "Phone number is required"]);
+    exit;
+}
+
+$phone = $data['phone'];
+
+// Validate phone number (only Nigeria numbers)
+
+if (!preg_match('/^\d{10}$/', $phone)) {
+
+    http_response_code(401); // Unauthorized
+    echo json_encode(["status" => "error", "message" => "Invalid phone number format"]);
+    exit;
+}
+
+// Prepend the country code 234 to the 9-digit phone number
+$phone = '234' . $phone;
+
+
+$purpose = $data['purpose'] ?? 'signup';
+$email = $data['email'] ?? null;
+$user_id = $data['user_id'] ?? null;
+
+// Validate email format if provided
+if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    http_response_code(401); // Unauthorized
+    echo json_encode(["status" => "error", "message" => "Invalid email format"]);
+    exit;
+}
+
+// Check if user exists (if user_id is provided)
+/*if ($user_id) {
+    // Use your model here to check if the user_id exists in the database
+    // Assuming a method `getUserById($user_id)` in your user model
+    $userModel = new User();
+    $user = $userModel->getUserById($user_id);
+    if (!$user) {
+        echo json_encode(["status" => "error", "message" => "User not found"]);
+        exit;
+    }
+}*/
+
+$controller = new OtpController();
+$response = $controller->sendOtp($phone, $purpose, $email, $user_id);
+echo json_encode($response);

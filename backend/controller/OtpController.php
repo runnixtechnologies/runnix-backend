@@ -1,0 +1,67 @@
+<?php
+namespace Controller;
+
+use Model\Otp;
+
+class OtpController
+{
+    private $termiiApiKey = "TLKCVBYRZyFFYYInnjIdPWOgfForjjZbEYgjIigNANxWYDaUJMyEFtuQpNPsNE"; // Replace with your Termii API Key
+    private $smsSenderName = "Runnix"; // Registered Termii sender ID
+
+    public function sendOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
+    {
+        $otp = rand(100000, 999999);
+        $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+        $otpModel = new Otp();
+        $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
+
+        $message = "Your Runnix verification code is $otp. It expires in 10 minutes.";
+
+        $this->sendViaTermii($phone, $message);
+
+        return ["status" => "success", "message" => "OTP sent to $phone"];
+    }
+
+    private function sendViaTermii($phone, $message)
+    {
+        $url = "https://v3.api.termii.com/api/sms/send";
+        //"https://BASE_URL/api/sms/otp/send",
+        $payload = [
+            "to" => $phone,
+            "from" => $this->smsSenderName,
+            "sms" => $message,
+            "type" => "plain",
+            "channel" => "generic",
+            "api_key" => $this->termiiApiKey
+        ];
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+
+        if ($response === false) {
+            error_log('Termii API error: ' . curl_error($ch));
+        }
+        
+        curl_close($ch);
+        
+        // Optional: You can log or handle $response if you want
+    }
+
+    public function verifyOtp($phone, $otp, $purpose = 'signup')
+    {
+        $otpModel = new Otp();
+        $otpData = $otpModel->verifyOtp($phone, $otp, $purpose);
+
+        if (!$otpData) {
+            http_response_code(401); // Unauthorized
+            return ["status" => "error", "message" => "Invalid or expired OTP"];
+        }
+
+        $otpModel->markOtpAsVerified($otpData['id']);
+        return ["status" => "success", "message" => "OTP verified successfully"];
+    }
+}
