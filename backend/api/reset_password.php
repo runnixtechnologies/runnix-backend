@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (!isset($data['phone'], $data['new_password'], $data['otp'])) {
+    http_response_code(401);
     echo json_encode(["status" => "error", "message" => "Missing required fields"]);
     exit;
 }
@@ -20,6 +21,7 @@ $otpModel = new Otp();
 $otpData = $otpModel->verifyOtp($phone, $otp, 'password_reset', true);
 
 if (!$otpData) {
+    http_response_code(401);
     echo json_encode(["status" => "error", "message" => "OTP not verified or expired"]);
     exit;
 }
@@ -32,5 +34,6 @@ $stmt->bindParam(":phone", $phone);
 if ($stmt->execute()) {
     echo json_encode(["status" => "success", "message" => "Password reset successful"]);
 } else {
+    http_response_code(401);
     echo json_encode(["status" => "error", "message" => "Failed to reset password"]);
 }

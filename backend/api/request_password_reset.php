@@ -10,6 +10,7 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (!isset($data['phone'])) {
+    http_response_code(401);
     echo json_encode(["status" => "error", "message" => "Phone number is required"]);
     exit;
 }
@@ -24,6 +25,7 @@ $stmt->execute();
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$user) {
+    http_response_code(401);
     echo json_encode(["status" => "error", "message" => "Phone number not found"]);
     exit;
 }
