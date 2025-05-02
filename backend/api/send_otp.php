@@ -24,10 +24,6 @@ if (!preg_match('/^\d{10}$/', $phone)) {
     exit;
 }
 
-// Prepend the country code 234 to the 9-digit phone number
-$phone = '234' . $phone;
-
-
 $purpose = $data['purpose'] ?? 'signup';
 $email = $data['email'] ?? null;
 $user_id = $data['user_id'] ?? null;

@@ -15,7 +15,7 @@ class OtpController
             http_response_code(401);
             return ["status" => "error", "message" => "Phone must be 10 digits (excluding leading 0)"];
         }*/
-        $phone = '234' . $phone; // Convert to international format
+       // $phone = '234' . $phone; // Convert to international format
      
         $otp = rand(100000, 999999);
         $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
@@ -23,7 +23,7 @@ class OtpController
         $otpModel = new Otp();
         $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
 
-        $message = "Your Runnix verification code is $otp. It expires in 10 minutes.";
+        $message = "Your Runnix OTP is $otp. It expires in 10 minutes.";
 
         $this->sendViaTermii($phone, $message);
 
