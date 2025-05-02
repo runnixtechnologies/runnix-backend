@@ -15,17 +15,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (empty($data['phone']) || empty($data['otp'])) {
+    
     http_response_code(401); // Unauthorized
     echo json_encode(["status" => "error", "message" => "Phone and OTP are required"]);
     exit;
 }
 
-$phone = $data['phone'];
+$phone = '234' . $data['phone']; // Add this line to match sendOtp format
 $otp = $data['otp'];
 
 // Validate phone number (only Nigeria numbers)
-if (!preg_match('/^\d{10}$/', $phone)) {
-    http_response_code(401); // Unauthorized
+if (!preg_match('/^234\d{10}$/', $phone)) {
+    http_response_code(401);
     echo json_encode(["status" => "error", "message" => "Invalid phone number format"]);
     exit;
 }
