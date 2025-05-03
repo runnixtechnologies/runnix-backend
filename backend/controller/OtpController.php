@@ -35,7 +35,7 @@ class OtpController
     $url = "https://v3.api.termii.com/api/sms/send";
     $payload = [
         //"to" => $phone,
-        "to" => '234' . ltrim($phone, '0'), // Guaranteed correct format
+        "to" => $phone,
         "from" => $this->smsSenderName,
         "sms" => $message,
         "type" => "plain",

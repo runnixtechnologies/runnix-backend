@@ -15,14 +15,13 @@ if (!isset($data['phone'])) {
 
 $phone = $data['phone'];
 
-// Validate phone number (only Nigeria numbers)
-
-if (!preg_match('/^\d{10}$/', $phone)) {
-
-    http_response_code(401); // Unauthorized
-    echo json_encode(["status" => "error", "message" => "Invalid phone number format"]);
+// Allow 10-11 digits (with optional leading 0)
+if (!preg_match('/^0?\d{10}$/', $phone)) {
+    http_response_code(400);
+    echo json_encode(["status" => "error", "message" => "Phone must be 10 or 11 digits"]);
     exit;
 }
+
 
 $purpose = $data['purpose'] ?? 'signup';
 $email = $data['email'] ?? null;
@@ -48,5 +47,7 @@ if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }*/
 
 $controller = new OtpController();
+// Format: Remove leading 0, add 234
+$phone = '234' . ltrim($phone, '0');
 $response = $controller->sendOtp($phone, $purpose, $email, $user_id);
 echo json_encode($response);

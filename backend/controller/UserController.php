@@ -21,7 +21,7 @@ class UserController
             http_response_code(400); // Bad Request
             return ["status" => "error", "message" => "Passwords do not match"];
         }
-
+        $phone = '234' . ltrim($data['phone'], '0');
         $userModel = new User();
 
         if ($userModel->getUserByPhone($data['phone'])) {
