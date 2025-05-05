@@ -66,4 +66,11 @@ public function verifyOtp($phone, $otp = null, $purpose = 'signup', $onlyVerifie
         $stmt->bindParam(":id", $id);
         return $stmt->execute();
     }
+
+    public function isOtpVerified($phone, $purpose = 'signup')
+{
+    $record = $this->verifyOtp($phone, null, $purpose, true);
+    return $record ? true : false;
+}
+
 }

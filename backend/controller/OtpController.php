@@ -10,25 +10,24 @@ class OtpController
 
     public function sendOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
     {
-        //if (!preg_match('/^\d{10}$/', $phone)) {
-       /* if (!preg_match('/^\d{10}$/', $phone)) {
-            http_response_code(401);
-            return ["status" => "error", "message" => "Phone must be 10 digits (excluding leading 0)"];
-        }*/
-       // $phone = '234' . $phone; // Convert to international format
-     
         $otp = rand(100000, 999999);
         $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
-
+    
         $otpModel = new Otp();
         $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
-
+    
         $message = "Your Runnix OTP is $otp. It expires in 10 minutes.";
-
-        $this->sendViaTermii($phone, $message);
-
+    
+        $response = $this->sendViaTermii($phone, $message);
+    
+        if (!isset($response['code']) || $response['code'] != 'ok') {
+            http_response_code(500);
+            return ["status" => "error", "message" => "Failed to send OTP. Please try again later."];
+        }
+    
         return ["status" => "success", "message" => "OTP sent to $phone"];
     }
+    
 
     private function sendViaTermii($phone, $message)
 {
@@ -86,3 +85,5 @@ class OtpController
         return ["status" => "success", "message" => "OTP verified successfully"];
     }
 }
+
+
