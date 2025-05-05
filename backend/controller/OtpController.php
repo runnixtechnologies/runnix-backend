@@ -16,7 +16,7 @@ class OtpController
         $otpModel = new Otp();
         $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
     
-        $message = "Your Runnix OTP is $otp. It expires in 10 minutes.";
+        $message = "Your Runnix authentication code is $otp. It expires in 10 minutes.";
     
         $response = $this->sendViaTermii($phone, $message);
     
@@ -38,7 +38,7 @@ class OtpController
         "from" => $this->smsSenderName,
         "sms" => $message,
         "type" => "plain",
-        "channel" => "generic", // Try "dnd" for Nigerian numbers
+        "channel" => "dnd", // Try "dnd" for Nigerian numbers
         "api_key" => $this->termiiApiKey
     ];
 
