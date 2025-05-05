@@ -58,7 +58,7 @@ class Otp
    
        $record = $stmt->fetch(PDO::FETCH_ASSOC);
    
-       // ✅ If a valid OTP was found, mark it as verified
+       
        if ($record) {
            $updateSql = "UPDATE {$this->table}
                          SET is_verified = 1, verified_at = NOW()

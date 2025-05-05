@@ -38,7 +38,7 @@ class OtpController
         "from" => $this->smsSenderName,
         "sms" => $message,
         "type" => "plain",
-        "channel" => "dnd", // Try "dnd" for Nigerian numbers
+        "channel" => "generic", // Try "dnd" for Nigerian numbers
         "api_key" => $this->termiiApiKey
     ];
 
