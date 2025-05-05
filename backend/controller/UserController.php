@@ -155,85 +155,90 @@ class UserController
     }
 
     public function finalizeSignup($data)
-{
-    $required = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password', 'role'];
-    foreach ($required as $field) {
-        if (empty($data[$field])) {
-            http_response_code(400); // Bad Request
-            return ["status" => "error", "message" => "$field is required"];
+    {
+        $required = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password', 'role'];
+        foreach ($required as $field) {
+            if (empty($data[$field])) {
+                http_response_code(400); // Bad Request
+                return ["status" => "error", "message" => "$field is required"];
+            }
         }
-    }
-
-    if ($data['password'] !== $data['confirm_password']) {
-        http_response_code(400);
-        return ["status" => "error", "message" => "Passwords do not match"];
-    }
-
-    // Normalize phone to E.164 format
-    $phone = '234' . ltrim($data['phone'], '0');
-
-    $userModel = new User();
-
-    if ($userModel->getUserByPhone($phone)) {
-        http_response_code(409);
-        return ["status" => "error", "message" => "User with this phone already exists"];
-    }
-
-    if ($userModel->getUserByEmail($data['email'])) {
-        http_response_code(409);
-        return ["status" => "error", "message" => "User with this email already exists"];
-    }
-
-    // Check if OTP is verified for this phone (OPTIONAL: with 'signup' purpose)
-    $otpModel = new Otp();
-    $isVerified = $otpModel->isOtpVerified($phone, 'signup'); // You must implement this in the Otp model
-
-    if (!$isVerified) {
-        http_response_code(401);
-        return ["status" => "error", "message" => "OTP not verified. Please verify OTP before signing up."];
-    }
-
-    // Handle referral
-    $referrer_id = null;
-    if (!empty($data['referral_code'])) {
-        $referrer = $userModel->getUserByReferralCode($data['referral_code']);
-        if (!$referrer) {
+    
+        if ($data['password'] !== $data['confirm_password']) {
             http_response_code(400);
-            return ["status" => "error", "message" => "Invalid referral code"];
+            return ["status" => "error", "message" => "Passwords do not match"];
         }
-        $referrer_id = $referrer['id'];
+    
+        $signupMethod = strtolower($data['signup_method'] ?? 'phone'); // Default to phone if not provided
+    
+        // Normalize phone
+        $phone = '234' . ltrim($data['phone'], '0');
+    
+        $userModel = new User();
+    
+        if ($userModel->getUserByPhone($phone)) {
+            http_response_code(409);
+            return ["status" => "error", "message" => "User with this phone already exists"];
+        }
+    
+        if ($userModel->getUserByEmail($data['email'])) {
+            http_response_code(409);
+            return ["status" => "error", "message" => "User with this email already exists"];
+        }
+    
+        // Only check OTP if signup method is phone
+        if ($signupMethod === 'phone') {
+            $otpModel = new Otp();
+            $isVerified = $otpModel->isOtpVerified($phone, 'signup');
+    
+            if (!$isVerified) {
+                http_response_code(401);
+                return ["status" => "error", "message" => "OTP not verified. Please verify OTP before signing up."];
+            }
+        }
+    
+        // Handle referral
+        $referrer_id = null;
+        if (!empty($data['referral_code'])) {
+            $referrer = $userModel->getUserByReferralCode($data['referral_code']);
+            if (!$referrer) {
+                http_response_code(400);
+                return ["status" => "error", "message" => "Invalid referral code"];
+            }
+            $referrer_id = $referrer['id'];
+        }
+        $google_id = $data['google_id'] ?? null;
+        $userId = $userModel->createUser(
+            $data['email'],
+            $phone,
+            $data['password'],
+            $data['role'],
+            $referrer_id,
+            $google_id
+        );
+    
+        if (!$userId) {
+            http_response_code(500);
+            return ["status" => "error", "message" => "Failed to create account"];
+        }
+    
+        $profileCreated = $userModel->createUserProfile(
+            $userId,
+            $data['first_name'],
+            $data['last_name']
+        );
+    
+        if (!$profileCreated) {
+            http_response_code(500);
+            return ["status" => "error", "message" => "Failed to create user profile"];
+        }
+    
+        http_response_code(201);
+        return [
+            "status" => "success",
+            "message" => "Account created successfully",
+            "user_id" => $userId
+        ];
     }
-
-    $userId = $userModel->createUser(
-        $data['email'],
-        $phone,
-        $data['password'],
-        $data['role'],
-        $referrer_id
-    );
-
-    if (!$userId) {
-        http_response_code(500);
-        return ["status" => "error", "message" => "Failed to create account"];
-    }
-
-    $profileCreated = $userModel->createUserProfile(
-        $userId,
-        $data['first_name'],
-        $data['last_name']
-    );
-
-    if (!$profileCreated) {
-        http_response_code(500);
-        return ["status" => "error", "message" => "Failed to create user profile"];
-    }
-
-    http_response_code(201);
-    return [
-        "status" => "success",
-        "message" => "Account created successfully",
-        "user_id" => $userId
-    ];
-}
-
+    
 }

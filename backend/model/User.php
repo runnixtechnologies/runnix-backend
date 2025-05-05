@@ -18,7 +18,7 @@ class User
         return substr(md5($email . time()), 0, 8);
     }
     
-    public function createUser($email, $phone, $password, $role, $referrer_id = null)
+    public function createUser($email, $phone, $password, $role, $referrer_id = null, $google_id = null)
     {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $referral_code = $this->generateReferralCode($email);
@@ -37,7 +37,7 @@ class User
         $stmt->bindParam(':role', $role);
         $stmt->bindParam(':referral_code', $referral_code);
         $stmt->bindValue(':referred_by', $referrer_id, is_null($referrer_id) ? PDO::PARAM_NULL : PDO::PARAM_INT);
-
+        $stmt->bindParam(':google_id', $google_id);
     
         if ($stmt->execute()) {
             return $this->conn->lastInsertId();
