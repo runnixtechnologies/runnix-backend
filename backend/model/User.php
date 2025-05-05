@@ -26,7 +26,7 @@ class User
 
         $sql = "INSERT INTO {$this->table} 
         (email, phone, password, role, referred_by, referral_code, google_id, is_verified, status, created_at)
-        VALUES (:email, :phone, :password, :role, :referred_by, :referral_code, :google_id, 1, 1, NOW())";
+        VALUES (:email, :phone, :password, :role, :referrer_id, :referral_code, :google_id, 1, 1, NOW())";
 
     
     
