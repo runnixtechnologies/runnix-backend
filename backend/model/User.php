@@ -59,8 +59,33 @@ class User
 
     return $stmt->execute();
 }
+public function createMerchantProfile($user_id, $store_name, $business_address, $business_email, $biz_reg_number, $biz_type, $biz_logo = null)
+{
+    $sql = "INSERT INTO merchants (user_id, store_name, business_address, business_email, biz_reg_number, biz_type, biz_logo, verified)
+            VALUES (:user_id, :store_name, :business_address, :business_email, :biz_reg_number, :biz_type, :biz_logo, 0)";  // Set default verified as 0
 
-  
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(':user_id', $user_id);
+    $stmt->bindParam(':store_name', $store_name);
+    $stmt->bindParam(':business_address', $business_address);
+    $stmt->bindParam(':business_email', $business_email);
+    $stmt->bindParam(':biz_reg_number', $biz_reg_number);
+    $stmt->bindParam(':biz_type', $biz_type);
+    $stmt->bindParam(':biz_logo', $biz_logo);
+
+    return $stmt->execute();
+}
+
+public function verifyMerchant($merchant_id)
+{
+    $sql = "UPDATE merchants SET verified = 1 WHERE id = :merchant_id";
+
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(':merchant_id', $merchant_id);
+
+    return $stmt->execute();
+}
+
     public function getUserByPhone($phone)
 {
     $sql = "SELECT * FROM {$this->table} WHERE phone = :phone LIMIT 1";
