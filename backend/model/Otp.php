@@ -32,33 +32,45 @@ class Otp
     }
 
    // Add inside Otp.php model
-public function verifyOtp($phone, $otp = null, $purpose = 'signup', $onlyVerified = false)
-{
-    $sql = "SELECT * FROM {$this->table}
-            WHERE phone = :phone 
-            AND purpose = :purpose";
-
-    if ($otp) {
-        $sql .= " AND otp_code = :otp";
-    }
-
-    if ($onlyVerified) {
-        $sql .= " AND is_verified = 1";
-    } else {
-        $sql .= " AND is_verified = 0 AND expires_at >= NOW()";
-    }
-
-    $sql .= " ORDER BY id DESC LIMIT 1";
-
-    $stmt = $this->conn->prepare($sql);
-    $stmt->bindParam(":phone", $phone);
-    if ($otp) $stmt->bindParam(":otp", $otp);
-    $stmt->bindParam(":purpose", $purpose);
-    $stmt->execute();
-
-    return $stmt->fetch(PDO::FETCH_ASSOC);
-}
-
+   public function verifyOtp($phone, $otp = null, $purpose = 'signup', $onlyVerified = false)
+   {
+       $sql = "SELECT * FROM {$this->table}
+               WHERE phone = :phone 
+               AND purpose = :purpose";
+   
+       if ($otp) {
+           $sql .= " AND otp_code = :otp";
+       }
+   
+       if ($onlyVerified) {
+           $sql .= " AND is_verified = 1";
+       } else {
+           $sql .= " AND is_verified = 0 AND expires_at >= NOW()";
+       }
+   
+       $sql .= " ORDER BY id DESC LIMIT 1";
+   
+       $stmt = $this->conn->prepare($sql);
+       $stmt->bindParam(":phone", $phone);
+       if ($otp) $stmt->bindParam(":otp", $otp);
+       $stmt->bindParam(":purpose", $purpose);
+       $stmt->execute();
+   
+       $record = $stmt->fetch(PDO::FETCH_ASSOC);
+   
+       // ✅ If a valid OTP was found, mark it as verified
+       if ($record) {
+           $updateSql = "UPDATE {$this->table}
+                         SET is_verified = 1, verified_at = NOW()
+                         WHERE id = :id";
+           $updateStmt = $this->conn->prepare($updateSql);
+           $updateStmt->bindParam(":id", $record['id']);
+           $updateStmt->execute();
+       }
+   
+       return $record;
+   }
+   
     public function markOtpAsVerified($id)
     {
         $sql = "UPDATE {$this->table} SET is_verified = 1, verified_at = NOW() WHERE id = :id";
