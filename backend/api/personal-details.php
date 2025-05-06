@@ -8,7 +8,7 @@ header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-$requiredFields = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password'];
+$requiredFields = ['first_name', 'last_name', 'email', 'password', 'confirm_password'];
 foreach ($requiredFields as $field) {
     if (empty($data[$field])) {
         http_response_code(400);
