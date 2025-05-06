@@ -22,5 +22,6 @@ if (!in_array($data['role'], $allowedRoles)) {
 }*/
 
 $userController = new UserController();
-$response = $userController->selectRole($data['role']);
+$response = $userController->selectRole($data);
+
 echo json_encode($response);

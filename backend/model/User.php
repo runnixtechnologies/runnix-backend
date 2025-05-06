@@ -47,6 +47,13 @@ class User
         return false;
     }
     
+    public function getUserByGoogleId($googleId)
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE google_id = ?");
+        $stmt->execute([$googleId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
     public function createUserProfile($user_id, $first_name, $last_name)
 {
     $sql = "INSERT INTO user_profiles (user_id, first_name, last_name)
