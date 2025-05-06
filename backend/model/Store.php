@@ -14,22 +14,24 @@ class Store
         $this->conn = (new Database())->getConnection();
     }
 
-    public function createStore($userId, $name, $address, $email, $phone, $regNumber, $logoFilename = null, $storeType)
-    {
-        $sql = "INSERT INTO stores (user_id, biz_name, store_address, biz_email, biz_phone, biz_reg_number, biz_logo, store_type)
-                VALUES (:user_id, :biz_name, :store_address, :biz_email, :biz_phone, :biz_reg_number, :biz_logo, :storeType)";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
-            ':user_id' => $userId,
-            ':biz_name' => $name,
-            ':store_address' => $address,
-            ':biz_email' => $email,
-            ':biz_phone' => $phone,
-            ':biz_reg_number' => $regNumber,
-            ':biz_logo' => $logoFilename,
-            ':store_type' => $storeType
-        ]);
-    }
+    public function createStore($userId, $storeName, $bizAddress, $bizEmail, $bizPhone, $bizRegNumber, $bizLogo = null, $storeType)
+{
+    $sql = "INSERT INTO stores (user_id, store_name, biz_address, biz_email, biz_phone, biz_reg_number, biz_logo, store_type)
+            VALUES (:user_id, :store_name, :biz_address, :biz_email, :biz_phone, :biz_reg_number, :biz_logo, :store_type)";
+    
+    $stmt = $this->conn->prepare($sql);
+    return $stmt->execute([
+        ':user_id' => $userId,
+        ':store_name' => $storeName,
+        ':biz_address' => $bizAddress,
+        ':biz_email' => $bizEmail,
+        ':biz_phone' => $bizPhone,
+        ':biz_reg_number' => $bizRegNumber,
+        ':biz_logo' => $bizLogo,
+        ':store_type' => $storeType
+    ]);
+}
+
     
 
     public function getStoreByUserId($user_id)

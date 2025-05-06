@@ -334,7 +334,9 @@ class UserController
 public function collectStoreDetails($data)
 {
     // Validate required fields
-    $requiredFields = ['store_name', 'business_email', 'biz_phone', 'biz_reg_number'];
+   
+    $requiredFields = ['store_name', 'biz_email', 'biz_address', 'biz_phone', 'biz_reg_number'];
+
 
     foreach ($requiredFields as $field) {
         if (empty($data[$field])) {
@@ -378,10 +380,12 @@ public function collectStoreDetails($data)
     // Return collected data with transformation (phone number)
     $responseData = [
         "store_name" => $data['store_name'],
-        "business_email" => $data['business_email'],
+        "biz_email" => $data['biz_email'],
+        "biz_address" => $data['biz_address'],
         "biz_phone" => $bizPhone,
         "biz_reg_number" => $data['biz_reg_number']
     ];
+    
 
     if (!empty($data['biz_logo'])) {
         $responseData['biz_logo'] = $data['biz_logo']; // Assuming it's a file object, or handle the upload
