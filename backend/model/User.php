@@ -163,4 +163,24 @@ public function updateUserReferral($user_id, $referrer_id) {
     return $stmt->execute();
 }
 
+public function getUserById($userId)
+{
+    $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE id = ?");
+    $stmt->execute([$userId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+public function deleteUser($userId)
+{
+    $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = ?");
+    return $stmt->execute([$userId]);
+}
+
+public function deleteUserProfile($userId)
+{
+    $stmt = $this->conn->prepare("DELETE FROM user_profiles WHERE user_id = ?");
+    return $stmt->execute([$userId]);
+}
+
+
 }
