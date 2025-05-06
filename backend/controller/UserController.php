@@ -266,7 +266,7 @@ class UserController
 
     public function collectPersonalDetails($data)
     {
-        $required = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password'];
+        $required = ['first_name', 'last_name', 'email', 'password', 'confirm_password'];
 
         foreach ($required as $field) {
             if (empty($data[$field])) {
