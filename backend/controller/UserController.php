@@ -283,8 +283,8 @@ class UserController
         http_response_code(200);
         return [
             "status" => "success",
-            "message" => "Personal details collected",
-            "data" => $data
+            "message" => "Personal details collected"
+            //"data" => $data
         ];
     }
 
