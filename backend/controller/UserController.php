@@ -166,21 +166,10 @@ class UserController
         
             if (!$storeName || !$storeAddress || !$bizEmail || !$bizPhone || !$bizRegNo) {
                 http_response_code(400);
-                return ["status" => "error", "message" => "All business fields and logo are required for store owners"];
+                return ["status" => "error", "message" => "All business fields are required for store owners"];
             }
         
-            // Validate file type
-            $allowedTypes = ['image/jpeg', 'image/png'];
-            if (!in_array($logo['type'], $allowedTypes)) {
-                http_response_code(400);
-                return ["status" => "error", "message" => "Invalid logo format. Only JPG and PNG allowed"];
-            }
-        
-            // Validate file size (≤ 150KB)
-            if ($logo['size'] > 150 * 1024) {
-                http_response_code(400);
-                return ["status" => "error", "message" => "Logo size must be 150KB or less"];
-            }
+           
         
             // Check uniqueness of business fields
             $storeModel = new Store();
@@ -202,14 +191,35 @@ class UserController
             }
         
             // Optional: Save the logo (handle upload)
+            
+
+
+                        // Optional: Save the logo (handle upload)
             $uploadDir = __DIR__ . '/../../uploads/logos/';
-            $filename = uniqid('logo_') . '_' . basename($logo['name']);
+            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            $maxSize = 150 * 1024; // 150KB
+
+            if (!in_array($logo['type'], $allowedTypes)) {
+                http_response_code(400);
+                return ["status" => "error", "message" => "Invalid file type. Only JPG, JPEG, and PNG files are allowed."];
+            }
+
+            if ($logo['size'] > $maxSize) {
+                http_response_code(400);
+                return ["status" => "error", "message" => "File size exceeds limit. Maximum allowed size is 150KB."];
+            }
+
+            
+            $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($logo['name']));
+            $filename = uniqid('logo_') . '_' . $safeName;
             $targetPath = $uploadDir . $filename;
-        
+
             if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
                 http_response_code(500);
                 return ["status" => "error", "message" => "Failed to upload logo"];
             }
+
+
         
             // Save store
             $storeCreated = $storeModel->createStore(
@@ -223,6 +233,7 @@ class UserController
             );
         
             if (!$storeCreated) {
+                unlink($targetPath); // Clean up uploaded file
                 http_response_code(500);
                 return ["status" => "error", "message" => "Failed to create store"];
             }
@@ -310,6 +321,70 @@ class UserController
 
     http_response_code(200);
     return ["status" => "success", "message" => "User deleted successfully"];
+}
+
+public function collectStoreDetails($data)
+{
+    // Validate required fields
+    $requiredFields = ['store_name', 'business_email', 'biz_phone', 'biz_reg_number'];
+
+    foreach ($requiredFields as $field) {
+        if (empty($data[$field])) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "$field is required"];
+        }
+    }
+
+   
+    
+
+    // Validate biz_phone (must be unique, 10 or 11 digits)
+    // Remove leading zero if present, prepend 234
+    $originalPhone = $data['biz_phone'];
+    if (!preg_match('/^\d{10,11}$/', $originalPhone)) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Business phone number must be 10 or 11 digits"];
+    }
+    $bizPhone = preg_replace('/^0/', '234', $originalPhone);
+    
+
+    
+
+    // Validate biz_logo (must be jpg/png and <= 150KB)
+    if (!empty($data['biz_logo'])) {
+        $logo = $data['biz_logo'];
+        $allowedExtensions = ['jpg', 'jpeg', 'png'];
+        $fileExtension = strtolower(pathinfo($logo['name'], PATHINFO_EXTENSION));
+
+        if (!in_array($fileExtension, $allowedExtensions)) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Logo must be a JPG or PNG file"];
+        }
+
+        if ($logo['size'] > 150 * 1024) { // 150 KB
+            http_response_code(400);
+            return ["status" => "error", "message" => "Logo file size must be less than or equal to 150KB"];
+        }
+    }
+
+    // Return collected data with transformation (phone number)
+    $responseData = [
+        "store_name" => $data['store_name'],
+        "business_email" => $data['business_email'],
+        "biz_phone" => $bizPhone,
+        "biz_reg_number" => $data['biz_reg_number']
+    ];
+
+    if (!empty($data['biz_logo'])) {
+        $responseData['biz_logo'] = $data['biz_logo']; // Assuming it's a file object, or handle the upload
+    }
+
+    http_response_code(200);
+    return [
+        "status" => "success",
+        "message" => "Store details collected successfully",
+        "data" => $responseData
+    ];
 }
 
 
