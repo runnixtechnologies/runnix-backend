@@ -162,9 +162,10 @@ class UserController
             $bizEmail = $data['biz_email'] ?? null;
             $bizPhone = $data['biz_phone'] ?? null;
             $bizRegNo = $data['biz_reg_number'] ?? null;
+            $storeType = $data['store_type'] ?? null;
             $logo = $_FILES['biz_logo'] ?? null;
         
-            if (!$storeName || !$storeAddress || !$bizEmail || !$bizPhone || !$bizRegNo) {
+            if (!$storeName || !$storeAddress || !$bizEmail || !$bizPhone || !$bizRegNo || !$storeType) {
                 http_response_code(400);
                 return ["status" => "error", "message" => "All business fields are required for store owners"];
             }
@@ -219,6 +220,11 @@ class UserController
                 return ["status" => "error", "message" => "Failed to upload logo"];
             }
 
+           /* $allowedStoreTypes = ['food', 'supermarkets & stores', 'IT & gadgets', 'fashion & lifestyles'];
+            if (!in_array($storeType, $allowedStoreTypes)) {
+            http_response_code(400);
+             return ["status" => "error", "message" => "Invalid store type"];
+            }*/
 
         
             // Save store
@@ -229,7 +235,8 @@ class UserController
                 $bizEmail,
                 $bizPhone,
                 $bizRegNo,
-                $filename // store the logo file name or path
+                $filename, // store the logo file name or path
+                $storeType
             );
         
             if (!$storeCreated) {
@@ -280,6 +287,7 @@ class UserController
             return ["status" => "error", "message" => "Passwords do not match"];
         }
 
+        
         http_response_code(200);
         return [
             "status" => "success",

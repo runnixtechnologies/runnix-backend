@@ -14,10 +14,10 @@ class Store
         $this->conn = (new Database())->getConnection();
     }
 
-    public function createStore($userId, $name, $address, $email, $phone, $regNumber, $logoFilename = null)
+    public function createStore($userId, $name, $address, $email, $phone, $regNumber, $logoFilename = null, $storeType)
     {
-        $sql = "INSERT INTO stores (user_id, biz_name, store_address, biz_email, biz_phone, biz_reg_number, biz_logo)
-                VALUES (:user_id, :biz_name, :store_address, :biz_email, :biz_phone, :biz_reg_number, :biz_logo)";
+        $sql = "INSERT INTO stores (user_id, biz_name, store_address, biz_email, biz_phone, biz_reg_number, biz_logo, store_type)
+                VALUES (:user_id, :biz_name, :store_address, :biz_email, :biz_phone, :biz_reg_number, :biz_logo, :storeType)";
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
             ':user_id' => $userId,
@@ -26,7 +26,8 @@ class Store
             ':biz_email' => $email,
             ':biz_phone' => $phone,
             ':biz_reg_number' => $regNumber,
-            ':biz_logo' => $logoFilename
+            ':biz_logo' => $logoFilename,
+            ':store_type' => $storeType
         ]);
     }
     
