@@ -371,10 +371,7 @@ public function collectStoreDetails($data)
             return ["status" => "error", "message" => "Logo must be a JPG or PNG file"];
         }
 
-        if ($logo['size'] > 150 * 1024) { // 150 KB
-            http_response_code(400);
-            return ["status" => "error", "message" => "Logo file size must be less than or equal to 150KB"];
-        }
+      
     }
 
     // Return collected data with transformation (phone number)
