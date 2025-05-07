@@ -364,7 +364,8 @@ public function collectStoreDetails($data)
     if (!empty($data['biz_logo'])) {
         $logo = $data['biz_logo'];
         $allowedExtensions = ['jpg', 'jpeg', 'png'];
-        $fileExtension = strtolower(pathinfo($logo['name'], PATHINFO_EXTENSION));
+        //$fileExtension = strtolower(pathinfo($logo['name'], PATHINFO_EXTENSION));
+        $fileExtension = strtolower(pathinfo($logo, PATHINFO_EXTENSION));
 
         if (!in_array($fileExtension, $allowedExtensions)) {
             http_response_code(400);
