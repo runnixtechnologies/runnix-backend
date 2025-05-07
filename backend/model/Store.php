@@ -15,23 +15,34 @@ class Store
     }
 
     public function createStore($userId, $storeName, $bizAddress, $bizEmail, $bizPhone, $bizRegNumber, $bizLogo = null, $storeType)
-{
-    $sql = "INSERT INTO stores (user_id, store_name, biz_address, biz_email, biz_phone, biz_reg_number, biz_logo, store_type)
-            VALUES (:user_id, :store_name, :biz_address, :biz_email, :biz_phone, :biz_reg_number, :biz_logo, :store_type)";
+    {
+        try {
+            $sql = "INSERT INTO stores (user_id, store_name, biz_address, biz_email, biz_phone, biz_reg_number, biz_logo, store_type)
+                    VALUES (:user_id, :store_name, :biz_address, :biz_email, :biz_phone, :biz_reg_number, :biz_logo, :store_type)";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':user_id' => $userId,
+                ':store_name' => $storeName,
+                ':biz_address' => $bizAddress,
+                ':biz_email' => $bizEmail,
+                ':biz_phone' => $bizPhone,
+                ':biz_reg_number' => $bizRegNumber,
+                ':biz_logo' => $bizLogo,
+                ':store_type' => $storeType
+            ]);
     
-    $stmt = $this->conn->prepare($sql);
-    return $stmt->execute([
-        ':user_id' => $userId,
-        ':store_name' => $storeName,
-        ':biz_address' => $bizAddress,
-        ':biz_email' => $bizEmail,
-        ':biz_phone' => $bizPhone,
-        ':biz_reg_number' => $bizRegNumber,
-        ':biz_logo' => $bizLogo,
-        ':store_type' => $storeType
-    ]);
-}
-
+            return true;
+        } catch (\PDOException $e) {
+            http_response_code(500);
+            echo json_encode([
+                "status" => "error",
+                "message" => "DB Error: " . $e->getMessage()
+            ]);
+            exit;
+        }
+    }
+    
     
 
     public function getStoreByUserId($user_id)
