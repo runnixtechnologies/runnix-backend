@@ -215,6 +215,7 @@ class UserController
 
         if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
             // If logo upload fails, delete user and profile created earlier
+            $userModel->deleteUserProfile($userId);
             $userModel->deleteUser($userId);
             http_response_code(500);
             return ["status" => "error", "message" => "Failed to upload logo"];
@@ -235,6 +236,7 @@ class UserController
         if (!$storeCreated) {
             // If store creation fails, delete logo and user data
             unlink($targetPath); // Clean up uploaded file
+            $userModel->deleteUserProfile($userId);
             $userModel->deleteUser($userId);
             http_response_code(500);
             return ["status" => "error", "message" => "Failed to create store"];
