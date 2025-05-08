@@ -80,7 +80,7 @@ class UserController
         return ["status" => "success", "message" => "OTP verified"];
     }
 
-  public function finalizeSignup($data)
+ public function finalizeSignup($data)
 {
     // Validate required fields
     $required = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password', 'role'];
@@ -201,6 +201,7 @@ class UserController
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         $maxSize = 150 * 1024; // 150KB
         $filename = null;
+        $targetPath = null;
 
         if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
             $logo = $_FILES['biz_logo'];
@@ -252,7 +253,7 @@ class UserController
 
         // If store creation fails, delete the uploaded logo file and rollback user/profile creation
         if (!$storeCreated) {
-            if ($filename) {
+            if ($filename && file_exists($targetPath)) {
                 unlink($targetPath); // Delete the uploaded logo
             }
             $userModel->deleteUserProfile($userId);
@@ -270,7 +271,6 @@ class UserController
         "user_id" => $userId
     ];
 }
-
 
     public function selectRole($data)
     {
