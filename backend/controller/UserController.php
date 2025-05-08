@@ -80,8 +80,9 @@ class UserController
         return ["status" => "success", "message" => "OTP verified"];
     }
 
-   public function finalizeSignup($data)
+  public function finalizeSignup($data)
 {
+    // Validate required fields
     $required = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password', 'role'];
     foreach ($required as $field) {
         if (empty($data[$field])) {
@@ -100,6 +101,7 @@ class UserController
 
     $userModel = new User();
 
+    // Check if user already exists by phone or email
     if ($userModel->getUserByPhone($phone)) {
         http_response_code(409);
         return ["status" => "error", "message" => "User with this phone already exists"];
@@ -110,6 +112,7 @@ class UserController
         return ["status" => "error", "message" => "User with this email already exists"];
     }
 
+    // OTP check if the signup method is phone
     if ($signupMethod === 'phone') {
         $otpModel = new Otp();
         if (!$otpModel->isOtpVerified($phone, 'signup')) {
@@ -118,6 +121,7 @@ class UserController
         }
     }
 
+    // Referral logic
     $referrer_id = null;
     if (!empty($data['referral_code'])) {
         $referrer = $userModel->getUserByReferralCode($data['referral_code']);
@@ -129,6 +133,7 @@ class UserController
     }
 
     $google_id = $data['google_id'] ?? null;
+    // Create the user
     $userId = $userModel->createUser(
         $data['email'],
         $phone,
@@ -143,6 +148,7 @@ class UserController
         return ["status" => "error", "message" => "Failed to create account"];
     }
 
+    // Create user profile
     $profileCreated = $userModel->createUserProfile(
         $userId,
         $data['first_name'],
@@ -150,11 +156,13 @@ class UserController
     );
 
     if (!$profileCreated) {
+        // If profile creation fails, rollback user creation
         $userModel->deleteUser($userId);
         http_response_code(500);
         return ["status" => "error", "message" => "Failed to create user profile"];
     }
 
+    // Merchant-specific store creation logic
     if (strtolower($data['role']) === 'merchant') {
         $storeName = $data['store_name'] ?? null;
         $storeAddress = $data['biz_address'] ?? null;
@@ -163,11 +171,13 @@ class UserController
         $bizRegNo = $data['biz_reg_number'] ?? null;
         $storeType = $data['store_type'] ?? null;
 
+        // Validate business fields
         if (!$storeName || !$storeAddress || !$bizEmail || !$bizPhone || !$bizRegNo || !$storeType) {
             http_response_code(400);
             return ["status" => "error", "message" => "All business fields are required for store owners"];
         }
 
+        // Check if store already exists
         $storeModel = new Store();
         if ($storeModel->storeExists('store_name', $storeName)) {
             http_response_code(409);
@@ -186,6 +196,7 @@ class UserController
             return ["status" => "error", "message" => "Business registration number already exists"];
         }
 
+        // Handle logo upload
         $uploadDir = __DIR__ . '/../../uploads/logos/';
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         $maxSize = 150 * 1024; // 150KB
@@ -195,6 +206,7 @@ class UserController
             $logo = $_FILES['biz_logo'];
             $fileType = $logo['type'];
 
+            // Validate logo file type
             if (!in_array($fileType, $allowedTypes)) {
                 http_response_code(400);
                 return [
@@ -203,6 +215,7 @@ class UserController
                 ];
             }
 
+            // Validate logo file size
             if ($logo['size'] > $maxSize) {
                 http_response_code(400);
                 return [
@@ -215,7 +228,9 @@ class UserController
             $filename = uniqid('logo_') . '_' . $safeName;
             $targetPath = $uploadDir . $filename;
 
+            // Upload the logo file
             if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
+                // Rollback user profile and user data deletion on logo upload failure
                 $userModel->deleteUserProfile($userId);
                 $userModel->deleteUser($userId);
                 http_response_code(500);
@@ -223,6 +238,7 @@ class UserController
             }
         }
 
+        // Create store
         $storeCreated = $storeModel->createStore(
             $userId,
             $storeName,
@@ -230,14 +246,14 @@ class UserController
             $bizEmail,
             $bizPhone,
             $bizRegNo,
-            
             $storeType,
             $filename
         );
 
+        // If store creation fails, delete the uploaded logo file and rollback user/profile creation
         if (!$storeCreated) {
             if ($filename) {
-                unlink($targetPath);
+                unlink($targetPath); // Delete the uploaded logo
             }
             $userModel->deleteUserProfile($userId);
             $userModel->deleteUser($userId);
@@ -246,6 +262,7 @@ class UserController
         }
     }
 
+    // If everything was successful, return success
     http_response_code(201);
     return [
         "status" => "success",
