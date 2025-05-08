@@ -80,7 +80,7 @@ class UserController
         return ["status" => "success", "message" => "OTP verified"];
     }
 
-    public function finalizeSignup($data)
+   public function finalizeSignup($data)
 {
     $required = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password', 'role'];
     foreach ($required as $field) {
@@ -100,7 +100,6 @@ class UserController
 
     $userModel = new User();
 
-    // Check if the user already exists by phone or email
     if ($userModel->getUserByPhone($phone)) {
         http_response_code(409);
         return ["status" => "error", "message" => "User with this phone already exists"];
@@ -119,7 +118,6 @@ class UserController
         }
     }
 
-    // Handle referral logic if provided
     $referrer_id = null;
     if (!empty($data['referral_code'])) {
         $referrer = $userModel->getUserByReferralCode($data['referral_code']);
@@ -130,7 +128,6 @@ class UserController
         $referrer_id = $referrer['id'];
     }
 
-    // Create user
     $google_id = $data['google_id'] ?? null;
     $userId = $userModel->createUser(
         $data['email'],
@@ -146,7 +143,6 @@ class UserController
         return ["status" => "error", "message" => "Failed to create account"];
     }
 
-    // Create user profile
     $profileCreated = $userModel->createUserProfile(
         $userId,
         $data['first_name'],
@@ -154,13 +150,11 @@ class UserController
     );
 
     if (!$profileCreated) {
-        // If profile creation fails, delete user from users table
         $userModel->deleteUser($userId);
         http_response_code(500);
         return ["status" => "error", "message" => "Failed to create user profile"];
     }
 
-    // Create store if user is a merchant
     if (strtolower($data['role']) === 'merchant') {
         $storeName = $data['store_name'] ?? null;
         $storeAddress = $data['biz_address'] ?? null;
@@ -168,15 +162,12 @@ class UserController
         $bizPhone = $data['biz_phone'] ?? null;
         $bizRegNo = $data['biz_reg_number'] ?? null;
         $storeType = $data['store_type'] ?? null;
-        $logo = $_FILES['biz_logo'] ?? null;
-        
 
         if (!$storeName || !$storeAddress || !$bizEmail || !$bizPhone || !$bizRegNo || !$storeType) {
             http_response_code(400);
             return ["status" => "error", "message" => "All business fields are required for store owners"];
         }
 
-        // Check uniqueness of business fields
         $storeModel = new Store();
         if ($storeModel->storeExists('store_name', $storeName)) {
             http_response_code(409);
@@ -195,34 +186,43 @@ class UserController
             return ["status" => "error", "message" => "Business registration number already exists"];
         }
 
-        // Handle logo upload
         $uploadDir = __DIR__ . '/../../uploads/logos/';
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         $maxSize = 150 * 1024; // 150KB
+        $filename = null;
 
-        if (!in_array($logo['type'], $allowedTypes)) {
-            http_response_code(400);
-            return ["status" => "error", "message" => "Invalid file type. Only JPG, JPEG, and PNG files are allowed."];
+        if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
+            $logo = $_FILES['biz_logo'];
+            $fileType = $logo['type'];
+
+            if (!in_array($fileType, $allowedTypes)) {
+                http_response_code(400);
+                return [
+                    'status' => 'error',
+                    'message' => 'Invalid file type. Only JPG, JPEG, and PNG files are allowed.'
+                ];
+            }
+
+            if ($logo['size'] > $maxSize) {
+                http_response_code(400);
+                return [
+                    "status" => "error",
+                    "message" => "File size exceeds limit. Maximum allowed size is 150KB."
+                ];
+            }
+
+            $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($logo['name']));
+            $filename = uniqid('logo_') . '_' . $safeName;
+            $targetPath = $uploadDir . $filename;
+
+            if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
+                $userModel->deleteUserProfile($userId);
+                $userModel->deleteUser($userId);
+                http_response_code(500);
+                return ["status" => "error", "message" => "Failed to upload logo"];
+            }
         }
 
-        if ($logo['size'] > $maxSize) {
-            http_response_code(400);
-            return ["status" => "error", "message" => "File size exceeds limit. Maximum allowed size is 150KB."];
-        }
-
-        $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($logo['name']));
-        $filename = uniqid('logo_') . '_' . $safeName;
-        $targetPath = $uploadDir . $filename;
-
-        if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
-            // If logo upload fails, delete user and profile created earlier
-            $userModel->deleteUserProfile($userId);
-            $userModel->deleteUser($userId);
-            http_response_code(500);
-            return ["status" => "error", "message" => "Failed to upload logo"];
-        }
-
-        // Create store
         $storeCreated = $storeModel->createStore(
             $userId,
             $storeName,
@@ -230,13 +230,14 @@ class UserController
             $bizEmail,
             $bizPhone,
             $bizRegNo,
-            $filename, // store the logo file name or path
+            $filename,
             $storeType
         );
 
         if (!$storeCreated) {
-            // If store creation fails, delete logo and user data
-            unlink($targetPath); // Clean up uploaded file
+            if ($filename) {
+                unlink($targetPath);
+            }
             $userModel->deleteUserProfile($userId);
             $userModel->deleteUser($userId);
             http_response_code(500);
