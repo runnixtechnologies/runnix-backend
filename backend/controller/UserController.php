@@ -178,7 +178,7 @@ class UserController
 
         // Check uniqueness of business fields
         $storeModel = new Store();
-        if ($storeModel->storeExists('biz_name', $storeName)) {
+        if ($storeModel->storeExists('store_name', $storeName)) {
             http_response_code(409);
             return ["status" => "error", "message" => "Business name already exists"];
         }
