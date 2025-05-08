@@ -230,8 +230,9 @@ class UserController
             $bizEmail,
             $bizPhone,
             $bizRegNo,
-            $filename,
-            $storeType
+            
+            $storeType,
+            $filename
         );
 
         if (!$storeCreated) {
