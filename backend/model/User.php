@@ -172,9 +172,15 @@ public function updateUserReferral($user_id, $referrer_id) {
 
 public function getUserById($userId)
 {
-    $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = ?");
-    $stmt->execute([$userId]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $user ?: null; // return null if user not found
+    } catch (\PDOException $e) {
+        // Log error or handle it as needed
+        return null;
+    }
 }
 
 
