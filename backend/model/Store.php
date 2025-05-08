@@ -57,7 +57,7 @@ class Store
 
     public function storeExists($field, $value)
 {
-    $allowedFields = ['biz_name', 'biz_email', 'biz_phone', 'biz_reg_number'];
+    $allowedFields = ['store_name', 'biz_email', 'biz_phone', 'biz_reg_number'];
     if (!in_array($field, $allowedFields)) {
         throw new \InvalidArgumentException("Invalid field for storeExists check");
     }
