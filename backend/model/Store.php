@@ -14,7 +14,8 @@ class Store
         $this->conn = (new Database())->getConnection();
     }
 
-    public function createStore($userId, $storeName, $bizAddress, $bizEmail, $bizPhone, $bizRegNumber, $bizLogo = null, $storeType)
+    public function createStore($userId, $storeName, $bizAddress, $bizEmail, $bizPhone, $bizRegNumber, $storeType, $bizLogo = null)
+
     {
         try {
             $sql = "INSERT INTO stores (user_id, store_name, biz_address, biz_email, biz_phone, biz_reg_number, biz_logo, store_type)

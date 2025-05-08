@@ -172,10 +172,11 @@ public function updateUserReferral($user_id, $referrer_id) {
 
 public function getUserById($userId)
 {
-    $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE id = ?");
+    $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
+
 
 public function deleteUser($userId)
 {
