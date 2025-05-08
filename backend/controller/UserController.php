@@ -232,7 +232,7 @@ class UserController
             // Upload the logo file
             if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
                 // Rollback user profile and user data deletion on logo upload failure
-                $userModel->deleteUserProfile($userId);
+               
                 $userModel->deleteUser($userId);
                 http_response_code(500);
                 return ["status" => "error", "message" => "Failed to upload logo"];
@@ -256,8 +256,9 @@ class UserController
             if ($filename && file_exists($targetPath)) {
                 unlink($targetPath); // Delete the uploaded logo
             }
-            $userModel->deleteUserProfile($userId);
-            $userModel->deleteUser($userId);
+            
+            $userModel->deleteUser($userId); // Automatically handles profile and user deletion in a transaction.
+
             http_response_code(500);
             return ["status" => "error", "message" => "Failed to create store"];
         }

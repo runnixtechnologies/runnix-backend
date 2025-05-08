@@ -8,6 +8,7 @@ class User
 {
     private $conn;
     private $table = "users";
+    private $profileTable = "user_profiles";  // Assuming this is your profile table
 
     public function __construct()
     {
@@ -183,7 +184,7 @@ public function getUserById($userId)
     }
 }
 
-
+/*
 public function deleteUser($userId)
 {
     $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = ?");
@@ -194,7 +195,67 @@ public function deleteUserProfile($userId)
 {
     $stmt = $this->conn->prepare("DELETE FROM user_profiles WHERE user_id = ?");
     return $stmt->execute([$userId]);
-}
+}*/
+
+ public function deleteUser($userId)
+    {
+        try {
+            // Begin transaction
+            $this->conn->beginTransaction();
+
+            // Delete user profile first (in case foreign keys or dependency)
+            $profileDeleted = $this->deleteUserProfile($userId);
+            if (!$profileDeleted) {
+                throw new \Exception("Failed to delete user profile.");
+            }
+
+            // Now, delete the user
+            $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = :id");
+            $stmt->bindParam(':id', $userId);
+            $stmt->execute();
+
+            if ($stmt->rowCount() <= 0) {
+                throw new \Exception("User not found or failed to delete.");
+            }
+
+            // Commit transaction
+            $this->conn->commit();
+            return true;
+        } catch (\Exception $e) {
+            // Rollback transaction if anything fails
+            $this->conn->rollBack();
+            error_log("Error deleting user: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Delete user profile
+    public function deleteUserProfile($userId)
+    {
+        try {
+            // Begin transaction
+            $this->conn->beginTransaction();
+
+            // Delete user profile data
+            $stmt = $this->conn->prepare("DELETE FROM {$this->profileTable} WHERE user_id = :user_id");
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->execute();
+
+            if ($stmt->rowCount() <= 0) {
+                throw new \Exception("User profile not found or failed to delete.");
+            }
+
+            // Commit transaction
+            $this->conn->commit();
+            return true;
+        } catch (\Exception $e) {
+            // Rollback transaction if anything fails
+            $this->conn->rollBack();
+            error_log("Error deleting user profile: " . $e->getMessage());
+            return false;
+        }
+    }
+
 
 
 }
