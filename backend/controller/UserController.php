@@ -163,9 +163,9 @@ class UserController
     // Create store if user is a merchant
     if (strtolower($data['role']) === 'merchant') {
         $storeName = $data['store_name'] ?? null;
-        $storeAddress = $data['business_address'] ?? null;
-        $bizEmail = $data['business_email'] ?? null;
-        $bizPhone = $data['phone'] ?? null; // or allow a separate biz_phone if needed
+        $storeAddress = $data['biz_address'] ?? null;
+        $bizEmail = $data['biz_email'] ?? null;
+        $bizPhone = $data['biz_phone'] ?? null;
         $bizRegNo = $data['biz_reg_number'] ?? null;
         $storeType = $data['store_type'] ?? null;
         $logo = $_FILES['biz_logo'] ?? null;
