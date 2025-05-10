@@ -127,7 +127,7 @@ public function setupUserRider($data)
     }
 }
 
-public function setupUserMerchant($data)
+public function setupMerchant($data)
 {
     // Validate required user fields
     $requiredUserFields = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password', 'role'];
