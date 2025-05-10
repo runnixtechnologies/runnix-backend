@@ -16,7 +16,7 @@ class OtpController
         $otpModel = new Otp();
         $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
     
-        $message = "Your Runnix authentication code is $otp. It expires in 10 minutes.";
+        $message = "Your Runnix Authentication PIN is $otp. It expires in 10 minutes.";
     
         $response = $this->sendViaTermii($phone, $message);
     

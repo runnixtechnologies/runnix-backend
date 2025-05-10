@@ -8,63 +8,157 @@ use Model\Store;
 
 class UserController
 {
-    public function login($data)
+
+    private $userModel;
+    private $otpModel;
+    private $storeModel;
+
+    public function __construct()
     {
-        $userModel = new User();
-        $phone = $data['phone'];
-        $password = $data['password'];
+        $this->userModel = new User();
+        $this->otpModel = new Otp();
+        $this->storeModel = new Store();  
+    }
+    public function login($data)
+{
+    $phone = $data['phone'];
+    $password = $data['password'];
 
-        if (empty($phone) || empty($password)) {
-            http_response_code(400);
-            return ["status" => "error", "message" => "Phone and password are required"];
+    if (empty($phone) || empty($password)) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Phone and password are required"];
+    }
+
+    // Attempt to find the user
+    $user = $this->userModel->login($phone, $password);
+
+    if (!$user) {
+        http_response_code(401);
+        return ["status" => "error", "message" => "Invalid credentials"];
+    }
+
+    // Generate JWT token
+    $jwt = new JwtHandler();
+    $payload = ["user_id" => $user['id'], "role" => $user['role']];
+    $token = $jwt->encode($payload);
+
+    http_response_code(200);
+    return [
+        "status" => "success",
+        "message" => "Login successful",
+        "token" => $token,
+        "user" => $user
+    ];
+}
+
+
+public function setupUserRider($data)
+{
+    // Sanitize inputs
+    $email = strtolower(trim($data['email']));
+    $phone = '234' . ltrim($data['phone'], '0');
+    $password = $data['password'];
+    $role = $data['role'];
+    $first_name = $data['first_name'];
+    $last_name = $data['last_name'];
+
+    // Validate signup method
+    $signupMethod = strtolower($data['signup_method'] ?? 'phone');
+    if (!in_array($signupMethod, ['phone', 'google'])) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Invalid signup method", "status_code" => 400];
+    }
+
+    $google_id = $data['google_id'] ?? null;
+
+    // Check if user already exists by phone or email
+    if ($this->userModel->getUserByPhone($phone)) {
+        http_response_code(409);  // Conflict
+        return ["status" => "error", "message" => "User with this phone already exists"];
+    }
+
+    if ($this->userModel->getUserByEmail($email)) {
+        http_response_code(409);  // Conflict
+        return ["status" => "error", "message" => "User with this email already exists"];
+    }
+
+    // OTP check if signup method is phone
+    if ($signupMethod === 'phone' && !$this->otpModel->isOtpVerified($phone, 'signup')) {
+        http_response_code(400);  // Bad Request
+        return ["status" => "error", "message" => "OTP not verified. Please verify OTP before signing up."];
+    }
+
+    // Referral logic
+    $referrer_id = null;
+    if (!empty($data['referral_code'])) {
+        $referrer = $this->userModel->getUserByReferralCode($data['referral_code']);
+        if (!$referrer) {
+            http_response_code(400);  // Bad Request
+            return ["status" => "error", "message" => "Invalid referral code"];
         }
+        $referrer_id = $referrer['id'];
+    }
 
-        $user = $userModel->login($phone, $password);
-
-        if (!$user) {
-            http_response_code(401);
-            return ["status" => "error", "message" => "Invalid credentials"];
+    // Create the user
+    $userId = $this->userModel->createUser($email, $phone, $password, $role, $referrer_id, $google_id);
+    if ($userId) {
+        // Create the user profile
+        $profileCreated = $this->userModel->createUserProfile($userId, $first_name, $last_name);
+        if ($profileCreated) {
+            return [
+                'status' => 'success',
+                'message' => 'User setup completed successfully',
+                'status_code' => 201,  // Created
+                'user_id' => $userId
+            ];
+        } else {
+            http_response_code(500);  // Internal Server Error
+            return [
+                'status' => 'error',
+                'message' => 'Failed to create user profile'
+            ];
         }
-
-        $jwt = new JwtHandler();
-        $payload = ["user_id" => $user['id'], "role" => $user['role']];
-        $token = $jwt->encode($payload);
-
-        http_response_code(200);
+    } else {
+        http_response_code(500);  // Internal Server Error
         return [
-            "status" => "success",
-            "message" => "Login successful",
-            "token" => $token,
-            "user" => $user
+            'status' => 'error',
+            'message' => 'Failed to create user'
         ];
     }
+}
+
 
     public function googlePrefill($data)
-    {
-        $userModel = new User();
+{
+    // Assuming $this->userModel is already injected or instantiated in the class
+    if (empty($data['email'])) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Email is required"];
+    }
 
-        if (empty($data['email'])) {
-            http_response_code(400);
-            return ["status" => "error", "message" => "Email is required"];
-        }
-
-        $existingUser = $userModel->getUserByEmail($data['email']);
-        if ($existingUser) {
-            http_response_code(409);
-            return ["status" => "exists", "message" => "User already exists", "user" => $existingUser];
-        }
-
-        http_response_code(200);
+    // Check if the user already exists
+    $existingUser = $this->userModel->getUserByEmail($data['email']);
+    if ($existingUser) {
+        http_response_code(409);
         return [
-            "status" => "prefill",
-            "message" => "Prefill registration form",
-            "data" => [
-                "first_name" => $data['first_name'] ?? "",
-                "last_name" => $data['last_name'] ?? "",
-                "email" => $data['email'] ?? ""
-            ]
+            "status" => "exists",
+            "message" => "User already exists",
+            "user" => $existingUser
         ];
     }
+
+    // Return prefill data if no existing user
+    http_response_code(200);
+    return [
+        "status" => "prefill",
+        "message" => "Prefill registration form",
+        "data" => [
+            "first_name" => $data['first_name'] ?? "",  // Use empty string as default if not provided
+            "last_name" => $data['last_name'] ?? "",    // Same for last_name
+            "email" => $data['email']                   // Email is mandatory and should be in data
+        ]
+    ];
+}
 
     public function verifyOtp($phone, $otp)
     {
