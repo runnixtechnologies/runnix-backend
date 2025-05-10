@@ -108,7 +108,7 @@ public function setupUserRider($data)
             return [
                 'status' => 'success',
                 'message' => 'User setup completed successfully',
-                'status_code' => 201,  // Created
+                //'status_code' => 201,  // Created
                 'user_id' => $userId
             ];
         } else {
