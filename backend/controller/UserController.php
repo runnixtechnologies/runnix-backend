@@ -127,6 +127,163 @@ public function setupUserRider($data)
     }
 }
 
+public function setupUserMerchant($data)
+{
+    // Validate required user fields
+    $requiredUserFields = ['first_name', 'last_name', 'email', 'phone', 'password', 'confirm_password', 'role'];
+    foreach ($requiredUserFields as $field) {
+        if (empty($data[$field])) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "$field is required"];
+        }
+    }
+
+    if ($data['password'] !== $data['confirm_password']) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Passwords do not match"];
+    }
+
+    $signupMethod = strtolower($data['signup_method'] ?? 'phone');
+    $phone = '234' . ltrim($data['phone'], '0');
+
+    $userModel = new User();
+
+    // Check if user already exists
+    if ($userModel->getUserByPhone($phone)) {
+        http_response_code(409);
+        return ["status" => "error", "message" => "User with this phone already exists"];
+    }
+    if ($userModel->getUserByEmail($data['email'])) {
+        http_response_code(409);
+        return ["status" => "error", "message" => "User with this email already exists"];
+    }
+
+    // OTP Verification (if applicable)
+    if ($signupMethod === 'phone') {
+        $otpModel = new Otp();
+        if (!$otpModel->isOtpVerified($phone, 'signup')) {
+            http_response_code(401);
+            return ["status" => "error", "message" => "OTP not verified. Please verify OTP before signing up."];
+        }
+    }
+
+    // Handle referral
+    $referrer_id = null;
+    if (!empty($data['referral_code'])) {
+        $referrer = $userModel->getUserByReferralCode($data['referral_code']);
+        if (!$referrer) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Invalid referral code"];
+        }
+        $referrer_id = $referrer['id'];
+    }
+
+    // Create user
+    $google_id = $data['google_id'] ?? null;
+    $userId = $userModel->createUser(
+        $data['email'],
+        $phone,
+        $data['password'],
+        $data['role'],
+        $referrer_id,
+        $google_id
+    );
+
+    if (!$userId) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to create account"];
+    }
+
+    // Create profile
+    $profileCreated = $userModel->createUserProfile($userId, $data['first_name'], $data['last_name']);
+    if (!$profileCreated) {
+        $userModel->deleteUser($userId);
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to create user profile"];
+    }
+
+    // Validate store fields
+    $requiredStoreFields = ['store_name', 'biz_address', 'biz_email', 'biz_phone', 'biz_reg_number', 'store_type'];
+    foreach ($requiredStoreFields as $field) {
+        if (empty($data[$field])) {
+            $userModel->deleteUser($userId);
+            http_response_code(400);
+            return ["status" => "error", "message" => "$field is required"];
+        }
+    }
+
+    $storeModel = new Store();
+
+    // Check if store info is unique
+    if ($storeModel->storeExists('store_name', $data['store_name']) ||
+        $storeModel->storeExists('biz_email', $data['biz_email']) ||
+        $storeModel->storeExists('biz_phone', $data['biz_phone']) ||
+        $storeModel->storeExists('biz_reg_number', $data['biz_reg_number'])) {
+        $userModel->deleteUser($userId);
+        http_response_code(409);
+        return ["status" => "error", "message" => "Business details already exist"];
+    }
+
+    // Handle biz logo (optional)
+    $uploadDir = __DIR__ . '/../../uploads/logos/';
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    $maxSize = 150 * 1024;
+    $filename = null;
+    $targetPath = null;
+
+    if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
+        $logo = $_FILES['biz_logo'];
+        if (!in_array($logo['type'], $allowedTypes)) {
+            $userModel->deleteUser($userId);
+            http_response_code(400);
+            return ["status" => "error", "message" => "Invalid logo format"];
+        }
+        if ($logo['size'] > $maxSize) {
+            $userModel->deleteUser($userId);
+            http_response_code(400);
+            return ["status" => "error", "message" => "Logo size exceeds 150KB"];
+        }
+
+        $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($logo['name']));
+        $filename = uniqid('logo_') . '_' . $safeName;
+        $targetPath = $uploadDir . $filename;
+
+        if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
+            $userModel->deleteUser($userId);
+            http_response_code(500);
+            return ["status" => "error", "message" => "Failed to upload logo"];
+        }
+    }
+
+    // Create store
+    $storeCreated = $storeModel->createStore(
+        $userId,
+        $data['store_name'],
+        $data['biz_address'],
+        $data['biz_email'],
+        $data['biz_phone'],
+        $data['biz_reg_number'],
+        $data['store_type'],
+        $filename
+    );
+
+    if (!$storeCreated) {
+        if ($filename && file_exists($targetPath)) {
+            unlink($targetPath);
+        }
+        $userModel->deleteUser($userId);
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to create store"];
+    }
+
+    http_response_code(201);
+    return [
+        "status" => "success",
+        "message" => "Merchant setup completed",
+        "user_id" => $userId
+    ];
+}
+
 
     public function googlePrefill($data)
 {

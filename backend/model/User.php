@@ -197,37 +197,18 @@ public function deleteUserProfile($userId)
     return $stmt->execute([$userId]);
 }*/
 
- public function deleteUser($userId)
-    {
-        try {
-            // Begin transaction
-            $this->conn->beginTransaction();
-
-            // Delete user profile first (in case foreign keys or dependency)
-            $profileDeleted = $this->deleteUserProfile($userId);
-            if (!$profileDeleted) {
-                throw new \Exception("Failed to delete user profile.");
-            }
-
-            // Now, delete the user
-            $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = :id");
-            $stmt->bindParam(':id', $userId);
-            $stmt->execute();
-
-            if ($stmt->rowCount() <= 0) {
-                throw new \Exception("User not found or failed to delete.");
-            }
-
-            // Commit transaction
-            $this->conn->commit();
-            return true;
-        } catch (\Exception $e) {
-            // Rollback transaction if anything fails
-            $this->conn->rollBack();
-            error_log("Error deleting user: " . $e->getMessage());
-            return false;
-        }
+public function deleteUser($userId)
+{
+    try {
+        $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = :id");
+        $stmt->bindParam(':id', $userId);
+        return $stmt->execute();
+    } catch (\Exception $e) {
+        error_log("Error deleting user: " . $e->getMessage());
+        return false;
     }
+}
+
 
     // Delete user profile
     public function deleteUserProfile($userId)
