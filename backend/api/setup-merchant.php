@@ -10,8 +10,14 @@ use Controller\UserController;
 
 header('Content-Type: application/json');
 
-// Combine POST data and file data if multipart/form-data
-$data = $_POST;
+// Detect content type and parse request body accordingly
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+if (stripos($contentType, 'application/json') !== false) {
+    $rawData = file_get_contents("php://input");
+    $data = json_decode($rawData, true) ?? [];
+} else {
+    $data = $_POST;
+}
 
 $userController = new UserController();
 $response = $userController->setupMerchant($data);
