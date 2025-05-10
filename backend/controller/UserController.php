@@ -225,47 +225,54 @@ public function setupMerchant($data)
     }
 
     // Handle biz logo (optional)
-    $uploadDir = __DIR__ . '/../../uploads/logos/';
-    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    $maxSize = 150 * 1024;
-    $filename = null;
-    $targetPath = null;
+$uploadDir = __DIR__ . '/../../uploads/logos/';
+$allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+$maxSize = 150 * 1024;
+$filename = null; // Set to null initially in case no logo is uploaded
+$targetPath = null;
 
-    if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
-        $logo = $_FILES['biz_logo'];
-        if (!in_array($logo['type'], $allowedTypes)) {
-            $userModel->deleteUser($userId);
-            http_response_code(400);
-            return ["status" => "error", "message" => "Invalid logo format"];
-        }
-        if ($logo['size'] > $maxSize) {
-            $userModel->deleteUser($userId);
-            http_response_code(400);
-            return ["status" => "error", "message" => "Logo size exceeds 150KB"];
-        }
-
-        $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($logo['name']));
-        $filename = uniqid('logo_') . '_' . $safeName;
-        $targetPath = $uploadDir . $filename;
-
-        if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
-            $userModel->deleteUser($userId);
-            http_response_code(500);
-            return ["status" => "error", "message" => "Failed to upload logo"];
-        }
+if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
+    $logo = $_FILES['biz_logo'];
+    
+    // Validate logo format
+    if (!in_array($logo['type'], $allowedTypes)) {
+        $userModel->deleteUser($userId);
+        http_response_code(400);
+        return ["status" => "error", "message" => "Invalid logo format"];
+    }
+    
+    // Validate logo size
+    if ($logo['size'] > $maxSize) {
+        $userModel->deleteUser($userId);
+        http_response_code(400);
+        return ["status" => "error", "message" => "Logo size exceeds 150KB"];
     }
 
-    // Create store
-    $storeCreated = $storeModel->createStore(
-        $userId,
-        $data['store_name'],
-        $data['biz_address'],
-        $data['biz_email'],
-        $data['biz_phone'],
-        $data['biz_reg_number'],
-        $data['store_type'],
-        $filename
-    );
+    // Sanitize file name
+    $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($logo['name']));
+    $filename = uniqid('logo_') . '_' . $safeName; // Create a unique filename
+    $targetPath = $uploadDir . $filename;
+
+    // Move the uploaded logo to the target directory
+    if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
+        $userModel->deleteUser($userId);
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to upload logo"];
+    }
+}
+
+// Create store, passing null for biz_logo if no file was uploaded
+$storeCreated = $storeModel->createStore(
+    $userId,
+    $data['store_name'],
+    $data['biz_address'],
+    $data['biz_email'],
+    $data['biz_phone'],
+    $data['biz_reg_number'],
+    $data['store_type'],
+    $filename // If no file uploaded, this will be null
+);
+
 
     if (!$storeCreated) {
         if ($filename && file_exists($targetPath)) {
