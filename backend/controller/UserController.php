@@ -18,8 +18,11 @@ class UserController
         $this->userModel = new User();
         $this->otpModel = new Otp();
         $this->storeModel = new Store();  
-    }public function login($data)
-{
+    }
+    
+    
+    public function login($data)
+    {
     $rawPhone = preg_replace('/\D/', '', $data['phone']); // remove non-digit characters
     $password = $data['password'];
 
@@ -51,6 +54,9 @@ class UserController
         return ["status" => "error", "message" => "Invalid credentials"];
     }
 
+    // Remove password from user data
+    unset($user['password']);
+    
     // Generate JWT token
     $jwt = new JwtHandler();
     $payload = ["user_id" => $user['id'], "role" => $user['role']];
