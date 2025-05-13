@@ -16,7 +16,7 @@ if (!isset($data['phone'])) {
 }
 
 $phone = $data['phone'];
-
+$phone = '234' . ltrim($phone, '0');
 // Check if phone exists in users table
 $conn = (new \Config\Database())->getConnection();
 $stmt = $conn->prepare("SELECT id, email FROM users WHERE phone = :phone");
@@ -33,6 +33,6 @@ if (!$user) {
 // Send OTP for password reset
 $otpController = new OtpController();
 // Format: Remove leading 0, add 234
-$phone = '234' . ltrim($phone, '0');
+
 $response = $otpController->sendOtp($phone, 'password_reset', $user['email'], $user['id']);
 echo json_encode($response);
