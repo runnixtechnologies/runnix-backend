@@ -18,16 +18,29 @@ class UserController
         $this->userModel = new User();
         $this->otpModel = new Otp();
         $this->storeModel = new Store();  
-    }
-    public function login($data)
+    }public function login($data)
 {
-    $phone = preg_replace('/^0/', '234', $data['phone']); // replace leading 0 with 234
-    
+    $rawPhone = preg_replace('/\D/', '', $data['phone']); // remove non-digit characters
     $password = $data['password'];
 
-    if (empty($phone) || empty($password)) {
+    // Normalize to format 234XXXXXXXXXX
+    if (strlen($rawPhone) === 11 && preg_match('/^0[7-9][01]\d{8}$/', $rawPhone)) {
+        // e.g., 08012345678 -> 2348012345678
+        $phone = '234' . substr($rawPhone, 1);
+    } elseif (strlen($rawPhone) === 10 && preg_match('/^[7-9][01]\d{8}$/', $rawPhone)) {
+        // e.g., 8012345678 -> 2348012345678
+        $phone = '234' . $rawPhone;
+    } elseif (strlen($rawPhone) === 13 && preg_match('/^234[7-9][01]\d{8}$/', $rawPhone)) {
+        // already in correct format
+        $phone = $rawPhone;
+    } else {
         http_response_code(400);
-        return ["status" => "error", "message" => "Phone and password are required"];
+        return ["status" => "error", "message" => "Invalid phone number format"];
+    }
+
+    if (empty($password)) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Password is required"];
     }
 
     // Attempt to find the user
@@ -51,7 +64,6 @@ class UserController
         "user" => $user
     ];
 }
-
 
 public function setupUserRider($data)
 {
