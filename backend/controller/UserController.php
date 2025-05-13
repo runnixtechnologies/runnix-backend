@@ -21,7 +21,8 @@ class UserController
     }
     public function login($data)
 {
-    $phone = $data['phone'];
+    $phone = preg_replace('/^0/', '234', $data['phone']); // replace leading 0 with 234
+    
     $password = $data['password'];
 
     if (empty($phone) || empty($password)) {

@@ -1,10 +1,12 @@
 <?php
+
+namespace Config;
+
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Dotenv\Dotenv;
 use Config\Database;
 use PDO;
-
 class JwtHandler {
     private $secret;
     private $issuedAt;
@@ -44,7 +46,7 @@ class JwtHandler {
 
             $decoded = JWT::decode($token, new Key($this->secret, 'HS256'));
             return (array)$decoded;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return false;
         }
     }
