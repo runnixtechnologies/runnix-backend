@@ -168,34 +168,43 @@ public function setupMerchant($data)
     }
 
     // Handle biz logo (optional)
-    $uploadDir = __DIR__ . '/../../uploads/logos/';
-    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    $maxSize = 150 * 1024;
-    $filename = null;
+$uploadDir = __DIR__ . '/../../uploads/logos/';
+$allowedTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/pjpeg',    // common from iOS/Flutter
+    'image/x-png'     // sometimes seen from Android
+];
+$maxSize = 150 * 1024; // 150KB
+$filename = null;
 
-    if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
-        $logo = $_FILES['biz_logo'];
+if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
+    $logo = $_FILES['biz_logo'];
 
-        if (!in_array($logo['type'], $allowedTypes)) {
-            http_response_code(400);
-            return ["status" => "error", "message" => "Invalid logo format"];
-        }
+    // Use mime_content_type to get the actual file MIME type
+    $detectedMime = mime_content_type($logo['tmp_name']);
+    error_log('Uploaded file MIME type: ' . $detectedMime); // optional: helps in debugging
 
-        if ($logo['size'] > $maxSize) {
-            http_response_code(400);
-            return ["status" => "error", "message" => "Logo size exceeds 150KB"];
-        }
-
-        $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($logo['name']));
-        $filename = uniqid('logo_') . '_' . $safeName;
-        $targetPath = $uploadDir . $filename;
-
-        if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
-            http_response_code(500);
-            return ["status" => "error", "message" => "Failed to upload logo"];
-        }
+    if (!in_array($detectedMime, $allowedTypes)) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Invalid logo format: $detectedMime"];
     }
 
+    if ($logo['size'] > $maxSize) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Logo size exceeds 150KB"];
+    }
+
+    $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($logo['name']));
+    $filename = uniqid('logo_') . '_' . $safeName;
+    $targetPath = $uploadDir . $filename;
+
+    if (!move_uploaded_file($logo['tmp_name'], $targetPath)) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to upload logo"];
+    }
+}
     // Create store
     $storeCreated = $storeModel->createStore(
         $userId,
