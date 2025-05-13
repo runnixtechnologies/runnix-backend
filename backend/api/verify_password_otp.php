@@ -22,6 +22,6 @@ $otp = $data['otp'];
 
 // Call OTP verification method
 $otpController = new OtpController();
-$response = $otpController->verifyOtp($phone, 'password_reset', $otp);
+$response = $otpController->verifyOtp($phone,  $otp,'password_reset');
 
 echo json_encode($response);
