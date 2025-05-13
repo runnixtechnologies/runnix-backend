@@ -55,8 +55,8 @@ class UserController
     }
 
     // Remove password from user data
-    unset($user['password']);
-    
+     unset($user['password']);
+
     // Generate JWT token
     $jwt = new JwtHandler();
     $payload = ["user_id" => $user['id'], "role" => $user['role']];
