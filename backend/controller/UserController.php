@@ -638,9 +638,9 @@ public function collectStoreDetails($data)
     {
     
         // Check if OTP was verified for this phone and purpose
-        if ($this->otpModel->OtpVerified($phone, 'password_reset')) {
-            http_response_code(401);
-            return ["status" => "error", "message" => "OTP not verified for this phone"];
+        if (!$this->otpModel->OtpVerified($phone, 'password_reset')) {
+    http_response_code(401);
+    return ["status" => "error", "message" => "OTP not verified for this phone"];
         }
 
         // Call model method to update the password
@@ -653,6 +653,5 @@ public function collectStoreDetails($data)
             return ["status" => "error", "message" => "Failed to reset password"];
         }
     }
-
 
 }
