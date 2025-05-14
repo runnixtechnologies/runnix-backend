@@ -21,20 +21,16 @@ class UserController
     }
     
     
-    public function login($data)
-    {
-    $rawPhone = preg_replace('/\D/', '', $data['phone']); // remove non-digit characters
+   public function login($data)
+{
+    $rawPhone = preg_replace('/\D/', '', $data['phone']);
     $password = $data['password'];
 
-    // Normalize to format 234XXXXXXXXXX
     if (strlen($rawPhone) === 11 && preg_match('/^0[7-9][01]\d{8}$/', $rawPhone)) {
-        // e.g., 08012345678 -> 2348012345678
         $phone = '234' . substr($rawPhone, 1);
     } elseif (strlen($rawPhone) === 10 && preg_match('/^[7-9][01]\d{8}$/', $rawPhone)) {
-        // e.g., 8012345678 -> 2348012345678
         $phone = '234' . $rawPhone;
     } elseif (strlen($rawPhone) === 13 && preg_match('/^234[7-9][01]\d{8}$/', $rawPhone)) {
-        // already in correct format
         $phone = $rawPhone;
     } else {
         http_response_code(400);
@@ -46,7 +42,6 @@ class UserController
         return ["status" => "error", "message" => "Password is required"];
     }
 
-    // Attempt to find the user
     $user = $this->userModel->login($phone, $password);
 
     if (!$user) {
@@ -54,10 +49,20 @@ class UserController
         return ["status" => "error", "message" => "Invalid credentials"];
     }
 
-    // Remove password from user data
-     unset($user['password']);
+    unset($user['password']);
 
-    // Generate JWT token
+    // Check store info for merchant
+    if ($user['role'] === 'merchant') {
+    $storeInfo = $this->userModel->getMerchantStore($user['id']);
+    if ($storeInfo) {
+        $user['store_type'] = $storeInfo['store_type'];
+        $user['store_setup'] = true;
+    } else {
+        $user['store_setup'] = false;
+    }
+}
+
+
     $jwt = new JwtHandler();
     $payload = ["user_id" => $user['id'], "role" => $user['role']];
     $token = $jwt->encode($payload);
@@ -70,6 +75,7 @@ class UserController
         "user" => $user
     ];
 }
+
 
 public function setupUserRider($data)
 {

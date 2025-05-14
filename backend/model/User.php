@@ -136,6 +136,14 @@ public function getUserByEmail($email)
         }
         return false;
     }
+    public function getMerchantStore($userId)
+    {
+    $stmt = $this->conn->prepare("SELECT store_type FROM stores WHERE user_id = :user_id LIMIT 1");
+    $stmt->bindParam(":user_id", $userId);
+    $stmt->execute();
+
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 
     public function resetPasswordByPhone($phone, $plainPassword)
     {
