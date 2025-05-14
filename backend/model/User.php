@@ -137,6 +137,14 @@ public function getUserByEmail($email)
         return false;
     }
 
+    public function resetPasswordByPhone($phone, $plainPassword)
+    {
+        $hashedPassword = password_hash($plainPassword, PASSWORD_BCRYPT);
+        $stmt = $this->conn->prepare("UPDATE users SET password = :password WHERE phone = :phone");
+        $stmt->bindParam(":password", $hashedPassword);
+        $stmt->bindParam(":phone", $phone);
+        return $stmt->execute();
+    }
     
     public function findOrCreateGoogleUser($email, $first_name, $last_name)
 {

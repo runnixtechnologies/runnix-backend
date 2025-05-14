@@ -85,4 +85,20 @@ class Otp
     return $record ? true : false;
 }
 
+
+public function OtpVerified($phone, $purpose)
+{
+    $stmt = $this->conn->prepare("
+        SELECT id FROM otp_requests 
+        WHERE phone = :phone AND purpose = :purpose AND verified = 1 
+        ORDER BY created_at DESC 
+        LIMIT 1
+    ");
+    $stmt->bindParam(':phone', $phone);
+    $stmt->bindParam(':purpose', $purpose);
+    $stmt->execute();
+
+    return $stmt->fetch(PDO::FETCH_ASSOC) ? true : false;
+}
+
 }

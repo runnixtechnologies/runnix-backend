@@ -634,5 +634,25 @@ public function collectStoreDetails($data)
     ];
 }
 
+    public function resetPassword($phone, $newPassword)
+    {
+    
+        // Check if OTP was verified for this phone and purpose
+        if ($this->otpModel->OtpVerified($phone, 'password_reset')) {
+            http_response_code(401);
+            return ["status" => "error", "message" => "OTP not verified for this phone"];
+        }
+
+        // Call model method to update the password
+        $result =$this->userModel->resetPasswordByPhone($phone, $newPassword);
+
+        if ($result) {
+            return ["status" => "success", "message" => "Password reset successful"];
+        } else {
+            http_response_code(500);
+            return ["status" => "error", "message" => "Failed to reset password"];
+        }
+    }
+
 
 }

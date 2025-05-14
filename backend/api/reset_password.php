@@ -1,39 +1,25 @@
 <?php
 require_once '../../vendor/autoload.php';
-require_once '../config/cors.php';      // Your custom CORS config
+require_once '../config/cors.php';
 
-use Model\Otp;
+use Controller\UserController;
 
 header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true);
 
-if (!isset($data['phone'], $data['new_password'], $data['otp'])) {
+// Validate input
+if (!isset($data['phone'], $data['new_password'])) {
     http_response_code(401);
-    echo json_encode(["status" => "error", "message" => "Missing required fields"]);
+    echo json_encode(["status" => "error", "message" => "Phone and New Password are required"]);
     exit;
 }
 
-$phone = $data['phone'];
-$newPassword = password_hash($data['new_password'], PASSWORD_BCRYPT);
-$otp = $data['otp'];
+// Format phone: remove leading 0, prepend 234
+$phone = '234' . ltrim($data['phone'], '0');
+$newPassword = $data['new_password'];
 
-$otpModel = new Otp();
-$otpData = $otpModel->verifyOtp($phone, $otp, 'password_reset', true);
+// Call controller
+$controller = new UserController();
+$response = $controller->resetPassword($phone, $newPassword);
 
-if (!$otpData) {
-    http_response_code(401);
-    echo json_encode(["status" => "error", "message" => "OTP not verified or expired"]);
-    exit;
-}
-
-$conn = (new \Config\Database())->getConnection();
-$stmt = $conn->prepare("UPDATE users SET password = :password WHERE phone = :phone");
-$stmt->bindParam(":password", $newPassword);
-$stmt->bindParam(":phone", $phone);
-
-if ($stmt->execute()) {
-    echo json_encode(["status" => "success", "message" => "Password reset successful"]);
-} else {
-    http_response_code(401);
-    echo json_encode(["status" => "error", "message" => "Failed to reset password"]);
-}
+echo json_encode($response);
