@@ -90,7 +90,7 @@ public function OtpVerified($phone, $purpose)
 {
     $stmt = $this->conn->prepare("
         SELECT id FROM otp_requests 
-        WHERE phone = :phone AND purpose = :purpose AND verified = 1 
+        WHERE phone = :phone AND purpose = :purpose AND is_verified = 1 
         ORDER BY created_at DESC 
         LIMIT 1
     ");
