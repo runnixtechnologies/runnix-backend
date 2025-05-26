@@ -1,0 +1,128 @@
+<?php
+
+
+namespace Model;
+
+use Config\Database;
+use PDO;
+use PDOException;
+
+class Item
+{
+    private $conn;
+    private $table = "items";
+
+    public function __construct()
+    {
+        $this->conn = (new Database())->getConnection();
+    }
+
+    
+    public function bulkCreateItems($storeId, $categoryId, $items)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            $sql = "INSERT INTO {$this->table} (store_id, category_id, name, price, photo, status, created_at, updated_at)
+                    VALUES (:store_id, :category_id, :name, :price, :photo, 'active', NOW(), NOW())";
+
+            $stmt = $this->conn->prepare($sql);
+
+            foreach ($items as $item) {
+                $stmt->execute([
+                    ':store_id' => $storeId,
+                    ':category_id' => $categoryId,
+                    ':name' => $item['name'],
+                    ':price' => $item['price'],
+                    ':photo' => $item['photo'] ?? null
+                ]);
+            }
+
+            $this->conn->commit();
+            http_response_code(201);
+            return ["status" => "success", "message" => "Items added successfully."];
+
+        } catch (PDOException $e) {
+            $this->conn->rollBack();
+            http_response_code(500);
+            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        }
+    }
+
+    public function createSingleItem($storeId, $categoryId, $name, $price, $photo = null)
+    {
+        try {
+            $sql = "INSERT INTO {$this->table} (store_id, category_id, name, price, photo, status, created_at, updated_at)
+                    VALUES (:store_id, :category_id, :name, :price, :photo, 'active', NOW(), NOW())";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':store_id' => $storeId,
+                ':category_id' => $categoryId,
+                ':name' => $name,
+                ':price' => $price,
+                ':photo' => $photo
+            ]);
+
+            http_response_code(201);
+            return ["status" => "success", "message" => "Item created successfully."];
+
+        } catch (PDOException $e) {
+            http_response_code(500);
+            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        }
+    }
+
+    public function updateItem($itemId, $data)
+    {
+        try {
+            $sql = "UPDATE {$this->table} SET name = :name, price = :price, photo = :photo, updated_at = NOW() WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':id' => $itemId,
+                ':name' => $data['name'],
+                ':price' => $data['price'],
+                ':photo' => $data['photo'] ?? null
+            ]);
+
+            http_response_code(200);
+            return ["status" => "success", "message" => "Item updated successfully."];
+        } catch (PDOException $e) {
+            http_response_code(500);
+            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        }
+    }
+
+    public function deleteItem($itemId)
+    {
+        try {
+            $sql = "DELETE FROM {$this->table} WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([':id' => $itemId]);
+
+            http_response_code(200);
+            return ["status" => "success", "message" => "Item deleted successfully."];
+        } catch (PDOException $e) {
+            http_response_code(500);
+            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        }
+    }
+
+    public function setItemStatus($itemId, $status)
+    {
+        try {
+            $sql = "UPDATE {$this->table} SET status = :status, updated_at = NOW() WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':id' => $itemId,
+                ':status' => $status
+            ]);
+
+            http_response_code(200);
+            return ["status" => "success", "message" => "Item status updated to {$status}."];
+        } catch (PDOException $e) {
+            http_response_code(500);
+            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        }
+    }
+}
