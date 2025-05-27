@@ -51,12 +51,16 @@ class UserController
 
     unset($user['password']);
 
-    // Check store info for merchant
-    if ($user['role'] === 'merchant') {
-    $storeInfo = $this->userModel->getMerchantStore($user['id']);
-    if ($storeInfo) {
-        $user['store_type'] = $storeInfo['store_type'];
-        $user['store_setup'] = true;
+   // Check store info for merchant
+if ($user['role'] === 'merchant') {
+    $storeDetails = $this->userModel->getMerchantStore($user['id']);
+    $store = $this->storeModel->getStoreByUserId($user['id']);
+
+    if ($storeDetails && $store) {
+        $user['store_id']     = $store['id']; // id from store table
+        $user['store_name']   = $storeDetails['store_name']; // name from userModel method
+        $user['store_type']   = $storeDetails['store_type']; // type from userModel method
+        $user['store_setup']  = true;
     } else {
         $user['store_setup'] = false;
     }

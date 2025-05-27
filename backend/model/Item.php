@@ -74,55 +74,96 @@ class Item
     }
 
     public function updateItem($itemId, $data)
-    {
-        try {
-            $sql = "UPDATE {$this->table} SET name = :name, price = :price, photo = :photo, updated_at = NOW() WHERE id = :id";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
-                ':id' => $itemId,
-                ':name' => $data['name'],
-                ':price' => $data['price'],
-                ':photo' => $data['photo'] ?? null
-            ]);
-
-            http_response_code(200);
-            return ["status" => "success", "message" => "Item updated successfully."];
-        } catch (PDOException $e) {
-            http_response_code(500);
-            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
-        }
+{
+    // Validate input minimally here for safety
+    if (!isset($data['name']) || !is_string($data['name']) || trim($data['name']) === '') {
+        return ["status" => "error", "message" => "Invalid item name."];
+    }
+    if (!isset($data['price']) || !is_numeric($data['price']) || $data['price'] < 0) {
+        return ["status" => "error", "message" => "Invalid price."];
     }
 
-    public function deleteItem($itemId)
-    {
-        try {
-            $sql = "DELETE FROM {$this->table} WHERE id = :id";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([':id' => $itemId]);
+    try {
+        // Optional photo can be NULL or empty string to clear photo
+        $photo = isset($data['photo']) ? $data['photo'] : null;
 
-            http_response_code(200);
-            return ["status" => "success", "message" => "Item deleted successfully."];
-        } catch (PDOException $e) {
-            http_response_code(500);
-            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        $sql = "UPDATE {$this->table} SET name = :name, price = :price, photo = :photo, updated_at = NOW() WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':id' => $itemId,
+            ':name' => $data['name'],
+            ':price' => $data['price'],
+            ':photo' => $photo
+        ]);
+
+        if ($stmt->rowCount() === 0) {
+            http_response_code(404);
+            return ["status" => "error", "message" => "Item not found or no changes made."];
         }
+
+        http_response_code(200);
+        return ["status" => "success", "message" => "Item updated successfully."];
+    } catch (PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+    }
+}
+
+public function deleteItem($itemId)
+{
+    try {
+        // Soft delete recommended - you can adapt this if you have a 'deleted' column
+        $sql = "DELETE FROM {$this->table} WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([':id' => $itemId]);
+
+        if ($stmt->rowCount() === 0) {
+            http_response_code(404);
+            return ["status" => "error", "message" => "Item not found."];
+        }
+
+        http_response_code(200);
+        return ["status" => "success", "message" => "Item deleted successfully."];
+    } catch (PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+    }
+}
+
+public function setItemStatus($itemId, $status)
+{
+    $validStatuses = ['active', 'inactive'];
+    if (!in_array($status, $validStatuses)) {
+        return ["status" => "error", "message" => "Invalid status value."];
     }
 
-    public function setItemStatus($itemId, $status)
-    {
-        try {
-            $sql = "UPDATE {$this->table} SET status = :status, updated_at = NOW() WHERE id = :id";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
-                ':id' => $itemId,
-                ':status' => $status
-            ]);
+    try {
+        $sql = "UPDATE {$this->table} SET status = :status, updated_at = NOW() WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':id' => $itemId,
+            ':status' => $status
+        ]);
 
-            http_response_code(200);
-            return ["status" => "success", "message" => "Item status updated to {$status}."];
-        } catch (PDOException $e) {
-            http_response_code(500);
-            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        if ($stmt->rowCount() === 0) {
+            http_response_code(404);
+            return ["status" => "error", "message" => "Item not found or status already set."];
         }
+
+        http_response_code(200);
+        return ["status" => "success", "message" => "Item status updated to {$status}."];
+    } catch (PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
     }
+}
+
+public function isItemOwnedByUser($itemId, $userId)
+{
+    $sql = "SELECT id FROM {$this->table} WHERE id = :itemId AND user_id = :userId AND deleted = '0'";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([':itemId' => $itemId, ':userId' => $userId]);
+    return $stmt->fetch() !== false;
+}
+
 }
