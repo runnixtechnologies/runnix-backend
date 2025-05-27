@@ -24,5 +24,28 @@ class StoreController
         return ["status" => "error", "message" => "Store not found"];
     }
 
-    // Add other methods like updateStore, deleteStore as needed
+    
+    public function verifyStoreAddress($data)
+{
+    if (empty($data['store_id']) || empty($data['latitude']) || empty($data['longitude'])) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Missing required fields"];
+    }
+
+    $storeId = $data['store_id'];
+    $latitude = $data['latitude'];
+    $longitude = $data['longitude'];
+   
+
+    $saved = $this->store->saveVerificationAddress($storeId, $latitude, $longitude);
+
+    if ($saved) {
+        http_response_code(200);
+        return ["status" => "success", "message" => "Address verification submitted"];
+    } else {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to save verification data"];
+    }
+}
+
 }
