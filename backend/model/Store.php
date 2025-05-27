@@ -79,7 +79,7 @@ public function deleteStoreByUserId($userId)
 public function saveVerificationAddress($storeId, $latitude, $longitude)
 {
     // Check for existing pending verification
-    $checkSql = "SELECT * FROM stores_verification_addresses WHERE store_id = :store_id AND verification_status = 'pending'";
+    $checkSql = "SELECT * FROM store_verification_addresses WHERE store_id = :store_id AND verification_status = 'pending'";
     $stmt = $this->conn->prepare($checkSql);
     $stmt->execute([':store_id' => $storeId]);
 
@@ -88,7 +88,7 @@ public function saveVerificationAddress($storeId, $latitude, $longitude)
     }
 
     // Insert new verification request
-    $sql = "INSERT INTO stores_verification_addresses 
+    $sql = "INSERT INTO store_verification_addresses 
         (store_id, latitude, longitude, verified_by_user, verification_status, created_at, updated_at)
         VALUES (:store_id, :latitude, :longitude, 1, 'pending', NOW(), NOW())";
 
@@ -106,7 +106,7 @@ public function verifyAddressByAdmin($verificationId, $action)
 {
     $status = $action === 'approve' ? 'verified' : 'rejected';
 
-    $sql = "UPDATE stores_verification_addresses 
+    $sql = "UPDATE store_verification_addresses 
             SET verification_status = :status, 
                 verified_by_admin = 1, 
                 verification_date = NOW(), 
@@ -120,5 +120,6 @@ public function verifyAddressByAdmin($verificationId, $action)
         ':id' => $verificationId
     ]);
 }
+
 
 }
