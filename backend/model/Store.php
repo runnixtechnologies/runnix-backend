@@ -121,5 +121,13 @@ public function verifyAddressByAdmin($verificationId, $action)
     ]);
 }
 
+public function getStoreById($storeId)
+{
+    $sql = "SELECT * FROM stores WHERE id = :id";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([':id' => $storeId]);
+
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
 }

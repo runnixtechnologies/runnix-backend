@@ -25,7 +25,7 @@ class StoreController
     }
 
     
-    public function verifyStoreAddress($data)
+  public function verifyStoreAddress($data)
 {
     if (empty($data['store_id']) || empty($data['latitude']) || empty($data['longitude'])) {
         http_response_code(400);
@@ -35,16 +35,23 @@ class StoreController
     $storeId = $data['store_id'];
     $latitude = $data['latitude'];
     $longitude = $data['longitude'];
-   
 
+    // Check if store exists
+    $store = $this->store->getStoreById($storeId);
+    if (!$store) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "Store does not exist"];
+    }
+
+    // Save verification address
     $saved = $this->store->saveVerificationAddress($storeId, $latitude, $longitude);
 
     if ($saved) {
         http_response_code(200);
         return ["status" => "success", "message" => "Address verification submitted"];
     } else {
-        http_response_code(500);
-        return ["status" => "error", "message" => "Failed to save verification data"];
+        http_response_code(409);
+        return ["status" => "error", "message" => "A pending verification already exists"];
     }
 }
 
