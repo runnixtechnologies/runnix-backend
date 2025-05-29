@@ -48,7 +48,7 @@ class Store
    
 public function getStoreTypes()
 {
-    $stmt = $this->conn->prepare("SELECT id, name, image_url FROM store_types WHERE status = 1");
+    $stmt = $this->conn->prepare("SELECT id, name, image_url FROM store_types WHERE status = '1'");
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
