@@ -55,4 +55,20 @@ class StoreController
     }
 }
 
+
+// StoreTypeController.php
+public function getActiveStoreTypes()
+{
+   
+    $types = $this->store->getStoreTypes(); // status = 1
+
+    if (empty($types)) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "No active store types found"];
+    }
+
+    return ["status" => "success", "data" => $types];
+}
+
+
 }

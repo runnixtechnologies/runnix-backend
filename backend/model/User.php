@@ -136,7 +136,7 @@ public function getUserByEmail($email)
         }
         return false;
     }
-    public function getMerchantStore($userId)
+    /*public function getMerchantStore($userId)
     {
     $stmt = $this->conn->prepare("SELECT store_type FROM stores WHERE user_id = :user_id LIMIT 1");
     $stmt->bindParam(":user_id", $userId);
@@ -144,6 +144,26 @@ public function getUserByEmail($email)
 
     return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+*/
+    public function getMerchantStore($userId)
+{
+    $sql = "SELECT 
+                s.id AS store_id,
+                s.store_name,
+                s.store_type_id,
+                st.name AS store_type_name,
+                st.image_url AS store_type_image
+            FROM stores s
+            JOIN store_types st ON s.store_type_id = st.id
+            WHERE s.user_id = :user_id
+            LIMIT 1";
+
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(':user_id', $userId);
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
 
     public function resetPasswordByPhone($phone, $plainPassword)
     {

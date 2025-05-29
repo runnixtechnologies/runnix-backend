@@ -14,12 +14,12 @@ class Store
         $this->conn = (new Database())->getConnection();
     }
 
-    public function createStore($userId, $storeName, $bizAddress, $bizEmail, $bizPhone, $bizRegNumber, $storeType, $bizLogo = null)
+    public function createStore($userId, $storeName, $bizAddress, $bizEmail, $bizPhone, $bizRegNumber, $storeTypeId, $bizLogo = null)
 
     {
         try {
-            $sql = "INSERT INTO stores (user_id, store_name, biz_address, biz_email, biz_phone, biz_reg_number, biz_logo, store_type)
-                    VALUES (:user_id, :store_name, :biz_address, :biz_email, :biz_phone, :biz_reg_number, :biz_logo, :store_type)";
+            $sql = "INSERT INTO stores (user_id, store_name, biz_address, biz_email, biz_phone, biz_reg_number, biz_logo, store_type_id)
+                    VALUES (:user_id, :store_name, :biz_address, :biz_email, :biz_phone, :biz_reg_number, :biz_logo, :store_type_id)";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
@@ -30,7 +30,7 @@ class Store
                 ':biz_phone' => $bizPhone,
                 ':biz_reg_number' => $bizRegNumber,
                 ':biz_logo' => $bizLogo,
-                ':store_type' => $storeType
+                ':store_type_id' => $storeTypeId
             ]);
     
             return true;
@@ -45,6 +45,13 @@ class Store
     }
     
     
+   
+public function getStoreTypes()
+{
+    $stmt = $this->conn->prepare("SELECT id, name, image_url FROM store_types WHERE status = 1");
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
     public function getStoreByUserId($user_id)
     {

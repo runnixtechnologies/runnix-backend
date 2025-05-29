@@ -57,14 +57,17 @@ if ($user['role'] === 'merchant') {
     $store = $this->storeModel->getStoreByUserId($user['id']);
 
     if ($storeDetails && $store) {
-        $user['store_id']     = $store['id']; // id from store table
-        $user['store_name']   = $storeDetails['store_name']; // name from userModel method
-        $user['store_type']   = $storeDetails['store_type']; // type from userModel method
-        $user['store_setup']  = true;
+        $user['store_id']         = $storeDetails['store_id'];
+        $user['store_name']       = $storeDetails['store_name'];
+        $user['store_type_id']    = $storeDetails['store_type_id'];
+        $user['store_type_name']  = $storeDetails['store_type_name'];
+        $user['store_type_image'] = $storeDetails['store_type_image'];
+        $user['store_setup']      = true;
     } else {
         $user['store_setup'] = false;
     }
 }
+
 
 
     $jwt = new JwtHandler();
@@ -179,7 +182,7 @@ public function setupMerchant($data)
     }
 
     // Validate store fields
-    $requiredFields = ['store_name', 'biz_address', 'biz_email', 'biz_phone', 'biz_reg_number', 'store_type'];
+    $requiredFields = ['store_name', 'biz_address', 'biz_email', 'biz_phone', 'biz_reg_number', 'store_type_id'];
     foreach ($requiredFields as $field) {
         if (empty($data[$field])) {
             http_response_code(400);
@@ -242,7 +245,7 @@ if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK
         $data['biz_email'],
         $data['biz_phone'],
         $data['biz_reg_number'],
-        $data['store_type'],
+        $data['store_type_id'],
         $filename
     );
 

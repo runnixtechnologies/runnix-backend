@@ -1,15 +1,15 @@
 <?php
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
 require_once '../config/cors.php';
 
-use Controller\ItemController;
+use Controller\StoreController;
 
 header('Content-Type: application/json');
 
-$data = json_decode(file_get_contents("php://input"), true);
-$controller = new ItemController();
-$response = $controller->activateItem($data);
+$store= new StoreController();
+$response = $store->getActiveStoreTypes();
 echo json_encode($response);
