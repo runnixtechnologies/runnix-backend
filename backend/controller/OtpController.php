@@ -8,25 +8,46 @@ class OtpController
     private $termiiApiKey = "TLKCVBYRZyFFYYInnjIdPWOgfForjjZbEYgjIigNANxWYDaUJMyEFtuQpNPsNE"; // Replace with your Termii API Key
     private $smsSenderName = "Runnix"; // Registered Termii sender ID
 
-    public function sendOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
-    {
-        $otp = rand(100000, 999999);
-        $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
-    
-        $otpModel = new Otp();
-        $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
-    
-        $message = "Your Runnix Authentication PIN is $otp. It expires in 10 minutes.";
-    
-        $response = $this->sendViaTermii($phone, $message);
-    
-        if (!isset($response['code']) || $response['code'] != 'ok') {
-            http_response_code(500);
-            return ["status" => "error", "message" => "Failed to send OTP. Please try again later."];
-        }
-    
-        return ["status" => "success", "message" => "OTP sent to $phone"];
+   public function sendOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
+{
+    $otp = rand(100000, 999999);
+    $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+    $otpModel = new Otp();
+    $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
+
+    $message = "Your Runnix Authentication PIN is $otp. It expires in 10 minutes.";
+
+    // Send SMS via Termii
+    $smsResponse = $this->sendViaTermii($phone, $message);
+
+    // Initialize status tracking
+    $status = [
+        "sms" => (isset($smsResponse['code']) && $smsResponse['code'] === 'ok'),
+        "email" => false
+    ];
+
+    // Send email if provided
+    if (!empty($email)) {
+        $emailSent = $this->sendOtpEmail($email, $otp);
+        $status['email'] = $emailSent;
     }
+
+    if (!$status['sms'] && !$status['email']) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to send OTP. Please try again later."];
+    }
+
+    $channels = [];
+    if ($status['sms']) $channels[] = "phone";
+    if ($status['email']) $channels[] = "email";
+
+    return [
+        "status" => "success",
+        "message" => "OTP sent to " . implode(" and ", $channels)
+    ];
+}
+
     
 
     private function sendViaTermii($phone, $message)
@@ -70,6 +91,33 @@ class OtpController
     curl_close($ch);
     return json_decode($response, true);
 }
+
+private function sendOtpEmail($email, $otp)
+{
+    $subject = "Your Runnix OTP Code";
+    $message = "
+        <html>
+        <head>
+            <title>Your Runnix OTP Code</title>
+        </head>
+        <body>
+            <p>Your Runnix Authentication PIN is <strong>$otp</strong>. It expires in 10 minutes.</p>
+        </body>
+        </html>
+    ";
+
+    // To send HTML email, the Content-type header must be set
+    $headers = "MIME-Version: 1.0" . "\r\n";
+    $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+
+    // Additional headers
+    $headers .= 'From: Runnix <no-reply@runnix.africa>' . "\r\n";
+    $headers .= 'Reply-To: no-reply@runnix.africa' . "\r\n";
+
+    // Send the email
+    return mail($email, $subject, $message, $headers);
+}
+
 
     public function verifyOtp($phone, $otp, $purpose = 'signup')
     {
