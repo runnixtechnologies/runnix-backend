@@ -12,17 +12,23 @@ class OtpController
     public function sendOtp($phone = null, $purpose = 'signup', $email = null, $user_id = null)
 {
     if ($phone) {
-        // Call SMS OTP method
-        return $this->sendPhoneOtp($phone, $purpose);
+        return $this->sendPhoneOtp($phone, $purpose, $email, $user_id);
     }
 
     if ($email) {
-        // Call Email OTP method
-        return $this->sendOtpEmail($email, $purpose);
+        // Generate OTP here since you directly send email OTP
+        $otp = rand(100000, 999999);
+        $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+        
+        $otpModel = new Otp();
+        $otpModel->createOtp($user_id, null, $email, $otp, $purpose, $expires_at);
+        
+        return $this->sendOtpEmail($email, $otp);
     }
 
     return ['status' => 'error', 'message' => 'No valid identifier provided'];
 }
+
 
 
    public function sendPhoneOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
