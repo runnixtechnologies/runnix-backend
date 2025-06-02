@@ -19,34 +19,30 @@ class User
         return substr(md5($email . time()), 0, 8);
     }
     
-    public function createUser($email, $phone, $password, $role, $referrer_id = null, $google_id = null)
-    {
-        $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-        $referral_code = $this->generateReferralCode($email);
+    public function createUser($email, $phone, $password, $role, $referrer_id = null)
+{
+    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+    $referral_code = $this->generateReferralCode($email ?? $phone);
 
+    $sql = "INSERT INTO {$this->table} 
+        (email, phone, password, role, referred_by, referral_code, is_verified, status, created_at)
+        VALUES (:email, :phone, :password, :role, :referred_by, :referral_code, 1, 1, NOW())";
 
-        $sql = "INSERT INTO {$this->table} 
-    (email, phone, password, role, referred_by, referral_code, google_id, is_verified, status, created_at)
-    VALUES (:email, :phone, :password, :role, :referred_by, :referral_code, :google_id, 1, 1, NOW())";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(':email', $email);
+    $stmt->bindParam(':phone', $phone);
+    $stmt->bindParam(':password', $hashedPassword);
+    $stmt->bindParam(':role', $role);
+    $stmt->bindParam(':referral_code', $referral_code);
+    $stmt->bindValue(':referred_by', $referrer_id, is_null($referrer_id) ? PDO::PARAM_NULL : PDO::PARAM_INT);
 
-
-    
-    
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':phone', $phone);
-        $stmt->bindParam(':password', $hashedPassword);
-        $stmt->bindParam(':role', $role);
-        $stmt->bindParam(':referral_code', $referral_code);
-        $stmt->bindValue(':referred_by', $referrer_id, is_null($referrer_id) ? PDO::PARAM_NULL : PDO::PARAM_INT);
-        $stmt->bindParam(':google_id', $google_id);
-    
-        if ($stmt->execute()) {
-            return $this->conn->lastInsertId();
-        }
-    
-        return false;
+    if ($stmt->execute()) {
+        return $this->conn->lastInsertId();
     }
+
+    return false;
+}
+
     
     public function getUserByGoogleId($googleId)
     {
@@ -123,19 +119,28 @@ public function getUserByEmail($email)
     }
     
 
-    public function login($phone, $password) {
-        $query = "SELECT * FROM {$this->table} WHERE phone = :phone";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":phone", $phone);
-        $stmt->execute();
-
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($user && password_verify($password, $user['password'])) {
-            return $user;
-        }
-        return false;
+   public function login($identifier, $password)
+{
+    // Determine if the identifier is an email or phone
+    if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+        $query = "SELECT * FROM {$this->table} WHERE email = :identifier";
+    } else {
+        $query = "SELECT * FROM {$this->table} WHERE phone = :identifier";
     }
+
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':identifier', $identifier);
+    $stmt->execute();
+
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($user && password_verify($password, $user['password'])) {
+        return $user;
+    }
+
+    return false;
+}
+
     /*public function getMerchantStore($userId)
     {
     $stmt = $this->conn->prepare("SELECT store_type FROM stores WHERE user_id = :user_id LIMIT 1");

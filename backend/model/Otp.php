@@ -31,45 +31,48 @@ class Otp
         return $stmt->execute();
     }
 
-   // Add inside Otp.php model
-   public function verifyOtp($phone, $otp = null, $purpose = 'signup', $onlyVerified = false)
-   {
-       $sql = "SELECT * FROM {$this->table}
-               WHERE phone = :phone 
-               AND purpose = :purpose";
-   
-       if ($otp) {
-           $sql .= " AND otp_code = :otp";
-       }
-   
-       if ($onlyVerified) {
-           $sql .= " AND is_verified = 1";
-       } else {
-           $sql .= " AND is_verified = 0 AND expires_at >= NOW()";
-       }
-   
-       $sql .= " ORDER BY id DESC LIMIT 1";
-   
-       $stmt = $this->conn->prepare($sql);
-       $stmt->bindParam(":phone", $phone);
-       if ($otp) $stmt->bindParam(":otp", $otp);
-       $stmt->bindParam(":purpose", $purpose);
-       $stmt->execute();
-   
-       $record = $stmt->fetch(PDO::FETCH_ASSOC);
-   
-       
-       if ($record) {
-           $updateSql = "UPDATE {$this->table}
-                         SET is_verified = 1, verified_at = NOW()
-                         WHERE id = :id";
-           $updateStmt = $this->conn->prepare($updateSql);
-           $updateStmt->bindParam(":id", $record['id']);
-           $updateStmt->execute();
-       }
-   
-       return $record;
-   }
+
+   public function verifyOtp($identifier, $otp = null, $purpose = 'signup', $onlyVerified = false)
+{
+    $sql = "SELECT * FROM {$this->table} WHERE purpose = :purpose";
+
+    // Check if identifier is an email or phone
+    if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+        $sql .= " AND email = :identifier";
+    } else {
+        $sql .= " AND phone = :identifier";
+    }
+
+    if ($otp) {
+        $sql .= " AND otp_code = :otp";
+    }
+
+    if ($onlyVerified) {
+        $sql .= " AND is_verified = 1";
+    } else {
+        $sql .= " AND is_verified = 0 AND expires_at >= NOW()";
+    }
+
+    $sql .= " ORDER BY id DESC LIMIT 1";
+
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(":purpose", $purpose);
+    $stmt->bindParam(":identifier", $identifier);
+    if ($otp) $stmt->bindParam(":otp", $otp);
+    $stmt->execute();
+
+    $record = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($record && !$onlyVerified) {
+        $updateSql = "UPDATE {$this->table} SET is_verified = 1, verified_at = NOW() WHERE id = :id";
+        $updateStmt = $this->conn->prepare($updateSql);
+        $updateStmt->bindParam(":id", $record['id']);
+        $updateStmt->execute();
+    }
+
+    return $record;
+}
+
    
     public function markOtpAsVerified($id)
     {
@@ -79,14 +82,14 @@ class Otp
         return $stmt->execute();
     }
 
-    public function isOtpVerified($phone, $purpose = 'signup')
+   public function isOtpVerified($identifier, $purpose = 'signup')
 {
-    $record = $this->verifyOtp($phone, null, $purpose, true);
+    $record = $this->verifyOtp($identifier, null, $purpose, true);
     return $record ? true : false;
 }
 
 
-public function OtpVerified($phone, $purpose)
+/*public function OtpVerified($phone, $purpose)
 {
     $stmt = $this->conn->prepare("
         SELECT id FROM otp_requests 
@@ -99,6 +102,6 @@ public function OtpVerified($phone, $purpose)
     $stmt->execute();
 
     return $stmt->fetch(PDO::FETCH_ASSOC) ? true : false;
-}
+}*/
 
 }

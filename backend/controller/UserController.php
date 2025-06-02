@@ -21,28 +21,34 @@ class UserController
     }
     
     
-   public function login($data)
+  public function login($data)
 {
-    $rawPhone = preg_replace('/\D/', '', $data['phone']);
-    $password = $data['password'];
+    $identifier = trim($data['identifier'] ?? '');
+    $password = $data['password'] ?? '';
 
-    if (strlen($rawPhone) === 11 && preg_match('/^0[7-9][01]\d{8}$/', $rawPhone)) {
-        $phone = '234' . substr($rawPhone, 1);
-    } elseif (strlen($rawPhone) === 10 && preg_match('/^[7-9][01]\d{8}$/', $rawPhone)) {
-        $phone = '234' . $rawPhone;
-    } elseif (strlen($rawPhone) === 13 && preg_match('/^234[7-9][01]\d{8}$/', $rawPhone)) {
-        $phone = $rawPhone;
-    } else {
+    if (empty($identifier) || empty($password)) {
         http_response_code(400);
-        return ["status" => "error", "message" => "Invalid phone number format"];
+        return ["status" => "error", "message" => "Email/Phone and password are required"];
     }
 
-    if (empty($password)) {
-        http_response_code(400);
-        return ["status" => "error", "message" => "Password is required"];
+    // Normalize phone number if it's a phone
+    $isPhone = preg_match('/^\+?234\d{10}$/', $identifier) || preg_match('/^0[7-9][01]\d{8}$/', $identifier);
+    if ($isPhone) {
+        $rawPhone = preg_replace('/\D/', '', $identifier);
+
+        if (strlen($rawPhone) === 11 && preg_match('/^0[7-9][01]\d{8}$/', $rawPhone)) {
+            $identifier = '234' . substr($rawPhone, 1);
+        } elseif (strlen($rawPhone) === 10 && preg_match('/^[7-9][01]\d{8}$/', $rawPhone)) {
+            $identifier = '234' . $rawPhone;
+        } elseif (strlen($rawPhone) === 13 && preg_match('/^234[7-9][01]\d{8}$/', $rawPhone)) {
+            $identifier = $rawPhone;
+        } else {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Invalid phone number format"];
+        }
     }
 
-    $user = $this->userModel->login($phone, $password);
+    $user = $this->userModel->login($identifier, $password);
 
     if (!$user) {
         http_response_code(401);
@@ -51,24 +57,22 @@ class UserController
 
     unset($user['password']);
 
-   // Check store info for merchant
-if ($user['role'] === 'merchant') {
-    $storeDetails = $this->userModel->getMerchantStore($user['id']);
-    $store = $this->storeModel->getStoreByUserId($user['id']);
+    // If user is merchant, attach store details
+    if ($user['role'] === 'merchant') {
+        $storeDetails = $this->userModel->getMerchantStore($user['id']);
+        $store = $this->storeModel->getStoreByUserId($user['id']);
 
-    if ($storeDetails && $store) {
-        $user['store_id']         = $storeDetails['store_id'];
-        $user['store_name']       = $storeDetails['store_name'];
-        $user['store_type_id']    = $storeDetails['store_type_id'];
-        $user['store_type_name']  = $storeDetails['store_type_name'];
-        $user['store_type_image'] = $storeDetails['store_type_image'];
-        $user['store_setup']      = true;
-    } else {
-        $user['store_setup'] = false;
+        if ($storeDetails && $store) {
+            $user['store_id']         = $storeDetails['store_id'];
+            $user['store_name']       = $storeDetails['store_name'];
+            $user['store_type_id']    = $storeDetails['store_type_id'];
+            $user['store_type_name']  = $storeDetails['store_type_name'];
+            $user['store_type_image'] = $storeDetails['store_type_image'];
+            $user['store_setup']      = true;
+        } else {
+            $user['store_setup'] = false;
+        }
     }
-}
-
-
 
     $jwt = new JwtHandler();
     $payload = ["user_id" => $user['id'], "role" => $user['role']];
@@ -86,38 +90,42 @@ if ($user['role'] === 'merchant') {
 
 public function setupUserRider($data)
 {
-    // Sanitize inputs
-    $email = strtolower(trim($data['email']));
-    $phone = '234' . ltrim($data['phone'], '0');
+    $email = isset($data['email']) ? strtolower(trim($data['email'])) : null;
+    $phone = isset($data['phone']) ? '234' . ltrim($data['phone'], '0') : null;
     $password = $data['password'];
     $role = $data['role'];
     $first_name = $data['first_name'];
     $last_name = $data['last_name'];
 
-    // Validate signup method
-    $signupMethod = strtolower($data['signup_method'] ?? 'phone');
-    if (!in_array($signupMethod, ['phone', 'google'])) {
+    // Check that either phone or email is provided
+    if (!$phone && !$email) {
         http_response_code(400);
-        return ["status" => "error", "message" => "Invalid signup method", "status_code" => 400];
+        return ["status" => "error", "message" => "Either phone or email must be provided"];
     }
 
-    $google_id = $data['google_id'] ?? null;
+    // Validate method
+    $signupMethod = $phone ? 'phone' : 'email';
 
-    // Check if user already exists by phone or email
-    if ($this->userModel->getUserByPhone($phone)) {
-        http_response_code(409);  // Conflict
+    // Check for existing user
+    if ($phone && $this->userModel->getUserByPhone($phone)) {
+        http_response_code(409);
         return ["status" => "error", "message" => "User with this phone already exists"];
     }
 
-    if ($this->userModel->getUserByEmail($email)) {
-        http_response_code(409);  // Conflict
+    if ($email && $this->userModel->getUserByEmail($email)) {
+        http_response_code(409);
         return ["status" => "error", "message" => "User with this email already exists"];
     }
 
-    // OTP check if signup method is phone
+    // OTP verification
     if ($signupMethod === 'phone' && !$this->otpModel->isOtpVerified($phone, 'signup')) {
-        http_response_code(400);  // Bad Request
-        return ["status" => "error", "message" => "OTP not verified. Please verify OTP before signing up."];
+        http_response_code(400);
+        return ["status" => "error", "message" => "Phone OTP not verified. Please verify OTP."];
+    }
+
+    if ($signupMethod === 'email' && !$this->otpModel->isOtpVerified($email, 'signup')) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Email OTP not verified. Please verify OTP."];
     }
 
     // Referral logic
@@ -125,39 +133,32 @@ public function setupUserRider($data)
     if (!empty($data['referral_code'])) {
         $referrer = $this->userModel->getUserByReferralCode($data['referral_code']);
         if (!$referrer) {
-            http_response_code(400);  // Bad Request
+            http_response_code(400);
             return ["status" => "error", "message" => "Invalid referral code"];
         }
         $referrer_id = $referrer['id'];
     }
 
-    // Create the user
-    $userId = $this->userModel->createUser($email, $phone, $password, $role, $referrer_id, $google_id);
+    // Create user
+    $userId = $this->userModel->createUser($email, $phone, $password, $role, $referrer_id);
     if ($userId) {
-        // Create the user profile
         $profileCreated = $this->userModel->createUserProfile($userId, $first_name, $last_name);
         if ($profileCreated) {
             return [
                 'status' => 'success',
                 'message' => 'User setup completed successfully',
-                //'status_code' => 201,  // Created
                 'user_id' => $userId
             ];
         } else {
-            http_response_code(500);  // Internal Server Error
-            return [
-                'status' => 'error',
-                'message' => 'Failed to create user profile'
-            ];
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to create user profile'];
         }
     } else {
-        http_response_code(500);  // Internal Server Error
-        return [
-            'status' => 'error',
-            'message' => 'Failed to create user'
-        ];
+        http_response_code(500);
+        return ['status' => 'error', 'message' => 'Failed to create user'];
     }
 }
+
 public function setupMerchant($data)
 {
     // Validate that user_id is present

@@ -12,21 +12,20 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true);
 
 // Define required fields
-$requiredFields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'phone', 'role'];
-foreach ($requiredFields as $field) {
-    if (empty($data[$field]) || !isset($data[$field])) {
-        http_response_code(400);  // Bad Request
-        echo json_encode(["status" => "error", "message" => "$field is required"]);
-        exit;
-    }
+$requiredFields = ['first_name', 'last_name', 'password', 'confirm_password', 'role'];
+if (empty($data['email']) && empty($data['phone'])) {
+    http_response_code(400);
+    echo json_encode(["status" => "error", "message" => "Phone or email is required"]);
+    exit;
 }
 
 // Validate email format
-if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
     echo json_encode(["status" => "error", "message" => "Invalid email format"]);
     exit;
 }
+
 
 // Check if passwords match
 if ($data['password'] !== $data['confirm_password']) {
