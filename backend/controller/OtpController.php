@@ -138,7 +138,11 @@ private function sendOtpEmail($email, $otp)
     $headers .= 'Reply-To: no-reply@runnix.africa' . "\r\n";
 
     // Send the email
-    return mail($email, $subject, $message, $headers);
+     mail($email, $subject, $message, $headers);
+   return [
+        "status" => "success",
+        "message" => "OTP sent to " . $email
+    ];
 }
 
 
