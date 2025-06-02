@@ -124,7 +124,7 @@ private function sendOtpEmail($email, $otp)
             <title>Your Runnix OTP Code</title>
         </head>
         <body>
-            <p>Your Runnix Authentication PIN is <strong>$otp</strong>. It expires in 10 minutes.</p>
+            <p>Your Runnix Authentication Code is <strong>$otp</strong>. It expires in 10 minutes.</p>
         </body>
         </html>
     ";
