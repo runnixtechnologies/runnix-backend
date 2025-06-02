@@ -32,11 +32,10 @@ class Otp
     }
 
 
-   public function verifyOtp($identifier, $otp = null, $purpose = 'signup', $onlyVerified = false)
+  public function verifyOtp($identifier, $otp = null, $purpose = 'signup', $onlyVerified = false): bool
 {
     $sql = "SELECT * FROM {$this->table} WHERE purpose = :purpose";
 
-    // Check if identifier is an email or phone
     if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
         $sql .= " AND email = :identifier";
     } else {
@@ -64,14 +63,17 @@ class Otp
     $record = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($record && !$onlyVerified) {
+        // Mark OTP as verified if not already
         $updateSql = "UPDATE {$this->table} SET is_verified = 1, verified_at = NOW() WHERE id = :id";
         $updateStmt = $this->conn->prepare($updateSql);
         $updateStmt->bindParam(":id", $record['id']);
         $updateStmt->execute();
+        return true;
     }
 
-    return $record;
+    return $record ? true : false;
 }
+
 
    
     public function markOtpAsVerified($id)

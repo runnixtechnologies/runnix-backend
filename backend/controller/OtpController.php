@@ -8,7 +8,24 @@ class OtpController
     private $termiiApiKey = "TLKCVBYRZyFFYYInnjIdPWOgfForjjZbEYgjIigNANxWYDaUJMyEFtuQpNPsNE"; // Replace with your Termii API Key
     private $smsSenderName = "Runnix"; // Registered Termii sender ID
 
-   public function sendOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
+
+    public function sendOtp($phone = null, $purpose = 'signup', $email = null, $user_id = null)
+{
+    if ($phone) {
+        // Call SMS OTP method
+        return $this->sendPhoneOtp($phone, $purpose);
+    }
+
+    if ($email) {
+        // Call Email OTP method
+        return $this->sendOtpEmail($email, $purpose);
+    }
+
+    return ['status' => 'error', 'message' => 'No valid identifier provided'];
+}
+
+
+   public function sendPhoneOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
 {
     $otp = rand(100000, 999999);
     $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));

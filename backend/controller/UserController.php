@@ -299,19 +299,34 @@ if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK
     ];
 }
 
-    public function verifyOtp($phone, $otp)
-    {
-        $otpModel = new Otp();
-        $isVerified = $otpModel->verifyOtp($phone, $otp, 'signup');
+    public function verifyPhoneOtp(string $phone, string $otp)
+{
+    $otpModel = new Otp();
+    $isVerified = $otpModel->verifyOtp($phone, $otp, 'signup');
 
-        if (!$isVerified) {
-            http_response_code(401);
-            return ["status" => "error", "message" => "Invalid OTP"];
-        }
-
-        http_response_code(200);
-        return ["status" => "success", "message" => "OTP verified"];
+    if (!$isVerified) {
+        http_response_code(401);
+        return ["status" => "error", "message" => "Invalid OTP for phone"];
     }
+
+    http_response_code(200);
+    return ["status" => "success", "message" => "Phone OTP verified"];
+}
+
+public function verifyEmailOtp(string $email, string $otp)
+{
+    $otpModel = new Otp();
+    $isVerified = $otpModel->verifyOtp($email, $otp, 'signup');
+
+    if (!$isVerified) {
+        http_response_code(401);
+        return ["status" => "error", "message" => "Invalid OTP for email"];
+    }
+
+    http_response_code(200);
+    return ["status" => "success", "message" => "Email OTP verified"];
+}
+
 
  public function finalizeSignup($data)
 {
