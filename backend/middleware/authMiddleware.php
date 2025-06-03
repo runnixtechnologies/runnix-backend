@@ -1,7 +1,8 @@
 <?php
 
+namespace Middleware;
+use Config\JwtHandler;
 
-use config\JwtHandler;
 function authenticateRequest() {
     $headers = getallheaders();
 
