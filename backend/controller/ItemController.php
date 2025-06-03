@@ -14,19 +14,19 @@ class ItemController
          $this->storeModel = new Store();
     }
 
-    public function addItemsBulk($data)
+    public function addItemsBulk($data, $user)
 {
     if (!isset($data['category_id'], $data['items']) || !is_array($data['items'])) {
         http_response_code(400);
         return ["status" => "error", "message" => "Invalid input: category_id and items[] are required."];
     }
 
-    if (!isset($_SESSION['user']['id'])) {
+    if (!isset($user['user_id'])) {
         http_response_code(401);
         return ["status" => "error", "message" => "Unauthorized"];
     }
 
-    $store = $this->storeModel->getStoreByUserId($_SESSION['user']['id']);
+    $store = $this->storeModel->getStoreByUserId($user['user_id']);
 
     if (!$store) {
         http_response_code(403);
@@ -55,11 +55,12 @@ class ItemController
 
         $photoFilename = null;
 
-        if (isset($_FILES['items']['name'][$index]['photo']) && $_FILES['items']['error'][$index]['photo'] === UPLOAD_ERR_OK) {
-            $fileTmpPath = $_FILES['items']['tmp_name'][$index]['photo'];
-            $fileName = $_FILES['items']['name'][$index]['photo'];
-            $fileType = $_FILES['items']['type'][$index]['photo'];
-            $fileSize = $_FILES['items']['size'][$index]['photo'];
+        // Adjust file handling according to your form's file input names and PHP $_FILES structure
+        if (isset($_FILES['items']['name'][$index]) && !empty($_FILES['items']['name'][$index])) {
+            $fileTmpPath = $_FILES['items']['tmp_name'][$index];
+            $fileName = $_FILES['items']['name'][$index];
+            $fileType = $_FILES['items']['type'][$index];
+            $fileSize = $_FILES['items']['size'][$index];
 
             if (!in_array($fileType, $allowedTypes)) {
                 http_response_code(415);
@@ -89,6 +90,7 @@ class ItemController
 
     return $this->itemModel->bulkCreateItems($storeId, $categoryId, $itemsToInsert);
 }
+
 public function createSingleItem($data, $user)
 {
     if (!isset($data['category_id'], $data['name'], $data['price'])) {
