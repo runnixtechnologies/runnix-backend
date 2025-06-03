@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
 require_once '../config/cors.php';
+require_once '../middleware/authMiddleware.php'; 
 
 use Controller\ItemController;
 use function Middleware\authenticateRequest;
