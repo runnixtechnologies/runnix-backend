@@ -55,12 +55,16 @@ class ItemController
 
         $photoFilename = null;
 
-        // Adjust file handling according to your form's file input names and PHP $_FILES structure
-        if (isset($_FILES['items']['name'][$index]) && !empty($_FILES['items']['name'][$index])) {
-            $fileTmpPath = $_FILES['items']['tmp_name'][$index];
-            $fileName = $_FILES['items']['name'][$index];
-            $fileType = $_FILES['items']['type'][$index];
-            $fileSize = $_FILES['items']['size'][$index];
+        // Safely check if a valid file was uploaded for this item
+        if (
+            isset($_FILES['items']['name'][$index]['photo']) &&
+            !empty($_FILES['items']['name'][$index]['photo']) &&
+            $_FILES['items']['error'][$index]['photo'] === UPLOAD_ERR_OK
+        ) {
+            $fileTmpPath = $_FILES['items']['tmp_name'][$index]['photo'];
+            $fileName = $_FILES['items']['name'][$index]['photo'];
+            $fileType = $_FILES['items']['type'][$index]['photo'];
+            $fileSize = $_FILES['items']['size'][$index]['photo'];
 
             if (!in_array($fileType, $allowedTypes)) {
                 http_response_code(415);
@@ -90,6 +94,7 @@ class ItemController
 
     return $this->itemModel->bulkCreateItems($storeId, $categoryId, $itemsToInsert);
 }
+
 
 public function createSingleItem($data, $user)
 {
