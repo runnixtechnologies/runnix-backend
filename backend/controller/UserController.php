@@ -75,7 +75,13 @@ class UserController
     }
 
     $jwt = new JwtHandler();
-    $payload = ["user_id" => $user['id'], "role" => $user['role']];
+   
+    $payload = [
+    "user_id" => $user['id'],
+    "role" => $user['role'],
+    "store_id" => $user['store_id'] ?? null // only if merchant
+];
+
     $token = $jwt->encode($payload);
 
     http_response_code(200);

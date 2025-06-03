@@ -89,22 +89,30 @@ class ItemController
 
     return $this->itemModel->bulkCreateItems($storeId, $categoryId, $itemsToInsert);
 }
-
-    public function createSingleItem($data)
-   {
+public function createSingleItem($data, $user)
+{
     if (!isset($data['category_id'], $data['name'], $data['price'])) {
         http_response_code(400);
         return ["status" => "error", "message" => "Missing required fields: category_id, name, price."];
     }
 
-    /*if (!isset($_SESSION['user']['store_id'])) {
+    // 👇 Use $user instead of $_SESSION
+    if (!isset($user['user_id'])) {
         http_response_code(403);
-        return ["status" => "error", "message" => "Unauthorized: Store ID missing in session."];
-    }*/
+        return ["status" => "error", "message" => "Unauthorized: User ID missing."];
+    }
+
+    // Fetch store_id from DB if you don't store it in token
+    $store = $this->storeModel->getStoreByUserId($user['user_id']);
+    if (!$store) {
+        http_response_code(403);
+        return ["status" => "error", "message" => "No store associated with this user. Please complete setup."];
+    }
 
     $photo = null;
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-        $allowedTypes = [
+        // ... existing image validation code ...
+           $allowedTypes = [
             'image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'
         ];
 
@@ -134,15 +142,15 @@ class ItemController
         $photo = $filename;
     }
 
-    $storeId = $_SESSION['user']['store_id'];
     return $this->itemModel->createSingleItem(
-        $storeId,
+        $store['id'], // 👈 Use store ID from DB
         $data['category_id'],
         $data['name'],
         $data['price'],
         $photo
     );
 }
+
 
     public function updateItem($data)
 {

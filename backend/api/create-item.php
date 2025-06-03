@@ -6,6 +6,7 @@ error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
 require_once '../config/cors.php';
+require_once '../middleware/authMiddleware.php'; 
 
 use Controller\ItemController;
 
@@ -22,7 +23,7 @@ if (stripos($contentType, 'application/json') !== false) {
     $data = $_POST;
 }
 
-
+$user = authenticateRequest();
 $controller = new ItemController();
-$response = $controller->createSingleItem($data);
+$response = $controller->createSingleItem($data, $user);
 echo json_encode($response);

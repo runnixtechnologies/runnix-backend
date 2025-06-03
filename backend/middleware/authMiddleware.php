@@ -1,6 +1,7 @@
 <?php
-require_once __DIR__ . '/../config/JwtHandler.php';
 
+
+use config\JwtHandler;
 function authenticateRequest() {
     $headers = getallheaders();
 
