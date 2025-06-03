@@ -1,6 +1,7 @@
 <?php
 
 namespace Middleware;
+
 use Config\JwtHandler;
 
 function authenticateRequest() {
