@@ -97,10 +97,10 @@ class ItemController
         return ["status" => "error", "message" => "Missing required fields: category_id, name, price."];
     }
 
-    if (!isset($_SESSION['user']['store_id'])) {
+    /*if (!isset($_SESSION['user']['store_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized: Store ID missing in session."];
-    }
+    }*/
 
     $photo = null;
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {

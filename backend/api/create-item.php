@@ -15,9 +15,13 @@ $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 if (stripos($contentType, 'application/json') !== false) {
     $rawData = file_get_contents("php://input");
     $data = json_decode($rawData, true) ?? [];
+} elseif (stripos($contentType, 'multipart/form-data') !== false) {
+    $data = $_POST;
 } else {
+    // fallback for form-encoded or unknown
     $data = $_POST;
 }
+
 
 $controller = new ItemController();
 $response = $controller->createSingleItem($data);
