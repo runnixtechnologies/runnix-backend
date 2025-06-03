@@ -70,5 +70,18 @@ public function getActiveStoreTypes()
     return ["status" => "success", "data" => $types];
 }
 
+public function getActiveCategories()
+{
+   
+    $types = $this->store->getActiveCategories(); // status = 1
+
+    if (empty($types)) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "No active categories found"];
+    }
+
+    return ["status" => "success", "data" => $types];
+}
+
 
 }
