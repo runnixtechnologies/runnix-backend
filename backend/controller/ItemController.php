@@ -88,6 +88,7 @@ class ItemController
         $itemsToInsert[] = [
             'name' => $item['name'],
             'price' => $item['price'],
+            'user_id' => $user['user_id'],
             'photo' => $photoFilename
         ];
     }
@@ -149,13 +150,15 @@ public function createSingleItem($data, $user)
         $photo = $filename;
     }
 
-    return $this->itemModel->createSingleItem(
-        $store['id'], // 👈 Use store ID from DB
-        $data['category_id'],
-        $data['name'],
-        $data['price'],
-        $photo
-    );
+   return $this->itemModel->createSingleItem(
+    $store['id'],
+    $data['category_id'],
+    $user['user_id'],
+    $data['name'],
+    $data['price'],
+    $photo
+);
+
 }
 
 

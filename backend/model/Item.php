@@ -23,8 +23,8 @@ class Item
         try {
             $this->conn->beginTransaction();
 
-            $sql = "INSERT INTO {$this->table} (store_id, category_id, name, price, photo, status, created_at, updated_at)
-                    VALUES (:store_id, :category_id, :name, :price, :photo, 'active', NOW(), NOW())";
+            $sql = "INSERT INTO {$this->table} (store_id, category_id, user_id, name, price, photo, status, created_at, updated_at)
+                    VALUES (:store_id, :category_id, :user_id, :name, :price, :photo, 'active', NOW(), NOW())";
 
             $stmt = $this->conn->prepare($sql);
 
@@ -32,6 +32,7 @@ class Item
                 $stmt->execute([
                     ':store_id' => $storeId,
                     ':category_id' => $categoryId,
+                    ':user_id' => $item['user_id'],
                     ':name' => $item['name'],
                     ':price' => $item['price'],
                     ':photo' => $item['photo'] ?? null
@@ -49,31 +50,32 @@ class Item
         }
     }
 
-    public function createSingleItem($storeId, $categoryId, $name, $price, $photo = null)
-    {
-        try {
-            $sql = "INSERT INTO {$this->table} (store_id, category_id, name, price, photo, status, created_at, updated_at)
-                    VALUES (:store_id, :category_id, :name, :price, :photo, 'active', NOW(), NOW())";
+    public function createSingleItem($storeId, $categoryId, $userId, $name, $price, $photo = null)
+{
+    try {
+        $sql = "INSERT INTO {$this->table} (store_id, category_id, user_id, name, price, photo, status, created_at, updated_at)
+                VALUES (:store_id, :category_id, :user_id, :name, :price, :photo, 'active', NOW(), NOW())";
 
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
-                ':store_id' => $storeId,
-                ':category_id' => $categoryId,
-                ':name' => $name,
-                ':price' => $price,
-                ':photo' => $photo
-            ]);
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':store_id' => $storeId,
+            ':category_id' => $categoryId,
+            ':user_id' => $userId,
+            ':name' => $name,
+            ':price' => $price,
+            ':photo' => $photo
+        ]);
 
-            http_response_code(201);
-           $insertedId = $this->conn->lastInsertId();
-           return ["status" => "success", "message" => "Item created successfully.", "item_id" => $insertedId];
+        http_response_code(201);
+        $insertedId = $this->conn->lastInsertId();
+        return ["status" => "success", "message" => "Item created successfully.", "item_id" => $insertedId];
 
-
-        } catch (PDOException $e) {
-            http_response_code(500);
-            return ["status" => "error", "message" => "Item Creation Failed"];
-        }
+    } catch (PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Item Creation Failed"];
     }
+}
+
 
     public function updateItem($itemId, $data)
 {
