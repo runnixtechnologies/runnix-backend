@@ -45,7 +45,7 @@ class Item
         } catch (PDOException $e) {
             $this->conn->rollBack();
             http_response_code(500);
-            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+            return ["status" => "error", "message" => "Item Addition Failed "];
         }
     }
 
@@ -65,11 +65,13 @@ class Item
             ]);
 
             http_response_code(201);
-            return ["status" => "success", "message" => "Item created successfully."];
+           $insertedId = $this->conn->lastInsertId();
+           return ["status" => "success", "message" => "Item created successfully.", "item_id" => $insertedId];
+
 
         } catch (PDOException $e) {
             http_response_code(500);
-            return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+            return ["status" => "error", "message" => "Item Creation Failed"];
         }
     }
 
@@ -105,7 +107,7 @@ class Item
         return ["status" => "success", "message" => "Item updated successfully."];
     } catch (PDOException $e) {
         http_response_code(500);
-        return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        return ["status" => "error", "message" => "Update Failed " ];
     }
 }
 
@@ -126,7 +128,7 @@ public function deleteItem($itemId)
         return ["status" => "success", "message" => "Item deleted successfully."];
     } catch (PDOException $e) {
         http_response_code(500);
-        return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        return ["status" => "error", "message" => "Item Deletion Failed"];
     }
 }
 
@@ -154,7 +156,7 @@ public function setItemStatus($itemId, $status)
         return ["status" => "success", "message" => "Item status updated to {$status}."];
     } catch (PDOException $e) {
         http_response_code(500);
-        return ["status" => "error", "message" => "DB Error: " . $e->getMessage()];
+        return ["status" => "error", "message" => "Item Status Update Failed"];
     }
 }
 

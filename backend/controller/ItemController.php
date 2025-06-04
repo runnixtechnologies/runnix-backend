@@ -180,7 +180,7 @@ public function createSingleItem($data, $user)
     return $this->itemModel->updateItem($data['id'], $data);
 }
 
-public function deleteItem($data)
+public function deleteItem($data, $user)
 {
     if (!isset($data['id']) || !is_numeric($data['id'])) {
         http_response_code(400);
@@ -188,7 +188,7 @@ public function deleteItem($data)
     }
 
     // Authorization check
-    if (!$this->userOwnsItem($data['id'])) {
+   if (!$this->userOwnsItem($data['id'], $user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to delete this item."];
     }
@@ -196,15 +196,20 @@ public function deleteItem($data)
     return $this->itemModel->deleteItem($data['id']);
 }
 
-public function deactivateItem($data)
+public function deactivateItem($data, $user)
 {
     if (!isset($data['id']) || !is_numeric($data['id'])) {
         http_response_code(400);
         return ["status" => "error", "message" => "Missing or invalid required field: id."];
     }
 
-    // Authorization check
-    if (!$this->userOwnsItem($data['id'])) {
+    if (!isset($user['user_id'])) {
+        http_response_code(401);
+        return ["status" => "error", "message" => "Unauthorized"];
+    }
+
+    // Authorization check with JWT user ID
+    if (!$this->userOwnsItem($data['id'], $user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to deactivate this item."];
     }
@@ -212,7 +217,8 @@ public function deactivateItem($data)
     return $this->itemModel->setItemStatus($data['id'], 'inactive');
 }
 
-public function activateItem($data)
+
+public function activateItem($data, $user)
 {
     if (!isset($data['id']) || !is_numeric($data['id'])) {
         http_response_code(400);
@@ -220,7 +226,7 @@ public function activateItem($data)
     }
 
     // Authorization check
-    if (!$this->userOwnsItem($data['id'])) {
+    if (!$this->userOwnsItem($data['id'], $user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to activate this item."];
     }
@@ -229,10 +235,11 @@ public function activateItem($data)
 }
 
 // Dummy authorization example — replace with your actual logic
-private function userOwnsItem($itemId)
+private function userOwnsItem($itemId, $userId)
 {
-    $userId = $_SESSION['user_id'] ?? null;
-    if (!$userId) return false;
+    if (!$userId || !is_numeric($userId)) {
+        return false;
+    }
 
     return $this->itemModel->isItemOwnedByUser($itemId, $userId);
 }
