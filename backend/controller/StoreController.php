@@ -84,4 +84,21 @@ public function getActiveCategories()
 }
 
 
+public function setStoreStatus($data, $user) {
+    if (!isset($data['store_id'], $data['is_online'])) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "store_id and is_online are required."];
+    }
+
+    // Optional: verify store belongs to the user
+    $store = $this->store->getStoreById($data['store_id']);
+
+    if (!$store || $store['user_id'] != $user['user_id']) {
+        http_response_code(403);
+        return ["status" => "error", "message" => "Unauthorized access to store."];
+    }
+
+    return $this->store->updateStoreStatus($data['store_id'], $data['is_online']);
+}
+
 }

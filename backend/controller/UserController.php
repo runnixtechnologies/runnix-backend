@@ -691,4 +691,19 @@ public function collectStoreDetails($data)
         }
     }
 
+    public function setUserStatus($data, $user) {
+    if (!isset($data['is_online'])) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "is_online is required."];
+    }
+
+    // Check if user is rider
+    if ($user['role'] !== 'rider') {
+        http_response_code(403);
+        return ["status" => "error", "message" => "Only riders can change status."];
+    }
+
+    return $this->userModel->updateUserStatus($user['user_id'], $user['role'], $data['is_online']);
+}
+
 }

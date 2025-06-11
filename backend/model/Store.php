@@ -144,4 +144,25 @@ public function getStoreById($storeId)
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+public function updateStoreStatus($storeId, $isOnline) {
+    try {
+        $sql = "INSERT INTO store_status (store_id, is_online)
+                VALUES (:store_id, :is_online)
+                ON DUPLICATE KEY UPDATE is_online = :is_online, updated_at = NOW()";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':store_id' => $storeId,
+            ':is_online' => $isOnline
+        ]);
+
+        http_response_code(200);
+        return ["status" => "success", "message" => "Store status updated successfully."];
+
+    } catch (\PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to update store status."];
+    }
+}
+
 }

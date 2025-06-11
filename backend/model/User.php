@@ -279,5 +279,26 @@ public function deleteUser($userId)
     }
 
 
+    public function updateUserStatus($userId, $role, $isOnline) {
+    try {
+        $sql = "INSERT INTO user_status (user_id, role, is_online)
+                VALUES (:user_id, :role, :is_online)
+                ON DUPLICATE KEY UPDATE is_online = :is_online, updated_at = NOW()";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':role' => $role,
+            ':is_online' => $isOnline
+        ]);
+
+        http_response_code(200);
+        return ["status" => "success", "message" => "User status updated successfully."];
+
+    } catch (\PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to update user status."];
+    }
+}
 
 }
