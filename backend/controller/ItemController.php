@@ -162,7 +162,7 @@ public function createSingleItem($data, $user)
 }
 
 
-    public function updateItem($data)
+    public function updateItem($data, $user)
 {
     // Validate required fields and data types
     if (!isset($data['id'], $data['name'], $data['price'])) {
@@ -175,7 +175,7 @@ public function createSingleItem($data, $user)
     }
 
     // Authorization check placeholder (implement your own logic)
-    if (!$this->userOwnsItem($data['id'])) {
+    if (!$this->userOwnsItem($data['id'],$user)) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }

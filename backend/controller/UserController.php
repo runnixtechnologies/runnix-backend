@@ -110,7 +110,9 @@ public function setupUserRider($data)
     }
 
     // Validate method
-    $signupMethod = $phone ? 'phone' : 'email';
+    //$signupMethod = $phone ? 'phone' : 'email';
+
+    $signupMethod = isset($data['signup_method']) ? strtolower($data['signup_method']) : ($phone ? 'phone' : 'email');
 
     // Check for existing user
     if ($phone && $this->userModel->getUserByPhone($phone)) {
