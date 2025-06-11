@@ -12,7 +12,7 @@ use function Middleware\authenticateRequest;
 header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents("php://input"), true);
-$user = authenticateRequest(); // returns logged-in user details
+//$user = authenticateRequest(); // returns logged-in user details
 
 $controller = new StoreController();
 $response = $controller->setStoreStatus($data, $user); // method renamed to match what we defined earlier
