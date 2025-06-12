@@ -107,13 +107,16 @@ public function getStatus($user) {
         return ["status" => "error", "message" => "Unauthorized"];
     }
 
-    $store = $this->store->getStoreByUserId($user['user_id']);
-    if (!$store) {
-        http_response_code(404);
-        return ["status" => "error", "message" => "Store not found for user."];
+    $storeData = $this->getStoreByUserId($user['user_id']);
+    
+    if ($storeData['status'] !== 'success') {
+        // Return the "Store not found" error from getStoreByUserId
+        return $storeData;
     }
 
+    $store = $storeData['store'];
     $storeId = $store['id'];
+
     return $this->store->getStoreStatus($storeId);
 }
 

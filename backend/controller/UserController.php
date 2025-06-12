@@ -24,27 +24,32 @@ class UserController
   public function login($data)
 {
     $identifier = trim($data['identifier'] ?? '');
-    $password = $data['password'] ?? '';
+    $password   = $data['password'] ?? '';
 
     if (empty($identifier) || empty($password)) {
         http_response_code(400);
         return ["status" => "error", "message" => "Email/Phone and password are required"];
     }
 
-    // Normalize phone number if it's a phone
-    $isPhone = preg_match('/^\+?234\d{10}$/', $identifier) || preg_match('/^0[7-9][01]\d{8}$/', $identifier);
-    if ($isPhone) {
-        $rawPhone = preg_replace('/\D/', '', $identifier);
+    // Check if it's a phone number (digits only after removing non-digit characters)
+    $rawPhone = preg_replace('/\D/', '', $identifier);
 
-        if (strlen($rawPhone) === 11 && preg_match('/^0[7-9][01]\d{8}$/', $rawPhone)) {
-            $identifier = '234' . substr($rawPhone, 1);
-        } elseif (strlen($rawPhone) === 10 && preg_match('/^[7-9][01]\d{8}$/', $rawPhone)) {
+    if (is_numeric($rawPhone)) {
+        if (strlen($rawPhone) === 11 && substr($rawPhone, 0, 1) === '0') {
+            // 11-digit local format (e.g., 0803...)
+            $identifier = '234' . substr($rawPhone, 1); // convert to international format
+        } elseif (strlen($rawPhone) === 10) {
+            // 10-digit without leading zero (e.g., 803...)
             $identifier = '234' . $rawPhone;
-        } elseif (strlen($rawPhone) === 13 && preg_match('/^234[7-9][01]\d{8}$/', $rawPhone)) {
+        } elseif (strlen($rawPhone) === 13 && substr($rawPhone, 0, 3) === '234') {
+            // already in international format (e.g., 234803...)
             $identifier = $rawPhone;
         } else {
-            http_response_code(400);
-            return ["status" => "error", "message" => "Invalid phone number format"];
+            // Might be an email or invalid number
+            if (!filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+                http_response_code(400);
+                return ["status" => "error", "message" => "Invalid phone number format"];
+            }
         }
     }
 
@@ -57,7 +62,7 @@ class UserController
 
     unset($user['password']);
 
-    // If user is merchant, attach store details
+    // Attach store details for merchants
     if ($user['role'] === 'merchant') {
         $storeDetails = $this->userModel->getMerchantStore($user['id']);
         $store = $this->storeModel->getStoreByUserId($user['id']);
@@ -75,21 +80,20 @@ class UserController
     }
 
     $jwt = new JwtHandler();
-   
     $payload = [
-    "user_id" => $user['id'],
-    "role" => $user['role'],
-    "store_id" => $user['store_id'] ?? null // only if merchant
-];
+        "user_id" => $user['id'],
+        "role"    => $user['role'],
+        "store_id" => $user['store_id'] ?? null
+    ];
 
     $token = $jwt->encode($payload);
 
     http_response_code(200);
     return [
-        "status" => "success",
+        "status"  => "success",
         "message" => "Login successful",
-        "token" => $token,
-        "user" => $user
+        "token"   => $token,
+        "user"    => $user
     ];
 }
 
