@@ -165,4 +165,23 @@ public function updateStoreStatus($storeId, $isOnline) {
     }
 }
 
+public function getStoreStatus($storeId) {
+    try {
+        $sql = "SELECT is_online FROM store_status WHERE store_id = :store_id LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([':store_id' => $storeId]);
+        $status = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($status) {
+            return ["status" => "success", "data" => $status];
+        } else {
+            return ["status" => "error", "message" => "Store status not found."];
+        }
+
+    } catch (\PDOException $e) {
+        return ["status" => "error", "message" => "Failed to fetch store status."];
+    }
+}
+
+
 }

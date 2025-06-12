@@ -101,4 +101,21 @@ public function setStoreStatus($data, $user) {
     return $this->store->updateStoreStatus($data['store_id'], $data['is_online']);
 }
 
+public function getStatus($user) {
+    if (!isset($user['user_id'])) {
+        http_response_code(401);
+        return ["status" => "error", "message" => "Unauthorized"];
+    }
+
+    $store = $this->store->getStoreByUserId($user['user_id']);
+    if (!$store) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "Store not found for user."];
+    }
+
+    $storeId = $store['id'];
+    return $this->store->getStoreStatus($storeId);
+}
+
+
 }

@@ -706,4 +706,14 @@ public function collectStoreDetails($data)
     return $this->userModel->updateUserStatus($user['user_id'], $user['role'], $data['is_online']);
 }
 
+public function getStatus($user) {
+    if (!isset($user['user_id'])) {
+        http_response_code(401);
+        return ["status" => "error", "message" => "Unauthorized"];
+    }
+
+    $userId = $user['user_id'];
+    return $this->userModel->getUserStatus($userId);
+}
+
 }

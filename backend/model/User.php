@@ -301,4 +301,22 @@ public function deleteUser($userId)
     }
 }
 
+public function getUserStatus($userId) {
+    try {
+        $sql = "SELECT role, is_online FROM user_status WHERE user_id = :user_id LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([':user_id' => $userId]);
+        $status = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($status) {
+            return ["status" => "success", "data" => $status];
+        } else {
+            return ["status" => "error", "message" => "User status not found."];
+        }
+
+    } catch (\PDOException $e) {
+        return ["status" => "error", "message" => "Failed to fetch user status."];
+    }
+}
+
 }
