@@ -172,7 +172,7 @@ public function isItemOwnedByUser($itemId, $userId)
 
  public function getAllItemsByStoreId($storeId)
 {
-    $sql = "SELECT * FROM items WHERE store_id = :store_id";
+    $sql = "SELECT * FROM items WHERE store_id = :store_id AND deleted = 0";
     $stmt = $this->conn->prepare($sql);
     $stmt->execute([':store_id' => $storeId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
