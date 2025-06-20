@@ -11,11 +11,19 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-
 authenticateRequest();
 $controller = new DiscountController();
 
-$storeId = $data['store_id'] ?? null;
-$response = $controller->getAllDiscountsByStore($storeId);
+// ✅ Use GET method to get the store_id from the query string
+$storeId = $_GET['store_id'] ?? null;
 
+if (!$storeId) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "store_id is missing"
+    ]);
+    exit;
+}
+
+$response = $controller->getAllDiscountsByStore($storeId);
 echo json_encode($response);
