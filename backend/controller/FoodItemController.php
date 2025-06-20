@@ -204,6 +204,23 @@ public function createFoodSide($data)
     }
 }
 
+public function getFoodSideById($id, $user)
+{
+    if (empty($id)) {
+        http_response_code(400); // Bad Request
+        return ['status' => 'error', 'message' => 'Missing Food Side ID'];
+    }
+
+    $side = $this->foodItem->getFoodSideById($id);
+    if ($side) {
+        http_response_code(200); // OK
+        return ['status' => 'success', 'data' => $side];
+    } else {
+        http_response_code(404); // Not Found
+        return ['status' => 'error', 'message' => 'Food Side not found'];
+    }
+}
+
 // READ All Sides by Store
 public function getAllFoodSidesByStoreId($storeId)
 {
@@ -254,6 +271,28 @@ public function addFoodItemSide($data,$user)
     } else {
         http_response_code(500); // Internal Server Error
         return ['status' => 'error', 'message' => 'Failed to create food item side mapping'];
+    }
+}
+
+
+public function updateFoodItemSide($data, $user)
+{
+    if (empty($data['item_id']) || empty($data['side_id'])) {
+        http_response_code(400); // Bad Request
+        return ['status' => 'error', 'message' => 'Missing item_id or side_id'];
+    }
+
+    $itemId = $data['item_id'];
+    $sideId = $data['side_id'];
+    $extraPrice = $data['extra_price'] ?? null;
+
+    $result = $this->foodItem->updateFoodItemSide($itemId, $sideId, $extraPrice);
+    if ($result) {
+        http_response_code(200); // OK
+        return ['status' => 'success', 'message' => 'Food item side mapping updated successfully'];
+    } else {
+        http_response_code(500); // Internal Server Error
+        return ['status' => 'error', 'message' => 'Failed to update food item side mapping'];
     }
 }
 

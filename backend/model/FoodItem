@@ -17,25 +17,28 @@ class FoodItem
 
     // Create Food Item
     public function create($data)
-    {
-        $sql = "INSERT INTO {$this->table} 
-                (store_id, category_id, user_id, name, price, photo, short_description, max_qty, status, created_at, updated_at)
-                VALUES 
-                (:store_id, :category_id, :user_id, :name, :price, :photo, :short_description, :max_qty, :status, NOW(), NOW())";
-        
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
-            'store_id' => $data['store_id'],
-            'category_id' => $data['category_id'],
-            'user_id' => $data['user_id'],
-            'name' => $data['name'],
-            'price' => $data['price'],
-            'photo' => $data['photo'],
-            'short_description' => $data['short_description'],
-            'max_qty' => $data['max_qty'],
-            'status' => $data['status'] ?? 'active'
-        ]);
-    }
+{
+    $sql = "INSERT INTO {$this->table} 
+            (store_id, category_id, section_id, user_id, name, price, photo, short_description, max_qty, status, created_at, updated_at)
+            VALUES 
+            (:store_id, :category_id, :section_id, :user_id, :name, :price, :photo, :short_description, :max_qty, :status, NOW(), NOW())";
+
+    $stmt = $this->conn->prepare($sql);
+    return $stmt->execute([
+        'store_id' => $data['store_id'],
+        'category_id' => $data['category_id'],
+        'section_id' => $data['section_id'] ?? null, // optional
+        'user_id' => $data['user_id'],
+        'name' => $data['name'],
+        'price' => $data['price'],
+        'photo' => $data['photo'],
+        'short_description' => $data['short_description'],
+        'max_qty' => $data['max_qty'],
+        'status' => $data['status'] ?? 'active'
+    ]);
+}
+
+
 
     // Read Food Item by id
     public function getById($id)
@@ -53,15 +56,16 @@ class FoodItem
                 name = :name,
                 description = :description,
                 price = :price,
+                section_id = :section_id, -- added section_id here
                 status = :status,
                 updated_at = NOW()";
 
-    // Check if photo is provided in update
     if (!empty($data['photo'])) {
         $query .= ", photo = :photo";
     }
 
     $query .= " WHERE id = :id";
+       $sectionId = $data['section_id'] ?? null;
 
     $stmt = $this->conn->prepare($query);
 
@@ -69,6 +73,9 @@ class FoodItem
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':description', $data['description']);
     $stmt->bindParam(':price', $data['price']);
+
+    $stmt->bindParam(':section_id', $sectionId);
+
     $stmt->bindParam(':status', $data['status']);
 
     if (!empty($data['photo'])) {
@@ -112,6 +119,18 @@ public function getByItemId($id)
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+public function updateFoodItemSide($itemId, $sideId, $extraPrice)
+{
+    $query = "UPDATE food_item_sides 
+              SET extra_price = :extra_price
+              WHERE item_id = :item_id AND side_id = :side_id";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':extra_price', $extraPrice);
+    $stmt->bindParam(':item_id', $itemId);
+    $stmt->bindParam(':side_id', $sideId);
+
+    return $stmt->execute();
+}
 
  public function createSide($data)
     {
@@ -198,6 +217,14 @@ public function createFoodSide($data)
     $stmt->bindParam(':side_name', $data['side_name']);
     $stmt->bindParam(':price', $data['price']);
     return $stmt->execute();
+}
+
+public function getFoodSideById($id)
+{
+    $query = "SELECT * FROM food_sides WHERE id = :id";
+    $stmt = $this->conn->prepare($query);
+    $stmt->execute(['id' => $id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
 // READ All Sides by Store

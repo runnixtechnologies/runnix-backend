@@ -1,7 +1,5 @@
 <?php
-
 ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
@@ -13,9 +11,9 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$data = $_GET; // expecting 'id' parameter
+$data = json_decode(file_get_contents("php://input"), true) ?? [];
 
 $user = authenticateRequest();
 $controller = new FoodItemController();
-$response = $controller->getFoodSideById($data['id'], $user);
+$response = $controller->deleteFoodItemSide($data, $user);
 echo json_encode($response);
