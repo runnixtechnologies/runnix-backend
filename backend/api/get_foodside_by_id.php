@@ -13,9 +13,17 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$data = $_GET; // expecting 'id' parameter
+$data = $_GET; // expecting 'item_id' parameter
+
+if (!isset($data['item_id'])) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Item ID is required']);
+    exit;
+}
+
+$itemId = $data['item_id'];
 
 $user = authenticateRequest();
 $controller = new FoodItemController();
-$response = $controller->getByItemId($data['id'], $user);
+$response = $controller->getFoodItemSides($itemId, $user);
 echo json_encode($response);
