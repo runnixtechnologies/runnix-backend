@@ -6,16 +6,16 @@ use Config\JwtHandler;
 
 class PackController
 {
-    private $packageModel;
+    private $packModel;
 
     public function __construct()
     {
-        $this->packageModel = new Pack();
+        $this->pack = new Pack();
     }
 
     public function create($data)
     {
-        $result = $this->packageModel->create($data);
+        $result = $this->packModel->create($data);
         if ($result) {
             http_response_code(201); // Created
             return ['status' => 'success', 'message' => 'Pack created successfully'];
@@ -27,7 +27,7 @@ class PackController
 
     public function update($data)
     {
-        $result = $this->packageModel->update($data);
+        $result = $this->packModel->update($data);
         if ($result) {
             http_response_code(200); // OK
             return ['status' => 'success', 'message' => 'Pack updated successfully'];
@@ -39,7 +39,7 @@ class PackController
 
     public function delete($data)
     {
-        $result = $this->packageModel->delete($data['id']);
+        $result = $this->packModel->delete($data['id']);
         if ($result) {
             http_response_code(200); // OK
             return ['status' => 'success', 'message' => 'Pack deleted successfully'];
@@ -51,7 +51,7 @@ class PackController
 
     public function getAll($storeId)
     {
-        $packs = $this->packageModel->getAll($storeId);
+        $packs = $this->packModel->getAll($storeId);
         if ($packs) {
             http_response_code(200); // OK
             return ['status' => 'success', 'data' => $packs];
@@ -63,7 +63,7 @@ class PackController
 
     public function getPackById($id)
     {
-        $pack = $this->packageModel->getPackById($id);
+        $pack = $this->packModel->getPackById($id);
         if ($pack) {
             http_response_code(200); // OK
             return ['status' => 'success', 'data' => $pack];

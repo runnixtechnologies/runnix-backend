@@ -54,6 +54,15 @@ class Discount
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+public function getByItemId($itemId)
+{
+    $query = "SELECT * FROM {$this->table} WHERE item_id = :item_id";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':item_id', $itemId);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 
     public function delete($id)
     {

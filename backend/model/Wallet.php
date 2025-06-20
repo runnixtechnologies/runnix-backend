@@ -61,13 +61,14 @@ class Wallet
 
             $this->conn->commit();
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->conn->rollBack();
+            error_log("Wallet Error: " . $e->getMessage());
             return false;
         }
     }
 
-    public function spend($userId, $role, $amount, $description)
+    public function spend($userId, $role, $amount, $description,  $reference = '')
     {
         try {
             $wallet = $this->getWalletByUserId($userId);
@@ -97,8 +98,9 @@ class Wallet
 
             $this->conn->commit();
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->conn->rollBack();
+            error_log("Wallet Error: " . $e->getMessage());
             return false;
         }
     }

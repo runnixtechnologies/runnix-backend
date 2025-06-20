@@ -10,9 +10,10 @@ class WalletController
 
     public function __construct()
     {
-        $this->wallet = new WalletController(); // Matches your controller pattern
+        $this->wallet = new Wallet(); // Correct model used here
     }
 
+    // Check wallet balance
     public function checkBalance($userId)
     {
         if (empty($userId)) {
@@ -30,10 +31,12 @@ class WalletController
         return [
             "status" => "success",
             "balance" => $wallet['balance'],
-            "currency" => $wallet['currency']
+            "currency" => $wallet['currency'],
+            "last_transaction_at" => $wallet['last_transaction_at']
         ];
     }
 
+    // Fund wallet
     public function fundWallet($data)
     {
         if (empty($data['user_id']) || empty($data['amount']) || empty($data['reference'])) {
@@ -56,6 +59,7 @@ class WalletController
         }
     }
 
+    // Spend from wallet
     public function spendFromWallet($data)
     {
         if (empty($data['user_id']) || empty($data['amount']) || empty($data['description'])) {

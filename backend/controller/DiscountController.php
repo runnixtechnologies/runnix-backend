@@ -58,4 +58,23 @@ class DiscountController
             return ['status' => 'error', 'message' => 'Failed to delete discount'];
         }
     }
+
+    public function getDiscountsByItemId($itemId)
+{
+    if (empty($itemId)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Item ID is required'];
+    }
+
+    $discounts = $this->discountModel->getByItemId($itemId);
+
+    if ($discounts) {
+        http_response_code(200);
+        return ['status' => 'success', 'data' => $discounts];
+    } else {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'No discounts found for this item'];
+    }
+}
+
 }

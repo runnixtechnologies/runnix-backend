@@ -33,15 +33,15 @@ class Pack
     public function update($data)
     {
         $sql = "UPDATE {$this->table} 
-                SET name = :name, price = :price, status = :status, updated_at = NOW() 
+                SET name = :name, price = :price, updated_at = NOW() 
                 WHERE id = :id";
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
             'id' => $data['id'],
             'name' => $data['name'],
-            'price' => $data['price'],
-            'status' => $data['status']
+            'price' => $data['price']
+           
         ]);
     }
 
