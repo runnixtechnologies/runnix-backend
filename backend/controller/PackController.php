@@ -10,7 +10,7 @@ class PackController
 
     public function __construct()
     {
-        $this->pack = new Pack();
+        $this->packModel = new Pack();
     }
 
     public function create($data)
