@@ -103,6 +103,14 @@ if ($storeCheck->fetchColumn() == 0) {
         return $stmt->execute(['id' => $id]);
     }
 
+
+    public function itemExists($id) {
+    $query = "SELECT COUNT(*) FROM food_items WHERE id = :id";
+    $stmt = $this->conn->prepare($query);
+    $stmt->execute(['id' => $id]);
+    return $stmt->fetchColumn() > 0;
+}
+
     public function isFoodOwnedByUser($id, $userId)
 {
     $sql = "SELECT id FROM {$this->table} WHERE id = :id AND user_id = :userId AND deleted = '0'";

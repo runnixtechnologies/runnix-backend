@@ -79,6 +79,12 @@ class FoodItemController
 {
     $photo = null;
 
+    // Check if item exists
+    if (!$this->foodItem->itemExists($data['id'])) {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Food item does not exist'];
+    }
+
     // Handle photo upload if new photo is provided
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $allowedTypes = [
