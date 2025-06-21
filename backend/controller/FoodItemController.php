@@ -248,7 +248,7 @@ public function getAllFoodItemsByStoreId($data, $user)
 }
 
 // CREATE Food Side
-public function createFoodSide($data)
+public function createFoodSide($data, $user)
 {
     $result = $this->foodItem->createFoodSide($data);
     if ($result) {

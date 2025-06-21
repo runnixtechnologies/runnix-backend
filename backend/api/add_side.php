@@ -17,5 +17,5 @@ $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
 $user = authenticateRequest();
 $controller = new FoodItemController();
-$response = $controller->addFoodItemSide($data, $user);
+$response = $controller->createFoodSide($data, $user);
 echo json_encode($response);
