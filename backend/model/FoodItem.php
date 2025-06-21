@@ -298,7 +298,7 @@ public function getAllFoodSidesByStoreId($store_id)
 // UPDATE Food Side
 public function updateFoodSide($data)
 {
-    $query = "UPDATE food_sides SET side_name = :side_name, price = :price WHERE id = :id AND store_id =:store_id";
+    $query = "UPDATE food_sides SET name = :name, price = :price WHERE id = :id AND store_id =:store_id";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
