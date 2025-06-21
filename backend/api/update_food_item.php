@@ -17,10 +17,11 @@ $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 if (stripos($contentType, 'application/json') !== false) {
     $data = json_decode(file_get_contents("php://input"), true) ?? [];
 } elseif (stripos($contentType, 'multipart/form-data') !== false) {
-    $data = $_POST;
+    $data = $_POST;  // File will be in $_FILES
 } else {
     $data = $_POST;
 }
+
 
 $user = authenticateRequest();
 $controller = new FoodItemController();

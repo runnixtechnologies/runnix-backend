@@ -80,7 +80,13 @@ class FoodItemController
     $photo = null;
 
     if (!isset($data['id']) || empty($data['id'])) {
-        return ['status' => 'debug', 'data_received' => $data];
+       return [
+    'status' => 'debug',
+    'post' => $_POST,
+    'files' => $_FILES,
+    'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set'
+];
+
 
     //return ['status' => 'error', 'message' => 'Food item does not exist'];
     
