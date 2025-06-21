@@ -80,7 +80,10 @@ class FoodItemController
     $photo = null;
 
     if (!isset($data['id']) || empty($data['id'])) {
-    return ['status' => 'error', 'message' => 'Food item does not exist'];
+        return ['status' => 'debug', 'data_received' => $data];
+
+    //return ['status' => 'error', 'message' => 'Food item does not exist'];
+    
 }
 
 
@@ -139,6 +142,7 @@ class FoodItemController
         http_response_code(404); // Not Found
         return ['status' => 'error', 'message' => 'Food item not found or not updated'];
     }
+    
 }
 
 
