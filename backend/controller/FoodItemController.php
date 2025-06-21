@@ -249,21 +249,34 @@ public function getAllFoodItemsByStoreId($data, $user)
 
 // CREATE Food Side
 public function createFoodSide($data, $user)
-
 {
+    // Ensure store_id
     if (!isset($data['store_id']) || empty($data['store_id'])) {
-    $data['store_id'] = $user['store_id']; // Use authenticated user's store_id if not passed
-}
+        $data['store_id'] = $user['store_id'];
+    }
+
+    // Validate name
+    if (!isset($data['name']) || empty(trim($data['name']))) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Food side name is required'];
+    }
+
+    // Validate price
+    if (!isset($data['price']) || empty($data['price'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Food side price is required'];
+    }
 
     $result = $this->foodItem->createFoodSide($data);
     if ($result) {
-        http_response_code(201); // Created
+        http_response_code(201);
         return ['status' => 'success', 'message' => 'Food side created successfully', 'data' => $result];
     } else {
-        http_response_code(500); // Internal Server Error
+        http_response_code(500);
         return ['status' => 'error', 'message' => 'Failed to create food side'];
     }
 }
+
 
 public function getFoodSideById($id, $user)
 {
