@@ -270,7 +270,9 @@ public function createFoodSide($data)
     $stmt->bindParam(':store_id', $data['store_id']);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
-    return $stmt->execute();
+     http_response_code(201);
+    return ['status' => 'success', 'message' => 'Food Side created successfully.'];
+   
     }
 
 
