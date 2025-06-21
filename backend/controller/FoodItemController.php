@@ -299,7 +299,7 @@ public function getFoodSideById($id, $user)
 }
 
 // READ All Sides by Store
-public function getAllFoodSidesByStoreId($storeId)
+public function getAllFoodSidesByStoreId($storeId, $user)
 {
     $result = $this->foodItem->getAllFoodSidesByStoreId($storeId);
     http_response_code(200); // OK
