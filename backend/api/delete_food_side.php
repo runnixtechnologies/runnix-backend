@@ -15,7 +15,15 @@ header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
+if (!isset($data['id'])) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Side Id is required']);
+    exit;
+}
+
 $user = authenticateRequest();
+
+$id = $data['id']; // extract the id from $data
 $controller = new FoodItemController();
 $response = $controller->deleteFoodSide($id, $user);
 echo json_encode($response);
