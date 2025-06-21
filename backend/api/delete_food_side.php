@@ -23,5 +23,5 @@ if (!isset($data['item_id']) || !isset($data['side_id'])) {
 
 $user = authenticateRequest();
 $controller = new FoodItemController();
-$response = $controller->deleteFoodItemSide($data, $user);
+$response = $controller->deleteFoodSide($id, $user);
 echo json_encode($response);

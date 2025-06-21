@@ -320,7 +320,7 @@ public function updateFoodSide($data, $user)
 }
 
 // DELETE Food Side
-public function deleteFoodSide($id)
+public function deleteFoodSide($id,$user)
 {
     $result = $this->foodItem->deleteFoodSide($id);
     if ($result) {
