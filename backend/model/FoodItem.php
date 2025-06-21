@@ -17,18 +17,18 @@ class FoodItem
 
     
     // Create Food Item
-    public function create($data)
+   public function create($data)
 {
-
+    // Validate store_id exists
     $storeCheck = $this->conn->prepare("SELECT COUNT(*) FROM stores WHERE id = :store_id");
-$storeCheck->execute(['store_id' => $data['store_id']]);
-if ($storeCheck->fetchColumn() == 0) {
-    http_response_code(400);
-    return ['status' => 'error', 'message' => 'Invalid store_id: no such store found.'];
-    
-}
+    $storeCheck->execute(['store_id' => $data['store_id']]);
+    if ($storeCheck->fetchColumn() == 0) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid store_id: no such store found.'];
+    }
 
-$nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND deleted = 0");
+    // Check if item with the same name exists in the store
+    $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND name = :name AND deleted = 0");
     $nameCheck->execute([
         'store_id' => $data['store_id'],
         'name' => $data['name']
@@ -38,14 +38,14 @@ $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE sto
         return ['status' => 'error', 'message' => 'Item with this name already exists in this store. Please choose a different name.'];
     }
 
-
+    // Insert new item
     $sql = "INSERT INTO {$this->table} 
             (store_id, category_id, section_id, user_id, name, price, photo, short_description, max_qty, status, created_at, updated_at)
             VALUES 
             (:store_id, :category_id, :section_id, :user_id, :name, :price, :photo, :short_description, :max_qty, :status, NOW(), NOW())";
 
     $stmt = $this->conn->prepare($sql);
-    return $stmt->execute([
+    $stmt->execute([
         'store_id' => $data['store_id'],
         'category_id' => $data['category_id'],
         'section_id' => $data['section_id'] ?? null, // optional
@@ -57,7 +57,11 @@ $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE sto
         'max_qty' => $data['max_qty'],
         'status' => $data['status'] ?? 'active'
     ]);
+
+    http_response_code(201);
+    return ['status' => 'success', 'message' => 'Item created successfully.'];
 }
+
 
 
 

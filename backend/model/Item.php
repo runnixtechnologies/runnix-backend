@@ -31,9 +31,9 @@ class Item
         $stmt = $this->conn->prepare($sql);
 
         foreach ($items as $item) {
-            // Check if item name already exists in this store
+            // Corrected name check
             $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} 
-                                               WHERE store_id = :store_id AND deleted = 0");
+                                               WHERE store_id = :store_id AND name = :name AND deleted = 0");
             $nameCheck->execute([
                 'store_id' => $storeId,
                 'name' => $item['name']
@@ -45,7 +45,7 @@ class Item
                 return ["status" => "error", "message" => "Item '{$item['name']}' already exists in this store. Bulk creation stopped."];
             }
 
-            // Insert item if no conflict
+            // Insert item
             $stmt->execute([
                 ':store_id' => $storeId,
                 ':category_id' => $categoryId,
@@ -68,12 +68,13 @@ class Item
 }
 
 
+
    public function createSingleItem($storeId, $categoryId, $userId, $name, $price, $photo = null)
 {
     try {
-        // Check if item name already exists in this store
+        // Corrected name check
         $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} 
-                                           WHERE store_id = :store_id AND deleted = 0");
+                                           WHERE store_id = :store_id AND name = :name AND deleted = 0");
         $nameCheck->execute([
             'store_id' => $storeId,
             'name' => $name
