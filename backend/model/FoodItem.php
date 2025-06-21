@@ -244,10 +244,10 @@ public function updateFoodItemSide($itemId, $sideId, $extraPrice)
     // CREATE Food Side
 public function createFoodSide($data)
 {
-    $query = "INSERT INTO food_sides (store_id, side_name, price) VALUES (:store_id, :side_name, :price)";
+    $query = "INSERT INTO food_sides (store_id, name, price) VALUES (:store_id, :name, :price)";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':store_id', $data['store_id']);
-    $stmt->bindParam(':side_name', $data['side_name']);
+    $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
     return $stmt->execute();
 }
