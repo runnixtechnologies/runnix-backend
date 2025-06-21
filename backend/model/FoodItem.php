@@ -314,7 +314,7 @@ public function deleteFoodSide($id)
 {
     $query = "DELETE FROM food_sides WHERE id = :id";
     $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':id', $id);
+    $stmt->bindParam(':id', $id); 
     return $stmt->execute();
 }
 
