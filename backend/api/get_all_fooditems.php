@@ -13,7 +13,9 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
+$data = $_GET; // Or $_POST depending on request method
+
 $user = authenticateRequest();
 $controller = new FoodItemController();
-$response = $controller->getAllFoodItems($user);
+$response = $controller->getAllFoodItemsByStoreId($data, $user);
 echo json_encode($response);

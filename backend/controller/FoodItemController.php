@@ -80,17 +80,11 @@ class FoodItemController
     $photo = null;
 
     if (!isset($data['id']) || empty($data['id'])) {
-       return [
-    'status' => 'debug',
-    'post' => $_POST,
-    'files' => $_FILES,
-    'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set'
-];
+       
 
-
-    //return ['status' => 'error', 'message' => 'Food item does not exist'];
+    return ['status' => 'error', 'message' => 'Food item does not exist'];
     
-}
+    }
 
 
     // Check if item exists
@@ -216,6 +210,36 @@ class FoodItemController
     return ["status" => "success", "data" => $foodItems];
 }
 
+
+public function getAllFoodItemsByStoreId($data, $user)
+{
+    // Validate store_id parameter
+    if (!isset($data['store_id']) || empty($data['store_id'])) {
+        http_response_code(400); // Bad Request
+        return ["status" => "error", "message" => "store_id is required."];
+    }
+
+    $storeId = $data['store_id'];
+
+    // Check if store exists
+    $store = $this->storeModel->getStoreById($storeId);
+    if (!$store) {
+        http_response_code(404); // Not Found
+        return ["status" => "error", "message" => "Store not found."];
+    }
+
+    // If user is merchant, ensure they can only access their own store
+    if ($user['role'] === 'merchant' && $store['user_id'] != $user['user_id']) {
+        http_response_code(403); // Forbidden
+        return ["status" => "error", "message" => "Access denied. You can only view your own store's food items."];
+    }
+
+    // Fetch food items
+    $foodItems = $this->foodItem->getAllByStoreId($storeId);
+
+    http_response_code(200);
+    return ["status" => "success", "data" => $foodItems];
+}
 
 // CREATE Food Side
 public function createFoodSide($data)
