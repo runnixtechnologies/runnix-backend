@@ -18,43 +18,76 @@ class Item
     }
 
     
-    public function bulkCreateItems($storeId, $categoryId, $items)
-    {
-        try {
-            $this->conn->beginTransaction();
-
-            $sql = "INSERT INTO {$this->table} (store_id, category_id, user_id, name, price, photo, status, created_at, updated_at)
-                    VALUES (:store_id, :category_id, :user_id, :name, :price, :photo, 'active', NOW(), NOW())";
-
-            $stmt = $this->conn->prepare($sql);
-
-            foreach ($items as $item) {
-                $stmt->execute([
-                    ':store_id' => $storeId,
-                    ':category_id' => $categoryId,
-                    ':user_id' => $item['user_id'],
-                    ':name' => $item['name'],
-                    ':price' => $item['price'],
-                    ':photo' => $item['photo'] ?? null
-                ]);
-            }
-
-            $this->conn->commit();
-            http_response_code(201);
-            return ["status" => "success", "message" => "Items added successfully."];
-
-        } catch (PDOException $e) {
-            $this->conn->rollBack();
-            http_response_code(500);
-            return ["status" => "error", "message" => "Item Addition Failed "];
-        }
-    }
-
-    public function createSingleItem($storeId, $categoryId, $userId, $name, $price, $photo = null)
+ public function bulkCreateItems($storeId, $categoryId, $items)
 {
     try {
-        $sql = "INSERT INTO {$this->table} (store_id, category_id, user_id, name, price, photo, status, created_at, updated_at)
-                VALUES (:store_id, :category_id, :user_id, :name, :price, :photo, 'active', NOW(), NOW())";
+        $this->conn->beginTransaction();
+
+        $sql = "INSERT INTO {$this->table} 
+                (store_id, category_id, user_id, name, price, photo, status, created_at, updated_at)
+                VALUES 
+                (:store_id, :category_id, :user_id, :name, :price, :photo, 'active', NOW(), NOW())";
+
+        $stmt = $this->conn->prepare($sql);
+
+        foreach ($items as $item) {
+            // Check if item name already exists in this store
+            $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} 
+                                               WHERE store_id = :store_id AND deleted = 0");
+            $nameCheck->execute([
+                'store_id' => $storeId,
+                'name' => $item['name']
+            ]);
+
+            if ($nameCheck->fetchColumn() > 0) {
+                $this->conn->rollBack();
+                http_response_code(409); // Conflict
+                return ["status" => "error", "message" => "Item '{$item['name']}' already exists in this store. Bulk creation stopped."];
+            }
+
+            // Insert item if no conflict
+            $stmt->execute([
+                ':store_id' => $storeId,
+                ':category_id' => $categoryId,
+                ':user_id' => $item['user_id'],
+                ':name' => $item['name'],
+                ':price' => $item['price'],
+                ':photo' => $item['photo'] ?? null
+            ]);
+        }
+
+        $this->conn->commit();
+        http_response_code(201);
+        return ["status" => "success", "message" => "Items added successfully."];
+
+    } catch (PDOException $e) {
+        $this->conn->rollBack();
+        http_response_code(500);
+        return ["status" => "error", "message" => "Item Addition Failed: " . $e->getMessage()];
+    }
+}
+
+
+   public function createSingleItem($storeId, $categoryId, $userId, $name, $price, $photo = null)
+{
+    try {
+        // Check if item name already exists in this store
+        $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} 
+                                           WHERE store_id = :store_id AND deleted = 0");
+        $nameCheck->execute([
+            'store_id' => $storeId,
+            'name' => $name
+        ]);
+
+        if ($nameCheck->fetchColumn() > 0) {
+            http_response_code(409); // Conflict
+            return ['status' => 'error', 'message' => 'Item with this name already exists in this store. Please choose a different name.'];
+        }
+
+        $sql = "INSERT INTO {$this->table} 
+                (store_id, category_id, user_id, name, price, photo, status, created_at, updated_at)
+                VALUES 
+                (:store_id, :category_id, :user_id, :name, :price, :photo, 'active', NOW(), NOW())";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
@@ -72,9 +105,10 @@ class Item
 
     } catch (PDOException $e) {
         http_response_code(500);
-        return ["status" => "error", "message" => "Item Creation Failed"];
+        return ["status" => "error", "message" => "Item Creation Failed: " . $e->getMessage()];
     }
 }
+
 
 
     public function updateItem($itemId, $data)

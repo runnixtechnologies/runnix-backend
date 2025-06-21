@@ -25,7 +25,19 @@ $storeCheck->execute(['store_id' => $data['store_id']]);
 if ($storeCheck->fetchColumn() == 0) {
     http_response_code(400);
     return ['status' => 'error', 'message' => 'Invalid store_id: no such store found.'];
+    
 }
+
+$nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND deleted = 0");
+    $nameCheck->execute([
+        'store_id' => $data['store_id'],
+        'name' => $data['name']
+    ]);
+    if ($nameCheck->fetchColumn() > 0) {
+        http_response_code(409); // Conflict
+        return ['status' => 'error', 'message' => 'Item with this name already exists in this store. Please choose a different name.'];
+    }
+
 
     $sql = "INSERT INTO {$this->table} 
             (store_id, category_id, section_id, user_id, name, price, photo, short_description, max_qty, status, created_at, updated_at)
