@@ -249,7 +249,12 @@ public function getAllFoodItemsByStoreId($data, $user)
 
 // CREATE Food Side
 public function createFoodSide($data, $user)
+
 {
+    if (!isset($data['store_id']) || empty($data['store_id'])) {
+    $data['store_id'] = $user['store_id']; // Use authenticated user's store_id if not passed
+}
+
     $result = $this->foodItem->createFoodSide($data);
     if ($result) {
         http_response_code(201); // Created
