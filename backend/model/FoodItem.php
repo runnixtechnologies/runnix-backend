@@ -264,14 +264,17 @@ public function createFoodSide($data)
         http_response_code(409); // Conflict
         return ['status' => 'error', 'message' => 'Side Name already exists in this store. Please choose a different name.'];
     }
-
-    
-    $query = "INSERT INTO food_sides (store_id, name, price) VALUES (:store_id, :name, :price)";
+    else{
+         $query = "INSERT INTO food_sides (store_id, name, price) VALUES (:store_id, :name, :price)";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':store_id', $data['store_id']);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
     return $stmt->execute();
+    }
+
+
+   
 }
 
 public function getFoodSideById($id)
