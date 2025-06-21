@@ -167,6 +167,16 @@ public function updateFoodItemSide($itemId, $sideId, $extraPrice)
 
  public function createSide($data)
     {
+         // Check if item with the same name exists in the store
+    $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM food_sides WHERE store_id = :store_id AND name = :name");
+    $nameCheck->execute([
+        'store_id' => $data['store_id'],
+        'name' => $data['name']
+    ]);
+    if ($nameCheck->fetchColumn() > 0) {
+        http_response_code(409); // Conflict
+        return ['status' => 'error', 'message' => 'Side Name already exists in this store. Please choose a different name.'];
+    }
         $sql = "INSERT INTO food_sides (store_id, name, price, created_at, updated_at) VALUES (:store_id, :name, :price, NOW(), NOW())";
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute($data);
