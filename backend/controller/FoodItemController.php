@@ -236,9 +236,15 @@ public function getAllFoodItemsByStoreId($data, $user)
 
     // Fetch food items
     $foodItems = $this->foodItem->getAllByStoreId($storeId);
-
-    http_response_code(200);
+    if ($foodItems ){
+     http_response_code(200);
     return ["status" => "success", "data" => $foodItems];
+    }
+    else{
+         http_response_code(400); // Bad Request
+        return ["status" => "error", "message" => "No Food Items Found."];
+    }
+ 
 }
 
 // CREATE Food Side
