@@ -286,11 +286,11 @@ public function getFoodSideById($id)
 }
 
 // READ All Sides by Store
-public function getAllFoodSidesByStoreId($storeId)
+public function getAllFoodSidesByStoreId($store_id)
 {
     $query = "SELECT * FROM food_sides WHERE store_id = :store_id";
     $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':store_id', $storeId);
+    $stmt->bindParam(':store_id', $store_id);
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

@@ -299,9 +299,9 @@ public function getFoodSideById($id, $user)
 }
 
 // READ All Sides by Store
-public function getAllFoodSidesByStoreId($storeId, $user)
+public function getAllFoodSidesByStoreId($store_id, $user)
 {
-    $result = $this->foodItem->getAllFoodSidesByStoreId($storeId);
+    $result = $this->foodItem->getAllFoodSidesByStoreId($store_id);
     http_response_code(200); // OK
     return ['status' => 'success', 'data' => $result];
 }

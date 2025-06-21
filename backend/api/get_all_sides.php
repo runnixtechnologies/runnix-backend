@@ -18,5 +18,5 @@ $data = $_GET; // expecting 'food_item_id' parameter
 
 $user = authenticateRequest();
 $controller = new FoodItemController();
-$response = $controller->getAllFoodSidesByStoreId($storeId, $user);
+$response = $controller->getAllFoodSidesByStoreId($store_id, $user);
 echo json_encode($response);
