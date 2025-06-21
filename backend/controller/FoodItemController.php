@@ -268,13 +268,16 @@ public function createFoodSide($data, $user)
     }
 
     $result = $this->foodItem->createFoodSide($data);
-    if ($result) {
-        http_response_code(201);
-        return ['status' => 'success', 'message' => 'Food side created successfully', 'data' => $result];
-    } else {
-        http_response_code(500);
-        return ['status' => 'error', 'message' => 'Failed to create food side'];
+
+    // Check result returned by the model
+    if (isset($result['status']) && $result['status'] === 'error') {
+        // Model detected error (like duplicate name)
+        return $result;  // Already has correct message & status
     }
+
+    // Otherwise, model inserted successfully
+    http_response_code(201);
+    return ['status' => 'success', 'message' => 'Food side created successfully'];
 }
 
 
