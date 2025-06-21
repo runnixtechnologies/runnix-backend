@@ -283,19 +283,19 @@ public function createFoodSide($data, $user)
 
 public function getFoodSideById($id, $user)
 {
-    if (empty($id)) {
-        http_response_code(400); // Bad Request
-        return ['status' => 'error', 'message' => 'Missing Food Side ID'];
-    }
-
-    $side = $this->foodItem->getFoodSideById($id);
-    if ($side) {
+    
+     $side = $this->foodItem->getFoodSideById($id);
+       if ($side) {
         http_response_code(200); // OK
         return ['status' => 'success', 'data' => $side];
     } else {
         http_response_code(404); // Not Found
         return ['status' => 'error', 'message' => 'Food Side not found'];
     }
+
+    
+   
+    
 }
 
 // READ All Sides by Store

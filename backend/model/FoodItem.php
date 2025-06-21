@@ -261,6 +261,7 @@ public function createFoodSide($data)
         'name' => $data['name']
     ]);
     if ($nameCheck->fetchColumn() > 0) {
+         http_response_code(400);
         return ['status' => 'error', 'message' => 'Side Name already exists in this store. Please choose a different name.'];
     }
 
