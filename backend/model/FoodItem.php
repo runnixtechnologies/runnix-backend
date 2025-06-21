@@ -63,7 +63,7 @@ if ($storeCheck->fetchColumn() == 0) {
 {
     $query = "UPDATE food_items SET 
                 name = :name,
-                description = :description,
+                short_description = :short_description,
                 price = :price,
                 section_id = :section_id, -- added section_id here
                 status = :status,
@@ -80,7 +80,7 @@ if ($storeCheck->fetchColumn() == 0) {
 
     $stmt->bindParam(':id', $data['id']);
     $stmt->bindParam(':name', $data['name']);
-    $stmt->bindParam(':description', $data['description']);
+    $stmt->bindParam(':short_description', $data['short_description']);
     $stmt->bindParam(':price', $data['price']);
 
     $stmt->bindParam(':section_id', $sectionId);
