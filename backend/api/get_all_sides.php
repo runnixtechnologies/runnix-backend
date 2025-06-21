@@ -17,6 +17,14 @@ header('Content-Type: application/json');
 $data = $_GET; // expecting 'food_item_id' parameter
 
 $user = authenticateRequest();
+if (!isset($user['store_id'])) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Authenticated user does not have store_id']);
+    exit;
+}
+
+$store_id = $user['store_id'];
 $controller = new FoodItemController();
+
 $response = $controller->getAllFoodSidesByStoreId($store_id, $user);
 echo json_encode($response);
