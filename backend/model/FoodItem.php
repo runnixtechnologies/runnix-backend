@@ -15,9 +15,18 @@ class FoodItem
         $this->conn = (new Database())->getConnection();
     }
 
+    
     // Create Food Item
     public function create($data)
 {
+
+    $storeCheck = $this->conn->prepare("SELECT COUNT(*) FROM stores WHERE id = :store_id");
+$storeCheck->execute(['store_id' => $data['store_id']]);
+if ($storeCheck->fetchColumn() == 0) {
+    http_response_code(400);
+    return ['status' => 'error', 'message' => 'Invalid store_id: no such store found.'];
+}
+
     $sql = "INSERT INTO {$this->table} 
             (store_id, category_id, section_id, user_id, name, price, photo, short_description, max_qty, status, created_at, updated_at)
             VALUES 

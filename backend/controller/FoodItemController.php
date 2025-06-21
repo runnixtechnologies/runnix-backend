@@ -59,6 +59,11 @@ class FoodItemController
     // Attach photo to data
     $data['photo'] = $photo;
 
+    if (!$this->storeModel->storeIdExists($data['store_id'])) {
+    http_response_code(400); // Bad Request
+    return ['status' => 'error', 'message' => 'Invalid store_id. Store does not exist.'];
+}
+
     $result = $this->foodItem->create($data);
     if ($result) {
         http_response_code(201); // Created

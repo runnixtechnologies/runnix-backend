@@ -68,6 +68,13 @@ public function getActiveCategories()
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+     public function storeIDExists($store_id) {
+        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE id = :store_id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['store_id' => $store_id]);
+        return $stmt->fetchColumn() > 0;
+    }
+
 
     public function storeExists($field, $value)
 {
