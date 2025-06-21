@@ -307,7 +307,7 @@ public function getAllFoodSidesByStoreId($store_id, $user)
 }
 
 // UPDATE Food Side
-public function updateFoodSide($data)
+public function updateFoodSide($data, $user)
 {
     $result = $this->foodItem->updateFoodSide($data);
     if ($result) {

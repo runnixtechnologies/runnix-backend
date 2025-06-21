@@ -300,7 +300,7 @@ public function updateFoodSide($data)
 {
     $query = "UPDATE food_sides SET side_name = :side_name, price = :price WHERE id = :id";
     $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':side_name', $data['side_name']);
+    $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
     $stmt->bindParam(':id', $data['id']);
     return $stmt->execute();
