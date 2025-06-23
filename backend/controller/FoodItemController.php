@@ -414,15 +414,40 @@ public function deleteFoodItemSide($data, $user)
 // CREATE Food Section
 public function createFoodSection($data, $user)
 {
+    if (empty($data['store_id']) || empty($data['section_name'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Please provide the store and section name.'];
+    }
+
+    if (isset($data['side_ids']) && !is_array($data['side_ids'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid sides format. Please select valid sides from the list.'];
+    }
+
+    if (isset($data['is_required'])) {
+        if (!in_array($data['is_required'], [0, 1])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid selection for the Required option.'];
+        }
+
+        if ($data['is_required'] == 1) {
+            if (!isset($data['max_qty']) || !is_numeric($data['max_qty']) || $data['max_qty'] <= 0) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Please set the maximum quantity since the section is required.' ];
+            }
+        }
+    }
+
     $result = $this->foodItem->createFoodSection($data);
     if ($result) {
         http_response_code(201);
-        return ['status' => 'success', 'message' => 'Food section created successfully'];
+        return ['status' => 'success', 'message' => 'Section created successfully.'];
     } else {
         http_response_code(500);
-        return ['status' => 'error', 'message' => 'Failed to create food section'];
+        return ['status' => 'error', 'message' => 'Something went wrong. Unable to create the section. Please try again.'];
     }
 }
+
 
 // READ All Sections by Store
 public function getAllFoodSectionsByStoreId($storeId)
@@ -435,15 +460,40 @@ public function getAllFoodSectionsByStoreId($storeId)
 // UPDATE Food Section
 public function updateFoodSection($id, $data, $user)
 {
-    $result = $this->foodItem->updateFoodSection( $data);
+    if (empty($id) || empty($data['section_name'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Please provide the section ID and name.'];
+    }
+
+    if (isset($data['side_ids']) && !is_array($data['side_ids'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid sides format. Please select valid sides from the list.'];
+    }
+
+    if (isset($data['is_required'])) {
+        if (!in_array($data['is_required'], [0, 1])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid selection for the Required option.'];
+        }
+
+        if ($data['is_required'] == 1) {
+            if (!isset($data['max_qty']) || !is_numeric($data['max_qty']) || $data['max_qty'] <= 0) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Please set the maximum quantity since the section is required.'];
+            }
+        }
+    }
+
+    $result = $this->foodItem->updateFoodSection($data);
     if ($result) {
         http_response_code(200);
-        return ['status' => 'success', 'message' => 'Food section updated successfully'];
+        return ['status' => 'success', 'message' => 'Section updated successfully.'];
     } else {
         http_response_code(404);
-        return ['status' => 'error', 'message' => 'Food section not found or not updated'];
+        return ['status' => 'error', 'message' => 'Section not found or could not be updated.'];
     }
 }
+
 // get foodsectionbyID
 
 public function getFoodSectionById($id)

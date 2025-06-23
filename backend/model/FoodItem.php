@@ -353,36 +353,167 @@ public function deleteFoodItemSide($itemId, $sideId)
     $stmt->bindParam(':side_id', $sideId);
     return $stmt->execute();
 }
-
-// CREATE Food Section
+// CREATE Food Section (ensure unique section name per store)
 public function createFoodSection($data)
 {
-    $query = "INSERT INTO food_sections (store_id, section_name) VALUES (:store_id, :section_name)";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':store_id', $data['store_id']);
-    $stmt->bindParam(':section_name', $data['section_name']);
-    return $stmt->execute();
+    try {
+        // Begin transaction
+        $this->conn->beginTransaction();
+
+        // Set defaults if not provided
+        $maxQuantity = isset($data['max_quantity']) ? $data['max_quantity'] : null;
+        $required = isset($data['required']) ? $data['required'] : 0;
+
+        // Insert new section
+        $query = "INSERT INTO food_sections (store_id, section_name, max_quantity, required) 
+                  VALUES (:store_id, :section_name, :max_quantity, :required)";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':store_id', $data['store_id']);
+        $stmt->bindParam(':section_name', $data['section_name']);
+        $stmt->bindParam(':max_quantity', $maxQuantity);
+        $stmt->bindParam(':required', $required);
+        $stmt->execute();
+
+        // Get the new section ID
+        $sectionId = $this->conn->lastInsertId();
+
+        // Attach sides if provided and valid
+        if (!empty($data['side_ids']) && is_array($data['side_ids'])) {
+            $sideQuery = "INSERT INTO food_section_sides (section_id, side_id) VALUES (:section_id, :side_id)";
+            $sideStmt = $this->conn->prepare($sideQuery);
+
+            foreach ($data['side_ids'] as $sideId) {
+                // Use bindValue inside the loop to avoid PDO binding issues
+                $sideStmt->bindValue(':section_id', $sectionId);
+                $sideStmt->bindValue(':side_id', $sideId);
+                $sideStmt->execute();
+            }
+        }
+
+        // Commit transaction
+        $this->conn->commit();
+        return true;
+
+    } catch (\PDOException $e) {
+        // Rollback on error
+        $this->conn->rollBack();
+        throw new \Exception("Error creating food section: " . $e->getMessage());
+    }
 }
+
 
 // READ All Sections by Store
 public function getAllFoodSectionsByStoreId($storeId)
 {
+    // First, get all sections for this store
     $query = "SELECT * FROM food_sections WHERE store_id = :store_id";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':store_id', $storeId);
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // For each section, get attached sides
+    foreach ($sections as &$section) {
+        $sideQuery = "SELECT fs.side_id, s.name 
+                      FROM food_section_sides fs
+                      JOIN food_sides s ON fs.side_id = s.id
+                      WHERE fs.section_id = :section_id";
+        $sideStmt = $this->conn->prepare($sideQuery);
+        $sideStmt->bindParam(':section_id', $section['id']);
+        $sideStmt->execute();
+        $sides = $sideStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Attach sides to this section
+        $section['sides'] = $sides;
+    }
+
+    return $sections;
 }
+
+
+// GET Single Section by ID
+public function getFoodSectionById($id)
+{
+    // Get the section
+    $query = "SELECT * FROM food_sections WHERE id = :id";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':id', $id);
+    $stmt->execute();
+    $section = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($section) {
+        // Get attached sides
+        $sideQuery = "SELECT fs.side_id, s.name 
+                      FROM food_section_sides fs
+                      JOIN food_sides s ON fs.side_id = s.id
+                      WHERE fs.section_id = :id";
+        $sideStmt = $this->conn->prepare($sideQuery);
+        $sideStmt->bindParam(':id', $id);
+        $sideStmt->execute();
+        $sides = $sideStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $section['sides'] = $sides;
+    }
+
+    return $section ?: null;
+}
+
 
 // UPDATE Food Section
 public function updateFoodSection($data)
 {
-    $query = "UPDATE food_sections SET section_name = :section_name WHERE id = :id";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':section_name', $data['section_name']);
-    $stmt->bindParam(':id', $data['id']);
-    return $stmt->execute();
+    try {
+        // Begin transaction
+        $this->conn->beginTransaction();
+
+        // Set defaults if not provided
+        $maxQuantity = isset($data['max_quantity']) ? $data['max_quantity'] : null;
+        $required = isset($data['required']) ? $data['required'] : 0;
+
+        // Update the section details
+        $query = "UPDATE food_sections 
+                  SET section_name = :section_name, max_quantity = :max_quantity, required = :required
+                  WHERE id = :section_id AND store_id = :store_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':section_name', $data['section_name']);
+        $stmt->bindParam(':max_quantity', $maxQuantity);
+        $stmt->bindParam(':required', $required);
+        $stmt->bindParam(':section_id', $data['section_id']);
+        $stmt->bindParam(':store_id', $data['store_id']);
+        $stmt->execute();
+
+        // Handle sides if provided
+        if (isset($data['side_ids']) && is_array($data['side_ids'])) {
+            // First, delete all existing sides for this section
+            $deleteQuery = "DELETE FROM food_section_sides WHERE section_id = :section_id";
+            $deleteStmt = $this->conn->prepare($deleteQuery);
+            $deleteStmt->bindParam(':section_id', $data['section_id']);
+            $deleteStmt->execute();
+
+            // Insert the new sides
+            if (!empty($data['side_ids'])) {
+                $insertQuery = "INSERT INTO food_section_sides (section_id, side_id) VALUES (:section_id, :side_id)";
+                $insertStmt = $this->conn->prepare($insertQuery);
+
+                foreach ($data['side_ids'] as $sideId) {
+                    $insertStmt->bindValue(':section_id', $data['section_id']);
+                    $insertStmt->bindValue(':side_id', $sideId);
+                    $insertStmt->execute();
+                }
+            }
+        }
+
+        // Commit transaction
+        $this->conn->commit();
+        return true;
+
+    } catch (\PDOException $e) {
+        // Rollback on error
+        $this->conn->rollBack();
+        throw new \Exception("Error updating food section: " . $e->getMessage());
+    }
 }
+
 
 // DELETE Food Section
 public function deleteFoodSection($id)
@@ -391,20 +522,6 @@ public function deleteFoodSection($id)
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':id', $id);
     return $stmt->execute();
-}
-
-
-public function getFoodSectionById($id)
-{
-    $sql = "SELECT id, store_id, name, created_at, updated_at 
-            FROM {$this->table} 
-            WHERE id = :id AND deleted = 0";
-
-    $stmt = $this->conn->prepare($sql);
-    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-    $stmt->execute();
-
-    return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
 
