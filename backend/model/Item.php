@@ -216,7 +216,7 @@ public function isItemOwnedByUser($itemId, $userId)
 public function getItemsByStoreAndCategory($storeId, $categoryId)
 {
     $sql = "SELECT * FROM items 
-            WHERE store_id = :store_id AND category_id = :category_id ";
+            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0";
     $stmt = $this->conn->prepare($sql);
     $stmt->execute([
         ':store_id' => $storeId,
