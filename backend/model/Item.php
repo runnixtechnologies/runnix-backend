@@ -215,11 +215,14 @@ public function isItemOwnedByUser($itemId, $userId)
 
 public function getItemsByStoreAndCategory($storeId, $categoryId)
 {
-    $sql = "SELECT * FROM items WHERE store_id = :store_id";
-$stmt = $this->conn->prepare($sql);
-$stmt->execute([':store_id' => $storeId]);
-return $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+    $sql = "SELECT * FROM items 
+            WHERE store_id = :store_id AND category_id = :category_id ";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([
+        ':store_id' => $storeId,
+        ':category_id' => $categoryId
+    ]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 
