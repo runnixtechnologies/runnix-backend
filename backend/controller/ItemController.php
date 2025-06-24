@@ -269,5 +269,26 @@ public function getAllItems($user)
 }
 
 
+public function getItemsByCategoryInStore($user, $categoryId)
+{
+    if ($user['role'] !== 'merchant') {
+        http_response_code(403);
+        return ["status" => "error", "message" => "Access denied. Only merchants can fetch store items."];
+    }
+
+    $store = $this->storeModel->getStoreByUserId($user['user_id']);
+
+    if (!$store) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "Store not found for this user."];
+    }
+
+    $storeId = $store['id'];
+    $items = $this->itemModel->getItemsByStoreAndCategory($storeId, $categoryId);
+
+    return ["status" => "success", "data" => $items];
+}
+
+
 }
 

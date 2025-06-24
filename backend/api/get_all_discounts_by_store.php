@@ -11,7 +11,8 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-authenticateRequest();
+$user = authenticateRequest();
+//authenticateRequest(); old code 
 $controller = new DiscountController();
 
 // ✅ Use GET method to get the store_id from the query string
