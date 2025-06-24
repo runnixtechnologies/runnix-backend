@@ -16,7 +16,7 @@ $user = authenticateRequest();
 
 if (!isset($_GET['category_id'])) {
     http_response_code(400);
-    echo json_encode(["status" => "error", "message" => "Missing category_id parameter."]);
+    echo json_encode(["status" => "error", "message" => "Missing Category Id."]);
     exit;
 }
 
