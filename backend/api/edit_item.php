@@ -15,7 +15,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 $controller = new ItemController();
 $user = authenticateRequest();
 
-$response = $controller->updateItem($data);
+$response = $controller->updateItem($data, $user);
 echo json_encode($response);
 ?>
 
