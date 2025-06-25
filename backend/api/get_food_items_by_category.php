@@ -21,7 +21,9 @@ if (!isset($_GET['category_id'])) {
 }
 
 $categoryId = intval($_GET['category_id']);
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
 
 $controller = new FoodItemController();
-$response = $controller->getItemsByCategoryInStore($user, $categoryId);
+$response = $controller->getItemsByCategoryInStore($user, $categoryId, $page, $limit);
 echo json_encode($response);

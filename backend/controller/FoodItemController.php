@@ -529,7 +529,7 @@ public function deleteFoodSection($id, $user)
 }
 
 
-public function getItemsByCategoryInStore($user, $categoryId)
+public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit = 10)
 {
     if ($user['role'] !== 'merchant') {
         http_response_code(403);
@@ -542,9 +542,12 @@ public function getItemsByCategoryInStore($user, $categoryId)
         http_response_code(404);
         return ["status" => "error", "message" => "Store not found for this user."];
     }
-
     $storeId = $store['id'];
-    $items = $this->foodItem->getItemsByStoreAndCategory($storeId, $categoryId);
+    $offset = ($page - 1) * $limit;
+
+    //$items = $this->foodItem->getItemsByStoreAndCategory($storeId, $categoryId);
+     $items = $this->foodItem->getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset);
+    $totalCount = $this->foodItem->countItemsByStoreAndCategory($storeId, $categoryId);
 
     return ["status" => "success", "data" => $items];
 }
