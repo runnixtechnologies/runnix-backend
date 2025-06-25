@@ -225,6 +225,22 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+public function updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId)
+{
+    $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+
+    $query = "UPDATE items 
+              SET category_id = ?, updated_at = NOW() 
+              WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
+
+    $stmt = $this->conn->prepare($query);
+
+    // Merge all bound values: new category, item IDs, then store ID
+    $params = array_merge([$newCategoryId], $itemIds, [$storeId]);
+
+    return $stmt->execute($params);
+}
+
 
 
 }
