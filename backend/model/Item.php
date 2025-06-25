@@ -242,6 +242,19 @@ public function updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId)
 }
 
 
+public function removeItemsFromCategory($itemIds, $storeId)
+{
+    $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+
+    $query = "UPDATE items 
+              SET category_id = NULL, updated_at = NOW()
+              WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
+
+    $stmt = $this->conn->prepare($query);
+    $params = array_merge($itemIds, [$storeId]);
+
+    return $stmt->execute($params);
+}
 
 
 

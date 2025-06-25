@@ -293,27 +293,42 @@ public function getItemsByCategoryInStore($user, $categoryId)
 
 public function bulkUpdateCategory($data, $user)
 {
-    if (empty($data['item_ids']) || !is_array($data['item_ids']) || empty($data['new_category_id'])) {
-        http_response_code(400); // Bad Request
-        return ['status' => 'error', 'message' => 'Missing item_ids or new_category_id'];
-    }
-
-    $itemIds = $data['item_ids'];
-    $newCategoryId = $data['new_category_id'];
+    $mode = $data['mode'] ?? 'assign';
+    $itemIds = $data['item_ids'] ?? [];
+    $newCategoryId = $data['new_category_id'] ?? null;
     $storeId = $user['store_id'] ?? null;
+
+    if (empty($itemIds) || !is_array($itemIds)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Missing or invalid item_ids'];
+    }
 
     if (!$storeId) {
         http_response_code(403);
         return ['status' => 'error', 'message' => 'Store ID not found for user'];
     }
 
-    $result = $this->itemModel->updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId);
+    // Only check for new_category_id if mode is assign
+    if ($mode === 'assign' && empty($newCategoryId)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Missing new_category_id for assign mode'];
+    }
+
+    $result = false;
+
+    if ($mode === 'remove') {
+        $result = $this->itemModel->removeItemsFromCategory($itemIds, $storeId);
+    } elseif ($mode === 'assign') {
+        $result = $this->itemModel->updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId);
+    } else {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid mode'];
+    }
 
     if ($result) {
-        http_response_code(200); // OK
-        return ['status' => 'success', 'message' => 'Item categories updated successfully'];
+        return ['status' => 'success', 'message' => 'Items updated successfully'];
     } else {
-        http_response_code(500); // Internal Server Error
+        http_response_code(500);
         return ['status' => 'error', 'message' => 'Failed to update item categories'];
     }
 }
