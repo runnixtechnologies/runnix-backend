@@ -156,6 +156,7 @@ public function getUserByEmail($email)
                 s.id AS store_id,
                 s.store_name,
                 s.store_type_id,
+                s.biz_logo,
                 st.name AS store_type_name,
                 st.image_url AS store_type_image
             FROM stores s

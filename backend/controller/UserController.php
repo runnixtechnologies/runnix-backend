@@ -73,7 +73,7 @@ class UserController
             $user['store_type_id']    = $storeDetails['store_type_id'];
             $user['store_type_name']  = $storeDetails['store_type_name'];
             $user['store_type_image'] = $storeDetails['store_type_image'];
-             $user['biz_logo'] = $storeDetails['biz_logo'];
+             user['biz_logo'] = $storeDetails['biz_logo'];
             $user['store_setup']      = true;
         } else {
             $user['store_setup'] = false;
