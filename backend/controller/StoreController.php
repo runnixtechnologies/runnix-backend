@@ -120,5 +120,21 @@ public function getStatus($user) {
     return $this->store->getStoreStatus($storeId);
 }
 
+public function getStoreActiveCategories($storeId)
+{
+    if (empty($storeId)) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "store_id is required"];
+    }
+
+    $categories = $this->store->fetchActiveCategoriesByStore($storeId); // from model
+
+    if (empty($categories)) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "No active categories found for this store"];
+    }
+
+    return ["status" => "success", "data" => $categories];
+}
 
 }

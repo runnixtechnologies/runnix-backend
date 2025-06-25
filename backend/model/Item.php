@@ -241,6 +241,20 @@ public function updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId)
     return $stmt->execute($params);
 }
 
+public function fetchActiveCategoriesByStore($storeId)
+{
+    $query = "SELECT id, name 
+              FROM categories 
+              WHERE status = 1 AND store_id = :store_id";
+
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+
 
 
 }

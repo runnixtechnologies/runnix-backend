@@ -548,5 +548,33 @@ public function getItemsByCategoryInStore($user, $categoryId)
 
     return ["status" => "success", "data" => $items];
 }
+
+public function bulkUpdateCategory($data, $user)
+{
+    if (empty($data['item_ids']) || !is_array($data['item_ids']) || empty($data['new_category_id'])) {
+        http_response_code(400); // Bad Request
+        return ['status' => 'error', 'message' => 'Missing item_ids or new_category_id'];
+    }
+
+    $itemIds = $data['item_ids'];
+    $newCategoryId = $data['new_category_id'];
+    $storeId = $user['store_id'] ?? null;
+
+    if (!$storeId) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found for user'];
+    }
+
+    $result = $this->foodItem->updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId);
+
+    if ($result) {
+        http_response_code(200); // OK
+        return ['status' => 'success', 'message' => 'Item categories updated successfully'];
+    } else {
+        http_response_code(500); // Internal Server Error
+        return ['status' => 'error', 'message' => 'Failed to update item categories'];
+    }
+}
+
 }
 ?>
