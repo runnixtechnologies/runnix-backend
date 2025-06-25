@@ -10,8 +10,7 @@ use Controller\StoreController;
 
 header('Content-Type: application/json');
 
-$data = json_decode(file_get_contents("php://input"), true);
-$storeTypeId = $data['store_type_id'] ?? null;
+$storeTypeId = $_GET['store_type_id'] ?? null;
 
 $storeController = new StoreController();
 $response = $storeController->getActiveCategoriesByStoreType($storeTypeId);
