@@ -249,6 +249,8 @@ if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK
         http_response_code(500);
         return ["status" => "error", "message" => "Failed to upload logo"];
     }
+    $filename = 'https://api.runnix.africa/uploads/logos/' . $filename;
+
 }
     // Create store
     $storeCreated = $storeModel->createStore(

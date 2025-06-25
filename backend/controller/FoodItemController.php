@@ -53,7 +53,7 @@ class FoodItemController
             return ["status" => "error", "message" => "Failed to upload image."];
         }
 
-        $photo = $filename;
+       $photo = 'https://api.runnix.africa/uploads/food-items/' . $filename;
     }
 
     // Attach photo to data
@@ -528,5 +528,25 @@ public function deleteFoodSection($id, $user)
     }
 }
 
+
+public function getItemsByCategoryInStore($user, $categoryId)
+{
+    if ($user['role'] !== 'merchant') {
+        http_response_code(403);
+        return ["status" => "error", "message" => "Access denied. Only merchants can fetch store items."];
+    }
+
+    $store = $this->storeModel->getStoreByUserId($user['user_id']);
+
+    if (!$store) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "Store not found for this user."];
+    }
+
+    $storeId = $store['id'];
+    $items = $this->foodItem->getItemsByStoreAndCategory($storeId, $categoryId);
+
+    return ["status" => "success", "data" => $items];
+}
 }
 ?>

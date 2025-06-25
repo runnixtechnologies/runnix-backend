@@ -86,11 +86,12 @@ class ItemController
         }
 
         $itemsToInsert[] = [
-            'name' => $item['name'],
-            'price' => $item['price'],
-            'user_id' => $user['user_id'],
-            'photo' => $photoFilename
-        ];
+    'name' => $item['name'],
+    'price' => $item['price'],
+    'user_id' => $user['user_id'],
+    'photo' => $photoFilename ? 'https://api.runnix.africa/uploads/items/' . $photoFilename : null
+];
+
     }
 
     return $this->itemModel->bulkCreateItems($storeId, $categoryId, $itemsToInsert);
@@ -147,7 +148,8 @@ public function createSingleItem($data, $user)
             return ["status" => "error", "message" => "Failed to upload image."];
         }
 
-        $photo = $filename;
+       $photo = 'https://api.runnix.africa/uploads/items/' . $filename;
+
     }
 
    return $this->itemModel->createSingleItem(

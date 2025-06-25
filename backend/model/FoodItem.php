@@ -525,6 +525,21 @@ public function deleteFoodSection($id)
 }
 
 
+public function getItemsByStoreAndCategory($storeId, $categoryId)
+{
+    $sql = "SELECT * FROM food_items 
+            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([
+        ':store_id' => $storeId,
+        ':category_id' => $categoryId
+    ]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+
+
+
 }
 
 
