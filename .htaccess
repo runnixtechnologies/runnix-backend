@@ -1,15 +1,2 @@
-{
-    "require": {
-        "firebase/php-jwt": "^6.11",
-        "kreait/firebase-php": "^5.26",
-        "vlucas/phpdotenv": "^5.6"
-    },
-    "autoload": {
-        "psr-4": {
-            "Controller\\": "backend/controller/",
-            "Model\\": "backend/model/",
-            "Config\\": "backend/config/",
-            "Middleware\\": "backend/middleware/"
-        }
-    }
-}
+RewriteEngine On
+RewriteRule ^api/(.*)$ backend/api/$1 [L]
