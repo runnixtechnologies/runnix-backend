@@ -213,6 +213,29 @@ public function isItemOwnedByUser($itemId, $userId)
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
+{
+    $sql = "SELECT * FROM items WHERE store_id = :store_id AND deleted = 0 
+            ORDER BY created_at DESC 
+            LIMIT :limit OFFSET :offset";
+
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+public function countItemsByStoreId($storeId)
+{
+    $sql = "SELECT COUNT(*) as total FROM items WHERE store_id = :store_id AND deleted = 0";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([':store_id' => $storeId]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int) $result['total'];
+}
+
 public function getItemsByStoreAndCategory($storeId, $categoryId)
 {
     $sql = "SELECT * FROM items 

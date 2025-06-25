@@ -248,26 +248,36 @@ private function userOwnsItem($itemId, $userId)
 
     return $this->itemModel->isItemOwnedByUser($itemId, $userId);
 }
-
-public function getAllItems($user)
+public function getAllItems($user, $page = 1, $limit = 10)
 {
     if ($user['role'] !== 'merchant') {
         http_response_code(403);
         return ["status" => "error", "message" => "Access denied. Only merchants can fetch store items."];
     }
 
-    // Get store by this user
     $store = $this->storeModel->getStoreByUserId($user['user_id']);
-
     if (!$store) {
         http_response_code(404);
         return ["status" => "error", "message" => "Store not found for this user."];
     }
 
     $storeId = $store['id'];
-    $items = $this->itemModel->getAllItemsByStoreId($storeId);
+    $offset = ($page - 1) * $limit;
 
-    return ["status" => "success", "data" => $items];
+    // Fetch items + total count
+    $items = $this->itemModel->getItemsByStoreIdPaginated($storeId, $limit, $offset);
+    $totalCount = $this->itemModel->countItemsByStoreId($storeId);
+
+    return [
+        "status" => "success",
+        "data" => $items,
+        "meta" => [
+            "page" => $page,
+            "limit" => $limit,
+            "total" => $totalCount,
+            "total_pages" => ceil($totalCount / $limit)
+        ]
+    ];
 }
 
 
