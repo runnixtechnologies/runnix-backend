@@ -60,6 +60,20 @@ public function getActiveCategories()
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+public function fetchActiveCategoriesByStoreType($storeTypeId)
+{
+    $query = "SELECT id, name 
+              FROM categories 
+              WHERE status = 1 AND store_type_id = :store_type_id";
+
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':store_type_id', $storeTypeId, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+
     public function getStoreByUserId($user_id)
     {
         $sql = "SELECT * FROM " . $this->table . " WHERE user_id = :user_id LIMIT 1";

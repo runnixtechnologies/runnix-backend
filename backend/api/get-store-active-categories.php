@@ -11,8 +11,8 @@ use Controller\StoreController;
 header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents("php://input"), true);
-$storeId = $data['store_id'] ?? null;
+$storeTypeId = $data['store_type_id'] ?? null;
 
 $storeController = new StoreController();
-$response = $storeController->getStoreActiveCategories($storeId);
+$response = $storeController->getActiveCategoriesByStoreType($storeTypeId);
 echo json_encode($response);
