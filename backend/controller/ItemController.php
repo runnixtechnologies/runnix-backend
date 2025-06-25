@@ -290,48 +290,32 @@ public function getItemsByCategoryInStore($user, $categoryId)
 
     return ["status" => "success", "data" => $items];
 }
-
 public function bulkUpdateCategory($data, $user)
 {
-    $mode = $data['mode'] ?? 'assign';
     $itemIds = $data['item_ids'] ?? [];
-    $newCategoryId = $data['new_category_id'] ?? null;
+    $categoryId = $data['new_category_id'] ?? null;
     $storeId = $user['store_id'] ?? null;
 
-    if (empty($itemIds) || !is_array($itemIds)) {
+    if (!is_array($itemIds)) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Missing or invalid item_ids'];
+        return ['status' => 'error', 'message' => 'item_ids must be an array'];
     }
 
-    if (!$storeId) {
-        http_response_code(403);
-        return ['status' => 'error', 'message' => 'Store ID not found for user'];
-    }
-
-    // Only check for new_category_id if mode is assign
-    if ($mode === 'assign' && empty($newCategoryId)) {
+    if (!$categoryId || !$storeId) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Missing new_category_id for assign mode'];
+        return ['status' => 'error', 'message' => 'Missing category or store ID'];
     }
 
-    $result = false;
-
-    if ($mode === 'remove') {
-        $result = $this->itemModel->removeItemsFromCategory($itemIds, $storeId);
-    } elseif ($mode === 'assign') {
-        $result = $this->itemModel->updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId);
-    } else {
-        http_response_code(400);
-        return ['status' => 'error', 'message' => 'Invalid mode'];
-    }
+    $result = $this->itemModel->replaceItemsInCategory($itemIds, $categoryId, $storeId);
 
     if ($result) {
-        return ['status' => 'success', 'message' => 'Items updated successfully'];
+        return ['status' => 'success', 'message' => 'Category items replaced successfully'];
     } else {
         http_response_code(500);
-        return ['status' => 'error', 'message' => 'Failed to update item categories'];
+        return ['status' => 'error', 'message' => 'Failed to replace category items'];
     }
 }
+
 
 }
 

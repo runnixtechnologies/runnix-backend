@@ -256,6 +256,31 @@ public function removeItemsFromCategory($itemIds, $storeId)
     return $stmt->execute($params);
 }
 
+public function replaceItemsInCategory($itemIds, $categoryId, $storeId)
+{
+    // Step 1: Clear all existing items in that category for the store
+    $clearQuery = "UPDATE items SET category_id = NULL, updated_at = NOW()
+                   WHERE category_id = ? AND store_id = ? AND deleted = 0";
+    $clearStmt = $this->conn->prepare($clearQuery);
+    if (!$clearStmt->execute([$categoryId, $storeId])) {
+        return false;
+    }
+
+    // Step 2: Assign new items to that category
+    if (empty($itemIds)) {
+        // If no items to assign, just return true after clearing
+        return true;
+    }
+
+    $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+    $assignQuery = "UPDATE items SET category_id = ?, updated_at = NOW()
+                    WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
+    $assignStmt = $this->conn->prepare($assignQuery);
+
+    $params = array_merge([$categoryId], $itemIds, [$storeId]);
+    return $assignStmt->execute($params);
+}
+
 
 
 }
