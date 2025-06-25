@@ -14,7 +14,7 @@ header('Content-Type: application/json');
 // Get the logged-in user info
 $user = authenticateRequest(); // returns user details (user_id, role, etc.)
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 2;
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 
 $controller = new ItemController();
 $response = $controller->getAllItems($user, $page, $limit);

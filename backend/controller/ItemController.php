@@ -280,8 +280,7 @@ public function getAllItems($user, $page = 1, $limit = 10)
     ];
 }
 
-
-public function getItemsByCategoryInStore($user, $categoryId)
+public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit = 10)
 {
     if ($user['role'] !== 'merchant') {
         http_response_code(403);
@@ -289,17 +288,29 @@ public function getItemsByCategoryInStore($user, $categoryId)
     }
 
     $store = $this->storeModel->getStoreByUserId($user['user_id']);
-
     if (!$store) {
         http_response_code(404);
         return ["status" => "error", "message" => "Store not found for this user."];
     }
 
     $storeId = $store['id'];
-    $items = $this->itemModel->getItemsByStoreAndCategory($storeId, $categoryId);
+    $offset = ($page - 1) * $limit;
 
-    return ["status" => "success", "data" => $items];
+    $items = $this->itemModel->getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset);
+    $totalCount = $this->itemModel->countItemsByStoreAndCategory($storeId, $categoryId);
+
+    return [
+        "status" => "success",
+        "data" => $items,
+        "meta" => [
+            "page" => $page,
+            "limit" => $limit,
+            "total" => $totalCount,
+            "total_pages" => ceil($totalCount / $limit)
+        ]
+    ];
 }
+
 public function bulkUpdateCategory($data, $user)
 {
     $itemIds = $data['item_ids'] ?? [];

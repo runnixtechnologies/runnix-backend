@@ -247,6 +247,38 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
     ]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset)
+{
+    $sql = "SELECT * FROM items 
+            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0
+            ORDER BY created_at DESC 
+            LIMIT :limit OFFSET :offset";
+
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
+    $stmt->bindValue(':category_id', $categoryId, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+public function countItemsByStoreAndCategory($storeId, $categoryId)
+{
+    $sql = "SELECT COUNT(*) as total FROM items 
+            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0";
+
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([
+        ':store_id' => $storeId,
+        ':category_id' => $categoryId
+    ]);
+
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int)$result['total'];
+}
+
 
 public function updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId)
 {
