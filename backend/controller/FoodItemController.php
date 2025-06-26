@@ -92,6 +92,11 @@ class FoodItemController
         http_response_code(404);
         return ['status' => 'error', 'message' => 'Food item does not exist in the DB'];
     }
+    // Authorization check placeholder (implement your own logic)
+    if (!$this->foodItem->isFoodOwnedByUser($data['id'],$user['user_id'])) {
+        http_response_code(403);
+        return ["status" => "error", "message" => "Unauthorized to update this item."];
+    }
 
     // Handle photo upload if new photo is provided
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
