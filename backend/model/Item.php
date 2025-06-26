@@ -112,41 +112,46 @@ class Item
 
 
 
-    public function updateItem($itemId, $data)
+   public function updateItem($itemId, $data)
 {
-    // Validate input minimally here for safety
-    if (!isset($data['name']) || !is_string($data['name']) || trim($data['name']) === '') {
-        return ["status" => "error", "message" => "Invalid item name."];
-    }
-    if (!isset($data['price']) || !is_numeric($data['price']) || $data['price'] < 0) {
-        return ["status" => "error", "message" => "Invalid price."];
-    }
-
     try {
-        // Optional photo can be NULL or empty string to clear photo
-        $photo = isset($data['photo']) ? $data['photo'] : null;
+        // Build base SQL
+        $sql = "UPDATE {$this->table} SET 
+                    name = :name, 
+                    price = :price, 
+                    updated_at = NOW()";
 
-        $sql = "UPDATE {$this->table} SET name = :name, price = :price, photo = :photo, updated_at = NOW() WHERE id = :id";
+        // Optional photo field update
+        if (!empty($data['photo'])) {
+            $sql .= ", photo = :photo";
+        }
+
+        $sql .= " WHERE id = :id";
+
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
+
+        // Bind parameters
+        $params = [
             ':id' => $itemId,
             ':name' => $data['name'],
             ':price' => $data['price'],
-            ':photo' => $photo
-        ]);
+        ];
 
-        if ($stmt->rowCount() === 0) {
-            http_response_code(404);
-            return ["status" => "error", "message" => "Item not found or no changes made."];
+        if (!empty($data['photo'])) {
+            $params[':photo'] = $data['photo'];
         }
 
-        http_response_code(200);
-        return ["status" => "success", "message" => "Item updated successfully."];
+        $stmt->execute($params);
+
+       return ["status" => "success", "updated" => $stmt->rowCount()];
+
     } catch (PDOException $e) {
-        http_response_code(500);
-        return ["status" => "error", "message" => "Update Failed " ];
+        // Optional: log the error or expose the message in development mode
+        error_log("Update Item Error: " . $e->getMessage());
+        return false;
     }
 }
+
 
 public function deleteItem($itemId)
 {

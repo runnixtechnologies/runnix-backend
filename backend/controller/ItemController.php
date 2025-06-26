@@ -164,25 +164,77 @@ public function createSingleItem($data, $user)
 }
 
 
-    public function updateItem($data, $user)
+   public function updateItem($data, $user)
 {
-    // Validate required fields and data types
+    // Validate required fields
     if (!isset($data['id'], $data['name'], $data['price'])) {
         http_response_code(400);
         return ["status" => "error", "message" => "Missing required fields: id, name, price."];
     }
-    if (!is_numeric($data['id']) || !is_string($data['name']) || trim($data['name']) === '' || !is_numeric($data['price']) || $data['price'] < 0) {
+
+    // Sanitize and validate input
+    $itemId = (int) $data['id'];
+    $itemName = trim($data['name']);
+    $itemPrice = (float) $data['price'];
+
+    if ($itemId <= 0 || $itemName === '' || $itemPrice < 0) {
         http_response_code(400);
         return ["status" => "error", "message" => "Invalid input data."];
     }
 
-    // Authorization check placeholder (implement your own logic)
-    if (!$this->userOwnsItem($data['id'],$user['user_id'])) {
+    // Check if the user owns the item
+    if (!$this->userOwnsItem($itemId, $user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }
 
-    return $this->itemModel->updateItem($data['id'], $data);
+    // Handle image upload if photo is provided
+    if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'];
+        $fileType = $_FILES['photo']['type'];
+        $fileSize = $_FILES['photo']['size'];
+
+        if (!in_array($fileType, $allowedTypes)) {
+            http_response_code(415);
+            return ["status" => "error", "message" => "Unsupported image format."];
+        }
+
+        if ($fileSize > 3 * 1024 * 1024) {
+            http_response_code(413);
+            return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
+        }
+
+        $uploadDir = __DIR__ . '/../../uploads/items/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
+        $filename = uniqid('item_', true) . '.' . $ext;
+        $uploadPath = $uploadDir . $filename;
+
+        if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
+            http_response_code(500);
+            return ["status" => "error", "message" => "Failed to upload image."];
+        }
+
+        // Attach uploaded photo to update payload
+        $data['photo'] = $filename;
+    }
+
+    // Proceed with update in the model
+    $updateResult = $this->itemModel->updateItem($itemId, $data);
+
+    if (!$updateResult || (is_array($updateResult) && isset($updateResult['status']) && $updateResult['status'] === 'error')) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to update item in database."];
+    }
+
+    return [
+        "status" => "success",
+        "message" => "Item updated successfully.",
+        "data" => $updateResult
+    ];
 }
 
 public function deleteItem($data, $user)
