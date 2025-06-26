@@ -336,6 +336,7 @@ public function replaceItemsInCategory($itemIds, $categoryId, $storeId)
     return $assignStmt->execute($params);
 }
 
+/*
 public function deleteItemsBulk($ids)
 {
     try {
@@ -350,7 +351,24 @@ public function deleteItemsBulk($ids)
         http_response_code(500);
         return ["status" => "error", "message" => "Bulk deletion failed."];
     }
+}*/
+
+public function deleteItemsBulk($ids)
+{
+    try {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "UPDATE {$this->table} SET deleted = 1, updated_at = NOW() WHERE id IN ($placeholders)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($ids);
+
+        http_response_code(200);
+        return ["status" => "success", "message" => "Items Deleted successfully."];
+    } catch (PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Bulk deletion failed."];
+    }
 }
+
 
 public function updateItemsStatusBulk($ids, $status)
 {

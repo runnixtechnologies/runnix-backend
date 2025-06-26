@@ -348,7 +348,7 @@ public function bulkDeleteItems($data, $user)
     foreach ($data['ids'] as $id) {
         if (!$this->userOwnsItem($id, $user['user_id'])) {
             http_response_code(403);
-            return ["status" => "error", "message" => "Unauthorized to delete item ID: $id"];
+            return ["status" => "error", "message" => "Unauthorized to delete item ID"];
         }
     }
 
@@ -375,7 +375,7 @@ private function bulkUpdateStatus($data, $user, $status)
     foreach ($data['ids'] as $id) {
         if (!$this->userOwnsItem($id, $user['user_id'])) {
             http_response_code(403);
-            return ["status" => "error", "message" => "Unauthorized to update item ID: $id"];
+            return ["status" => "error", "message" => "Unauthorized to update this item"];
         }
     }
 
