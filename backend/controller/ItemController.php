@@ -265,7 +265,6 @@ public function getAllItems($user, $page = 1, $limit = 10)
     $storeId = $store['id'];
     $offset = ($page - 1) * $limit;
 
-    // Fetch items + total count
     $items = $this->itemModel->getItemsByStoreIdPaginated($storeId, $limit, $offset);
     $totalCount = $this->itemModel->countItemsByStoreId($storeId);
 
@@ -280,7 +279,6 @@ public function getAllItems($user, $page = 1, $limit = 10)
         ]
     ];
 }
-
 public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit = 10)
 {
     if ($user['role'] !== 'merchant') {
@@ -311,6 +309,7 @@ public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit 
         ]
     ];
 }
+
 
 public function bulkUpdateCategory($data, $user)
 {

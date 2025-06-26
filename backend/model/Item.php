@@ -215,8 +215,15 @@ public function isItemOwnedByUser($itemId, $userId)
 
 public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
 {
-    $sql = "SELECT * FROM items WHERE store_id = :store_id AND deleted = 0 
-            ORDER BY created_at DESC 
+    $sql = "SELECT i.*, di.percentage, 
+                   (i.price - (i.price * di.percentage / 100)) AS discount_price
+            FROM items i
+            LEFT JOIN discount_items di ON i.id = di.item_id
+            LEFT JOIN discounts d ON di.discount_id = d.id
+            WHERE i.store_id = :store_id AND i.deleted = 0
+              AND (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
+              OR d.id IS NULL
+            ORDER BY i.created_at DESC 
             LIMIT :limit OFFSET :offset";
 
     $stmt = $this->conn->prepare($sql);
@@ -224,6 +231,7 @@ public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
     $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
     $stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
     $stmt->execute();
+
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -249,9 +257,15 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
 }
 public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset)
 {
-    $sql = "SELECT * FROM items 
-            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0
-            ORDER BY created_at DESC 
+    $sql = "SELECT i.*, di.percentage, 
+                   (i.price - (i.price * di.percentage / 100)) AS discount_price
+            FROM items i
+            LEFT JOIN discount_items di ON i.id = di.item_id
+            LEFT JOIN discounts d ON di.discount_id = d.id
+            WHERE i.store_id = :store_id AND i.category_id = :category_id AND i.deleted = 0
+              AND (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
+              OR d.id IS NULL
+            ORDER BY i.created_at DESC 
             LIMIT :limit OFFSET :offset";
 
     $stmt = $this->conn->prepare($sql);

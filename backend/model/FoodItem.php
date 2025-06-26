@@ -4,6 +4,7 @@ namespace Model;
 
 use Config\Database;
 use PDO;
+use PDOException;
 
 class FoodItem
 {
@@ -602,6 +603,39 @@ public function countItemsByStoreAndCategory($storeId, $categoryId)
     return (int)$result['total'];
 }
 
+
+public function deleteItemsBulk($ids)
+{
+    try {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "UPDATE {$this->table} SET deleted = 1, updated_at = NOW() WHERE id IN ($placeholders)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($ids);
+
+        http_response_code(200);
+        return ["status" => "success", "message" => "Items Deleted successfully."];
+    } catch (PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Bulk deletion failed."];
+    }
+}
+
+
+public function updateItemsStatusBulk($ids, $status)
+{
+    try {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id IN ($placeholders)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(array_merge([$status], $ids));
+
+        http_response_code(200);
+        return ["status" => "success", "message" => "Items updated to '$status' status successfully."];
+    } catch (PDOException $e) {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Bulk status update failed."];
+    }
+}
 
 }
 
