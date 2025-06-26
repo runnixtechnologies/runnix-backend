@@ -239,6 +239,7 @@ public function activateItem($data, $user)
     return $this->itemModel->setItemStatus($data['id'], 'active');
 }
 
+
 // Dummy authorization example — replace with your actual logic
 private function userOwnsItem($itemId, $userId)
 {
