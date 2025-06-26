@@ -231,6 +231,7 @@ public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
         LEFT JOIN discounts d ON di.discount_id = d.id
         LEFT JOIN order_items oi ON i.id = oi.item_id
         WHERE i.store_id = :store_id
+          AND i.deleted = 0
           AND (
               d.id IS NULL OR (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
           )
@@ -247,6 +248,7 @@ public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
 
 
 public function countItemsByStoreId($storeId)
