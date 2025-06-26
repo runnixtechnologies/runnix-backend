@@ -215,25 +215,34 @@ public function isItemOwnedByUser($itemId, $userId)
 
 public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
 {
-    $sql = "SELECT i.*, di.percentage, 
-                   (i.price - (i.price * di.percentage / 100)) AS discount_price
-            FROM items i
-            LEFT JOIN discount_items di ON i.id = di.item_id
-            LEFT JOIN discounts d ON di.discount_id = d.id
-            WHERE i.store_id = :store_id AND i.deleted = 0
-              AND (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
-              OR d.id IS NULL
-            ORDER BY i.created_at DESC 
-            LIMIT :limit OFFSET :offset";
+    $sql = "
+        SELECT 
+            i.*, 
+            d.percentage, 
+            (i.price - (i.price * d.percentage / 100)) AS discount_price,
+            COUNT(oi.id) AS total_orders
+        FROM items i
+        LEFT JOIN discount_items di ON i.id = di.item_id
+        LEFT JOIN discounts d ON di.discount_id = d.id
+        LEFT JOIN order_items oi ON i.id = oi.item_id
+        WHERE i.store_id = :store_id
+          AND (
+              d.id IS NULL OR (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
+          )
+        GROUP BY i.id, d.percentage
+        ORDER BY i.created_at DESC
+        LIMIT :limit OFFSET :offset
+    ";
 
     $stmt = $this->conn->prepare($sql);
     $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
-    $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
 
 public function countItemsByStoreId($storeId)
 {
@@ -257,26 +266,35 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
 }
 public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset)
 {
-    $sql = "SELECT i.*, di.percentage, 
-                   (i.price - (i.price * di.percentage / 100)) AS discount_price
-            FROM items i
-            LEFT JOIN discount_items di ON i.id = di.item_id
-            LEFT JOIN discounts d ON di.discount_id = d.id
-            WHERE i.store_id = :store_id AND i.category_id = :category_id AND i.deleted = 0
-              AND (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
-              OR d.id IS NULL
-            ORDER BY i.created_at DESC 
-            LIMIT :limit OFFSET :offset";
+    $sql = "
+        SELECT 
+            i.*, 
+            d.percentage, 
+            (i.price - (i.price * d.percentage / 100)) AS discount_price,
+            COUNT(oi.id) AS total_orders
+        FROM items i
+        LEFT JOIN discount_items di ON i.id = di.item_id
+        LEFT JOIN discounts d ON di.discount_id = d.id
+        LEFT JOIN order_items oi ON i.id = oi.item_id
+        WHERE i.store_id = :store_id AND i.category_id = :category_id
+          AND (
+              d.id IS NULL OR (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
+          )
+        GROUP BY i.id, d.percentage
+        ORDER BY i.created_at DESC
+        LIMIT :limit OFFSET :offset
+    ";
 
     $stmt = $this->conn->prepare($sql);
     $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
     $stmt->bindValue(':category_id', $categoryId, PDO::PARAM_INT);
-    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
 
 public function countItemsByStoreAndCategory($storeId, $categoryId)
 {

@@ -268,6 +268,13 @@ public function getAllItems($user, $page = 1, $limit = 10)
     $items = $this->itemModel->getItemsByStoreIdPaginated($storeId, $limit, $offset);
     $totalCount = $this->itemModel->countItemsByStoreId($storeId);
 
+    foreach ($items as &$item) {
+        $item['price'] = (float)$item['price'];
+        $item['discount_price'] = $item['discount_price'] !== null ? (float)$item['discount_price'] : null;
+        $item['percentage'] = $item['percentage'] !== null ? (int)$item['percentage'] : null;
+        $item['total_orders'] = (int)$item['total_orders'];
+    }
+
     return [
         "status" => "success",
         "data" => $items,
@@ -279,6 +286,7 @@ public function getAllItems($user, $page = 1, $limit = 10)
         ]
     ];
 }
+
 public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit = 10)
 {
     if ($user['role'] !== 'merchant') {
@@ -298,6 +306,13 @@ public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit 
     $items = $this->itemModel->getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset);
     $totalCount = $this->itemModel->countItemsByStoreAndCategory($storeId, $categoryId);
 
+    foreach ($items as &$item) {
+        $item['price'] = (float)$item['price'];
+        $item['discount_price'] = $item['discount_price'] !== null ? (float)$item['discount_price'] : null;
+        $item['percentage'] = $item['percentage'] !== null ? (int)$item['percentage'] : null;
+        $item['total_orders'] = (int)$item['total_orders'];
+    }
+
     return [
         "status" => "success",
         "data" => $items,
@@ -309,6 +324,7 @@ public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit 
         ]
     ];
 }
+
 
 
 public function bulkUpdateCategory($data, $user)
