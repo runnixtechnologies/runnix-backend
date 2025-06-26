@@ -177,7 +177,7 @@ public function createSingleItem($data, $user)
     }
 
     // Authorization check placeholder (implement your own logic)
-    if (!$this->userOwnsItem($data['id'],$user)) {
+    if (!$this->userOwnsItem($data['id'],$user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }
