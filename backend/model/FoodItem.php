@@ -508,7 +508,7 @@ public function updateFoodSection($data)
         $this->conn->commit();
         return true;
 
-    } catch (\PDOException $e) {
+    } catch (PDOException $e) {
         // Rollback on error
         $this->conn->rollBack();
         throw new \Exception("Error updating food section: " . $e->getMessage());

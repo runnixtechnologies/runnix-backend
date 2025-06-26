@@ -283,7 +283,9 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
         LEFT JOIN discount_items di ON i.id = di.item_id
         LEFT JOIN discounts d ON di.discount_id = d.id
         LEFT JOIN order_items oi ON i.id = oi.item_id
-        WHERE i.store_id = :store_id AND i.category_id = :category_id
+        WHERE i.store_id = :store_id 
+          AND i.category_id = :category_id
+          AND i.deleted = 0
           AND (
               d.id IS NULL OR (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
           )
