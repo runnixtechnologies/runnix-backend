@@ -324,6 +324,13 @@ public function getAllItems($user, $page = 1, $limit = 10)
         $item['price'] = (float)$item['price'];
         $item['discount_price'] = $item['discount_price'] !== null ? (float)$item['discount_price'] : null;
         $item['percentage'] = $item['percentage'] !== null ? (int)$item['percentage'] : null;
+        $item['discount_start_date'] = $item['discount_start_date'] !== null 
+        ? date('Y-m-d', strtotime($item['discount_start_date'])) 
+        : null;
+
+    $item['discount_end_date'] = $item['discount_end_date'] !== null 
+        ? date('Y-m-d', strtotime($item['discount_end_date'])) 
+        : null;
         $item['total_orders'] = (int)$item['total_orders'];
     }
 
@@ -358,12 +365,22 @@ public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit 
     $items = $this->itemModel->getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset);
     $totalCount = $this->itemModel->countItemsByStoreAndCategory($storeId, $categoryId);
 
-    foreach ($items as &$item) {
-        $item['price'] = (float)$item['price'];
-        $item['discount_price'] = $item['discount_price'] !== null ? (float)$item['discount_price'] : null;
-        $item['percentage'] = $item['percentage'] !== null ? (int)$item['percentage'] : null;
-        $item['total_orders'] = (int)$item['total_orders'];
-    }
+ foreach ($items as &$item) {
+    $item['price'] = (float)$item['price'];
+    $item['discount_price'] = $item['discount_price'] !== null ? (float)$item['discount_price'] : null;
+    $item['percentage'] = $item['percentage'] !== null ? (int)$item['percentage'] : null;
+
+    $item['discount_start_date'] = $item['discount_start_date'] !== null 
+        ? date('Y-m-d', strtotime($item['discount_start_date'])) 
+        : null;
+
+    $item['discount_end_date'] = $item['discount_end_date'] !== null 
+        ? date('Y-m-d', strtotime($item['discount_end_date'])) 
+        : null;
+
+    $item['total_orders'] = (int)$item['total_orders'];
+}
+
 
     return [
         "status" => "success",

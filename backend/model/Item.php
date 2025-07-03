@@ -223,6 +223,8 @@ public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
     $sql = "
         SELECT 
             i.*, 
+            d.start_date AS discount_start_date, 
+            d.end_date AS discount_end_date, 
             d.percentage, 
             (i.price - (i.price * d.percentage / 100)) AS discount_price,
             COUNT(oi.id) AS total_orders
@@ -276,6 +278,8 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
     $sql = "
         SELECT 
             i.*, 
+            d.start_date AS discount_start_date, 
+            d.end_date AS discount_end_date, 
             d.percentage, 
             (i.price - (i.price * d.percentage / 100)) AS discount_price,
             COUNT(oi.id) AS total_orders
