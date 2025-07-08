@@ -29,6 +29,29 @@ class DiscountController
         }
     }
 
+    public function updateDiscount($discountId, $data)
+{
+    if (
+        empty($discountId) || 
+        empty($data['store_id']) || 
+        empty($data['store_type_id']) || 
+        empty($data['percentage']) || 
+        empty($data['items'])
+    ) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Required fields are missing'];
+    }
+
+    $updated = $this->discountModel->update($discountId, $data);
+    if ($updated) {
+        http_response_code(200);
+        return ['status' => 'success', 'message' => 'Discount updated successfully'];
+    } else {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Update failed. Check discount ID and store ownership.'];
+    }
+}
+
     public function getAllDiscountsByStore($storeId)
 {
     if (empty($storeId)) {
