@@ -69,6 +69,14 @@ public function getByItemId($itemId)
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+public function getById($id)
+{
+    $sql = "SELECT * FROM {$this->table} WHERE id = :id LIMIT 1";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute(['id' => $id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
 
 public function update($discountId, $data)
 {
@@ -121,10 +129,29 @@ public function update($discountId, $data)
 }
 
 
-    public function delete($id)
-    {
-        $sql = "DELETE FROM {$this->table} WHERE id = :id";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute(['id' => $id]);
+   public function delete($id)
+{
+    try {
+        // Begin transaction
+        $this->conn->beginTransaction();
+
+        // Step 1: Delete related discount_items
+        $sqlItems = "DELETE FROM discount_items WHERE discount_id = :id";
+        $stmtItems = $this->conn->prepare($sqlItems);
+        $stmtItems->execute(['id' => $id]);
+
+        // Step 2: Delete the main discount
+        $sqlDiscount = "DELETE FROM {$this->table} WHERE id = :id";
+        $stmtDiscount = $this->conn->prepare($sqlDiscount);
+        $stmtDiscount->execute(['id' => $id]);
+
+        $this->conn->commit();
+        return true;
+    } catch (\PDOException $e) {
+        $this->conn->rollBack();
+        error_log("Discount delete failed: " . $e->getMessage());
+        return false;
     }
+}
+
 }

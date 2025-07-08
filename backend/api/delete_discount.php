@@ -12,7 +12,9 @@ use function Middleware\authenticateRequest;
 header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
-authenticateRequest();
+$user = authenticateRequest(); // Auth middleware should return user/store info
+$storeId = $user['store_id'] ?? 0;
+
 $controller = new DiscountController();
-$response = $controller->deleteDiscount($data['id'] ?? 0);
+$response = $controller->deleteDiscount($data['id'] ?? 0, $storeId);
 echo json_encode($response);
