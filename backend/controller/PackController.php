@@ -42,6 +42,23 @@ class PackController
     }
 }
 
+public function activatePack($data)
+{
+    if (empty($data['id']) || empty($data['store_id'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Pack ID and store ID are required'];
+    }
+
+    $result = $this->packModel->activate($data['id'], $data['store_id']);
+    if ($result) {
+        http_response_code(200);
+        return ['status' => 'success', 'message' => 'Pack activated successfully'];
+    } else {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Failed to activate pack or unauthorized'];
+    }
+}
+
     public function update($data)
     {
         $result = $this->packModel->update($data);

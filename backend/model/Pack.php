@@ -42,6 +42,18 @@ class Pack
         'store_id' => $storeId
     ]);
 }
+public function activate($packId, $storeId)
+{
+    $sql = "UPDATE {$this->table} 
+            SET status = 'active', updated_at = NOW()
+            WHERE id = :id AND store_id = :store_id";
+
+    $stmt = $this->conn->prepare($sql);
+    return $stmt->execute([
+        'id' => $packId,
+        'store_id' => $storeId
+    ]);
+}
 
 
     public function update($data)
