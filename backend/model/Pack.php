@@ -30,6 +30,20 @@ class Pack
         ]);
     }
 
+    public function deactivate($packId, $storeId)
+{
+    $sql = "UPDATE {$this->table} 
+            SET status = 'inactive', updated_at = NOW()
+            WHERE id = :id AND store_id = :store_id";
+
+    $stmt = $this->conn->prepare($sql);
+    return $stmt->execute([
+        'id' => $packId,
+        'store_id' => $storeId
+    ]);
+}
+
+
     public function update($data)
     {
         $sql = "UPDATE {$this->table} 

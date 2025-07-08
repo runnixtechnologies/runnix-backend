@@ -25,6 +25,23 @@ class PackController
         }
     }
 
+    public function deactivatePack($data)
+{
+    if (empty($data['id']) || empty($data['store_id'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Pack ID and store ID are required'];
+    }
+
+    $result = $this->packModel->deactivate($data['id'], $data['store_id']);
+    if ($result) {
+        http_response_code(200);
+        return ['status' => 'success', 'message' => 'Pack deactivated successfully'];
+    } else {
+        http_response_code(404); // Not found or not owned by this store
+        return ['status' => 'error', 'message' => 'Failed to deactivate pack or unauthorized'];
+    }
+}
+
     public function update($data)
     {
         $result = $this->packModel->update($data);
