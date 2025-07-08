@@ -92,26 +92,6 @@ public function deleteDiscount($id, $storeId)
 }
 
 
-   public function deleteDiscount($id, $storeId)
-{
-    // Fetch discount and validate ownership
-    $discount = $this->discountModel->getById($id);
-
-    if (!$discount || $discount['store_id'] != $storeId) {
-        http_response_code(403);
-        return ['status' => 'error', 'message' => 'Unauthorized to delete this discount'];
-    }
-
-    // Proceed with deletion
-    if ($this->discountModel->delete($id)) {
-        http_response_code(200);
-        return ['status' => 'success', 'message' => 'Discount deleted'];
-    } else {
-        http_response_code(500);
-        return ['status' => 'error', 'message' => 'Failed to delete discount'];
-    }
-}
-
 
 
     public function getDiscountsByItemId($itemId)
