@@ -115,13 +115,11 @@ class Item
    public function updateItem($itemId, $data)
 {
     try {
-        // Build base SQL
         $sql = "UPDATE {$this->table} SET 
                     name = :name, 
                     price = :price, 
                     updated_at = NOW()";
 
-        // Optional photo field update
         if (!empty($data['photo'])) {
             $sql .= ", photo = :photo";
         }
@@ -130,7 +128,6 @@ class Item
 
         $stmt = $this->conn->prepare($sql);
 
-        // Bind parameters
         $params = [
             ':id' => $itemId,
             ':name' => $data['name'],
@@ -143,14 +140,21 @@ class Item
 
         $stmt->execute($params);
 
-       return ["status" => "success", "updated" => $stmt->rowCount()];
-
+        return ["status" => "success", "updated" => $stmt->rowCount()];
     } catch (PDOException $e) {
-        // Optional: log the error or expose the message in development mode
         error_log("Update Item Error: " . $e->getMessage());
         return false;
     }
 }
+
+public function getItemById($itemId)
+{
+    $sql = "SELECT * FROM {$this->table} WHERE id = :id LIMIT 1";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([':id' => $itemId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
 
 
 public function deleteItem($itemId)

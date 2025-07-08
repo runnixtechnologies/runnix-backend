@@ -11,11 +11,18 @@ use function Middleware\authenticateRequest;
 
 header ('Content-Type: application/json');
 
-$data = json_decode(file_get_contents("php://input"), true) ?? [];
-$controller = new ItemController();
 $user = authenticateRequest();
 
+$data = [];
+
+// Check for multipart/form-data
+if ($_SERVER['CONTENT_TYPE'] ?? '' && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
+    $data = $_POST; // Form fields
+} else {
+    $input = file_get_contents("php://input");
+    $data = json_decode($input, true) ?? [];
+}
+
+$controller = new ItemController();
 $response = $controller->updateItem($data, $user);
 echo json_encode($response);
-?>
-

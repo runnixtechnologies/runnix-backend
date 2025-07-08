@@ -164,7 +164,7 @@ public function createSingleItem($data, $user)
 }
 
 
-   public function updateItem($data, $user)
+  public function updateItem($data, $user)
 {
     // Validate required fields
     if (!isset($data['id'], $data['name'], $data['price'])) {
@@ -172,7 +172,7 @@ public function createSingleItem($data, $user)
         return ["status" => "error", "message" => "Missing required fields: id, name, price."];
     }
 
-    // Sanitize and validate input
+    // Sanitize input
     $itemId = (int) $data['id'];
     $itemName = trim($data['name']);
     $itemPrice = (float) $data['price'];
@@ -182,13 +182,13 @@ public function createSingleItem($data, $user)
         return ["status" => "error", "message" => "Invalid input data."];
     }
 
-    // Check if the user owns the item
+    // Verify ownership
     if (!$this->userOwnsItem($itemId, $user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }
 
-    // Handle image upload if photo is provided
+    // Handle optional image update
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'];
         $fileType = $_FILES['photo']['type'];
@@ -209,6 +209,16 @@ public function createSingleItem($data, $user)
             mkdir($uploadDir, 0777, true);
         }
 
+        // Delete old image if exists
+        $currentItem = $this->itemModel->getItemById($itemId);
+        if ($currentItem && !empty($currentItem['photo'])) {
+            $oldPath = $uploadDir . $currentItem['photo'];
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
+        // Save new image
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $filename = uniqid('item_', true) . '.' . $ext;
         $uploadPath = $uploadDir . $filename;
@@ -218,11 +228,10 @@ public function createSingleItem($data, $user)
             return ["status" => "error", "message" => "Failed to upload image."];
         }
 
-        // Attach uploaded photo to update payload
         $data['photo'] = $filename;
     }
 
-    // Proceed with update in the model
+    // Update item in DB
     $updateResult = $this->itemModel->updateItem($itemId, $data);
 
     if (!$updateResult || (is_array($updateResult) && isset($updateResult['status']) && $updateResult['status'] === 'error')) {
@@ -236,6 +245,7 @@ public function createSingleItem($data, $user)
         "data" => $updateResult
     ];
 }
+
 
 public function deleteItem($data, $user)
 {
