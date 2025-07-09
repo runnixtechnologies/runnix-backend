@@ -163,12 +163,13 @@ public function createSingleItem($data, $user)
 
 }
 
-
 public function updateItem($data, $user)
 {
     // Step 1: Validate required fields
+    $requiredFields = ['id', 'name', 'price'];
     $missing = [];
-    foreach (['id', 'name', 'price'] as $field) {
+
+    foreach ($requiredFields as $field) {
         if (!isset($data[$field]) || trim($data[$field]) === '') {
             $missing[] = $field;
         }
@@ -183,7 +184,7 @@ public function updateItem($data, $user)
         ];
     }
 
-    //  Step 2: Sanitize input
+    // Step 2: Sanitize inputs
     $itemId = (int) $data['id'];
     $itemName = trim($data['name']);
     $itemPrice = (float) $data['price'];
@@ -193,13 +194,21 @@ public function updateItem($data, $user)
         return ["status" => "error", "message" => "Invalid input values."];
     }
 
-    //  Step 3: Verify ownership
+    // Step 3: Verify ownership
     if (!$this->userOwnsItem($itemId, $user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }
 
-    // Step 4: Handle image upload if present
+    // Step 4: Fetch current item
+    $currentItem = $this->itemModel->getItemById($itemId);
+    if (!$currentItem) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "Item not found."];
+    }
+
+    // Step 5: Handle image upload (optional)
+    $newPhotoFilename = null;
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'];
         $fileType = $_FILES['photo']['type'];
@@ -221,34 +230,39 @@ public function updateItem($data, $user)
         }
 
         // Delete old image if it exists
-        $currentItem = $this->itemModel->getItemById($itemId);
-        if ($currentItem && !empty($currentItem['photo'])) {
+        if (!empty($currentItem['photo'])) {
             $oldPath = $uploadDir . $currentItem['photo'];
             if (file_exists($oldPath)) {
                 unlink($oldPath);
             }
         }
 
-        //  Save new image
+        // Save new image
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
-        $filename = uniqid('item_', true) . '.' . $ext;
-        $uploadPath = $uploadDir . $filename;
+        $newPhotoFilename = uniqid('item_', true) . '.' . $ext;
+        $uploadPath = $uploadDir . $newPhotoFilename;
 
         if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
             http_response_code(500);
             return ["status" => "error", "message" => "Failed to upload image."];
         }
 
-        $data['photo'] = $filename;
+        $data['photo'] = $newPhotoFilename;
     }
 
-    // Step 5: Update item in DB
+    // Step 6: Update item in DB
     $updateResult = $this->itemModel->updateItem($itemId, $data);
 
     if (!$updateResult || (is_array($updateResult) && isset($updateResult['status']) && $updateResult['status'] === 'error')) {
         http_response_code(500);
         return ["status" => "error", "message" => "Failed to update item in database."];
     }
+
+    // Step 7: Always return updated photo URL
+    $finalPhoto = $newPhotoFilename ?? $currentItem['photo'];
+    $updateResult['photo_url'] = $finalPhoto 
+        ? "https://api.runnix.africa/uploads/items/" . $finalPhoto 
+        : null;
 
     return [
         "status" => "success",
