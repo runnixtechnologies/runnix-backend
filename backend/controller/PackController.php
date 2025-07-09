@@ -59,6 +59,48 @@ public function activatePack($data)
     }
 }
 
+
+public function activatePacksBulk($data)
+{
+    if (empty($data['ids']) || empty($data['store_id'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Pack IDs and store ID are required'];
+    }
+
+    $result = $this->packModel->activateBulk($data['ids'], $data['store_id']);
+    return $result
+        ? ['status' => 'success', 'message' => 'Packs activated']
+        : ['status' => 'error', 'message' => 'Failed to activate packs'];
+}
+
+public function deactivatePacksBulk($data)
+{
+    if (empty($data['ids']) || empty($data['store_id'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Pack IDs and store ID are required'];
+    }
+
+    $result = $this->packModel->deactivateBulk($data['ids'], $data['store_id']);
+    return $result
+        ? ['status' => 'success', 'message' => 'Packs deactivated']
+        : ['status' => 'error', 'message' => 'Failed to deactivate packs'];
+}
+
+public function deletePacksBulk($data)
+{
+    if (empty($data['ids']) || empty($data['store_id'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Pack IDs and store ID are required'];
+    }
+
+    $result = $this->packModel->deleteBulk($data['ids'], $data['store_id']);
+    return $result
+        ? ['status' => 'success', 'message' => 'Packs deleted']
+        : ['status' => 'error', 'message' => 'Failed to delete packs'];
+}
+
+
+
     public function update($data)
     {
         $result = $this->packModel->update($data);

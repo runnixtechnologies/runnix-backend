@@ -55,6 +55,39 @@ public function activate($packId, $storeId)
     ]);
 }
 
+// Activate packs in bulk
+public function activateBulk($packIds, $storeId)
+{
+    $ids = implode(',', array_map('intval', $packIds));
+    $sql = "UPDATE {$this->table} SET status = 'active', updated_at = NOW()
+            WHERE id IN ($ids) AND store_id = :store_id";
+
+    $stmt = $this->conn->prepare($sql);
+    return $stmt->execute(['store_id' => $storeId]);
+}
+
+// Deactivate packs in bulk
+public function deactivateBulk($packIds, $storeId)
+{
+    $ids = implode(',', array_map('intval', $packIds));
+    $sql = "UPDATE {$this->table} SET status = 'inactive', updated_at = NOW()
+            WHERE id IN ($ids) AND store_id = :store_id";
+
+    $stmt = $this->conn->prepare($sql);
+    return $stmt->execute(['store_id' => $storeId]);
+}
+
+// Delete packs in bulk
+public function deleteBulk($packIds, $storeId)
+{
+    $ids = implode(',', array_map('intval', $packIds));
+    $sql = "DELETE FROM {$this->table}
+            WHERE id IN ($ids) AND store_id = :store_id";
+
+    $stmt = $this->conn->prepare($sql);
+    return $stmt->execute(['store_id' => $storeId]);
+}
+
 
     public function update($data)
     {
