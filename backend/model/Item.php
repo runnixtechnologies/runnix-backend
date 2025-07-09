@@ -265,6 +265,16 @@ public function countItemsByStoreId($storeId)
     return (int) $result['total'];
 }
 
+public function getItemById($itemId)
+{
+    $sql = "SELECT * FROM {$this->table} WHERE id = :id AND deleted = 0 LIMIT 1";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([':id' => $itemId]);
+    $item = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    return $item ?: null; // returns null if not found
+}
+
 public function getItemsByStoreAndCategory($storeId, $categoryId)
 {
     $sql = "SELECT * FROM items 
