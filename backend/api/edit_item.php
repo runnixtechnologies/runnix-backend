@@ -14,6 +14,8 @@ header ('Content-Type: application/json');
 $user = authenticateRequest();
 
 $data = [];
+error_log("Form-data received: " . print_r($_POST, true));
+
 
 // Check for multipart/form-data
 if ($_SERVER['CONTENT_TYPE'] ?? '' && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
