@@ -13,21 +13,19 @@ header ('Content-Type: application/json');
 
 $user = authenticateRequest();
 
-//$data = [];
-$data = array_change_key_case($_POST, CASE_LOWER); // Normalize keys to lowercase
-
-error_log("Form-data received: " . print_r($_POST, true));
-error_log("Normalized POST data: " . print_r($data, true));
+$data = [];
 
 
-// Check for multipart/form-data
 if ($_SERVER['CONTENT_TYPE'] ?? '' && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
-    $data = $_POST; // Form fields
+    $data = array_change_key_case($_POST, CASE_LOWER); // Normalize keys
 } else {
     $input = file_get_contents("php://input");
     $data = json_decode($input, true) ?? [];
 }
 
+error_log("Final parsed data: " . print_r($data, true));
+
 $controller = new ItemController();
 $response = $controller->updateItem($data, $user);
+
 echo json_encode($response);

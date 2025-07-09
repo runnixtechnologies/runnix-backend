@@ -164,31 +164,42 @@ public function createSingleItem($data, $user)
 }
 
 
-  public function updateItem($data, $user)
+public function updateItem($data, $user)
 {
-    // Validate required fields
-    if (!isset($data['id'], $data['name'], $data['price'])) {
-        http_response_code(400);
-        return ["status" => "error", "message" => "Missing required fields: id, name, price."];
+    // ✅ Step 1: Validate required fields
+    $missing = [];
+    foreach (['id', 'name', 'price'] as $field) {
+        if (!isset($data[$field]) || trim($data[$field]) === '') {
+            $missing[] = $field;
+        }
     }
 
-    // Sanitize input
+    if (!empty($missing)) {
+        http_response_code(400);
+        return [
+            "status" => "error",
+            "message" => "Missing or empty fields: " . implode(', ', $missing),
+            "received" => $data
+        ];
+    }
+
+    // ✅ Step 2: Sanitize input
     $itemId = (int) $data['id'];
     $itemName = trim($data['name']);
     $itemPrice = (float) $data['price'];
 
-    if ($itemId <= 0 || $itemName === '' || $itemPrice < 0) {
+    if ($itemId <= 0 || $itemPrice < 0) {
         http_response_code(400);
-        return ["status" => "error", "message" => "Invalid input data."];
+        return ["status" => "error", "message" => "Invalid input values."];
     }
 
-    // Verify ownership
+    // ✅ Step 3: Verify ownership
     if (!$this->userOwnsItem($itemId, $user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }
 
-    // Handle optional image update
+    // ✅ Step 4: Handle image upload if present
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'];
         $fileType = $_FILES['photo']['type'];
@@ -209,7 +220,7 @@ public function createSingleItem($data, $user)
             mkdir($uploadDir, 0777, true);
         }
 
-        // Delete old image if exists
+        // ✅ Delete old image if it exists
         $currentItem = $this->itemModel->getItemById($itemId);
         if ($currentItem && !empty($currentItem['photo'])) {
             $oldPath = $uploadDir . $currentItem['photo'];
@@ -218,7 +229,7 @@ public function createSingleItem($data, $user)
             }
         }
 
-        // Save new image
+        // ✅ Save new image
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $filename = uniqid('item_', true) . '.' . $ext;
         $uploadPath = $uploadDir . $filename;
@@ -231,27 +242,12 @@ public function createSingleItem($data, $user)
         $data['photo'] = $filename;
     }
 
-    // Update item in DB
+    // ✅ Step 5: Update item in DB
     $updateResult = $this->itemModel->updateItem($itemId, $data);
 
     if (!$updateResult || (is_array($updateResult) && isset($updateResult['status']) && $updateResult['status'] === 'error')) {
         http_response_code(500);
-        $missing = [];
-foreach (['id', 'name', 'price'] as $field) {
-    if (empty($data[$field])) {
-        $missing[] = $field;
-    }
-}
-if (!empty($missing)) {
-    http_response_code(400);
-    return [
-        "status" => "error",
-        "message" => "Missing or empty fields: " . implode(', ', $missing),
-        "received" => $data
-    ];
-}
-
-        //return ["status" => "error", "message" => "Failed to update item in database."];
+        return ["status" => "error", "message" => "Failed to update item in database."];
     }
 
     return [
