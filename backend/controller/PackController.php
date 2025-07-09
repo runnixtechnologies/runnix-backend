@@ -125,17 +125,30 @@ public function deletePacksBulk($data)
         }
     }
 
-    public function getAll($storeId)
-    {
-        $packs = $this->packModel->getAll($storeId);
-        if ($packs) {
-            http_response_code(200); // OK
-            return ['status' => 'success', 'data' => $packs];
-        } else {
-            http_response_code(404); // Not Found
-            return ['status' => 'error', 'message' => 'No packs found'];
-        }
+    public function getAll($storeId, $page = 1, $limit = 10)
+{
+    $offset = ($page - 1) * $limit;
+
+    $packs = $this->packModel->getAll($storeId, $limit, $offset);
+    $total = $this->packModel->countByStore($storeId);
+
+    if ($packs) {
+        http_response_code(200);
+        return [
+            'status' => 'success',
+            'data' => $packs,
+            'pagination' => [
+                'current_page' => $page,
+                'limit'        => $limit,
+                'total'        => (int) $total,
+                'total_pages'  => ceil($total / $limit),
+            ]
+        ];
+    } else {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'No packs found'];
     }
+}
 
     public function getPackById($id)
     {

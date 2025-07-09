@@ -111,13 +111,27 @@ public function deleteBulk($packIds, $storeId)
         return $stmt->execute(['id' => $id]);
     }
 
-    public function getAll($storeId)
-    {
-        $sql = "SELECT * FROM {$this->table} WHERE store_id = :store_id";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute(['store_id' => $storeId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+    public function getAll($storeId, $limit = 10, $offset = 0)
+{
+    $sql = "SELECT * FROM {$this->table} WHERE store_id = :store_id LIMIT :limit OFFSET :offset";
+    $stmt = $this->conn->prepare($sql);
+
+    $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+
+public function countByStore($storeId)
+{
+    $sql = "SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute([':store_id' => $storeId]);
+    return $stmt->fetchColumn();
+}
 
     public function getPackById($id)
     {

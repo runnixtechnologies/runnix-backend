@@ -15,11 +15,13 @@ $user = authenticateRequest();
 $controller = new PackController();
 
 $storeId = $_GET['store_id'] ?? null;
+$page     = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$limit    = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
 
 if ($storeId) {
-    $response = $controller->getAll($storeId);
+    $response = $controller->getAll($storeId, $page, $limit);
 } else {
-    http_response_code(400); // Bad Request
+    http_response_code(400);
     $response = ['status' => 'error', 'message' => 'store_id parameter is required'];
 }
 
