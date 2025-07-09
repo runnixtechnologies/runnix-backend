@@ -236,7 +236,22 @@ public function createSingleItem($data, $user)
 
     if (!$updateResult || (is_array($updateResult) && isset($updateResult['status']) && $updateResult['status'] === 'error')) {
         http_response_code(500);
-        return ["status" => "error", "message" => "Failed to update item in database."];
+        $missing = [];
+foreach (['id', 'name', 'price'] as $field) {
+    if (empty($data[$field])) {
+        $missing[] = $field;
+    }
+}
+if (!empty($missing)) {
+    http_response_code(400);
+    return [
+        "status" => "error",
+        "message" => "Missing or empty fields: " . implode(', ', $missing),
+        "received" => $data
+    ];
+}
+
+        //return ["status" => "error", "message" => "Failed to update item in database."];
     }
 
     return [

@@ -13,8 +13,11 @@ header ('Content-Type: application/json');
 
 $user = authenticateRequest();
 
-$data = [];
+//$data = [];
+$data = array_change_key_case($_POST, CASE_LOWER); // Normalize keys to lowercase
+
 error_log("Form-data received: " . print_r($_POST, true));
+error_log("Normalized POST data: " . print_r($data, true));
 
 
 // Check for multipart/form-data
