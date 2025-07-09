@@ -228,6 +228,7 @@ public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
         SELECT 
             i.*, 
             d.start_date AS discount_start_date, 
+            d.id AS discount_id, 
             d.end_date AS discount_end_date, 
             d.percentage, 
             (i.price - (i.price * d.percentage / 100)) AS discount_price,
@@ -283,6 +284,7 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
         SELECT 
             i.*, 
             d.start_date AS discount_start_date, 
+            d.id AS discount_id, 
             d.end_date AS discount_end_date, 
             d.percentage, 
             (i.price - (i.price * d.percentage / 100)) AS discount_price,
