@@ -287,11 +287,14 @@ public function getFoodSideById($id)
 }
 
 // READ All Sides by Store
-public function getAllFoodSidesByStoreId($store_id)
+
+public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
 {
-    $query = "SELECT * FROM food_sides WHERE store_id = :store_id";
+    $query = "SELECT * FROM food_sides WHERE store_id = :store_id LIMIT :limit OFFSET :offset";
     $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':store_id', $store_id);
+    $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
+    $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -318,6 +321,36 @@ public function deleteFoodSide($id)
     $stmt->bindParam(':id', $id); 
     return $stmt->execute();
 }
+
+public function updateFoodSideStatus($id, $status)
+{
+    $query = "UPDATE food_sides SET status = :status WHERE id = :id";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':status', $status);
+    $stmt->bindParam(':id', $id);
+    return $stmt->execute();
+}
+
+public function bulkDeleteFoodSides($ids)
+{
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $query = "DELETE FROM food_sides WHERE id IN ($placeholders)";
+    $stmt = $this->conn->prepare($query);
+    return $stmt->execute($ids) ? $stmt->rowCount() : 0;
+}
+public function bulkUpdateFoodSideStatus($ids, $status)
+{
+    if (empty($ids)) return false;
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $sql = "UPDATE food_sides SET status = ?, updated_at = NOW() WHERE id IN ($placeholders)";
+
+    $stmt = $this->conn->prepare($sql);
+
+    $params = array_merge([$status], $ids);
+    return $stmt->execute($params);
+}
+
 
 // CREATE Food Item Side Mapping with Extra Price
 public function createFoodItemSide($data)

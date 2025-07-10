@@ -306,9 +306,43 @@ public function getFoodSideById($id, $user)
 // READ All Sides by Store
 public function getAllFoodSidesByStoreId($store_id, $user)
 {
-    $result = $this->foodItem->getAllFoodSidesByStoreId($store_id);
-    http_response_code(200); // OK
+    $page = $_GET['page'] ?? 1;
+    $limit = $_GET['limit'] ?? 10;
+    $offset = ($page - 1) * $limit;
+
+    $result = $this->foodItem->getAllFoodSidesByStoreId($store_id, $limit, $offset);
+    http_response_code(200);
     return ['status' => 'success', 'data' => $result];
+}
+
+public function deactivateBulkFoodSides($ids, $user)
+{
+    if (empty($ids) || !is_array($ids)) {
+        return ['status' => 'error', 'message' => 'Invalid input: IDs must be a non-empty array.'];
+    }
+
+    $result = $this->foodItem->bulkUpdateFoodSideStatus($ids, 'inactive');
+
+    if ($result) {
+        return ['status' => 'success', 'message' => 'Food sides deactivated successfully.'];
+    } else {
+        return ['status' => 'error', 'message' => 'Failed to deactivate food sides.'];
+    }
+}
+
+public function activateBulkFoodSides($ids, $user)
+{
+    if (empty($ids) || !is_array($ids)) {
+        return ['status' => 'error', 'message' => 'Invalid input: IDs must be a non-empty array.'];
+    }
+
+    $result = $this->foodItem->bulkUpdateFoodSideStatus($ids, 'active');
+
+    if ($result) {
+        return ['status' => 'success', 'message' => 'Food sides activated successfully.'];
+    } else {
+        return ['status' => 'error', 'message' => 'Failed to activate food sides.'];
+    }
 }
 
 // UPDATE Food Side
@@ -336,6 +370,55 @@ public function deleteFoodSide($id,$user)
         return ['status' => 'error', 'message' => 'Food side not found or not deleted'];
     }
 }
+
+
+public function activateFoodSide($id, $user)
+{
+    $result = $this->foodItem->updateFoodSideStatus($id, 'active');
+    if ($result) {
+        http_response_code(200);
+        return ['status' => 'success', 'message' => 'Food side activated'];
+    } else {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Food side not found or update failed'];
+    }
+}
+
+public function deactivateFoodSide($id, $user)
+{
+    return $this->activateFoodSide($id, $user); // Reuses same method
+}
+
+public function bulkDeleteFoodSides($ids, $user)
+{
+    if (empty($ids) || !is_array($ids)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid food side IDs'];
+    }
+
+    $result = $this->foodItem->bulkDeleteFoodSides($ids);
+    http_response_code(200);
+    return ['status' => 'success', 'message' => "$result food sides deleted"];
+}
+public function bulkActivateFoodSides($ids, $user)
+{
+    return $this->bulkUpdateFoodSideStatus($ids, 'active');
+}
+public function bulkDeactivateFoodSides($ids, $user)
+{
+    return $this->bulkUpdateFoodSideStatus($ids, 'inactive');
+}
+public function bulkUpdateFoodSideStatus($ids, $status)
+{
+    if (empty($ids) || !is_array($ids)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid food side IDs'];
+    }
+
+    $updated = $this->foodItem->bulkUpdateFoodSideStatus($ids, $status);
+    return ['status' => 'success', 'message' => "$updated food sides updated to $status"];
+}
+
 
 // CREATE Food Item Side Mapping
 public function addFoodItemSide($data,$user)

@@ -231,7 +231,7 @@ public function updateItem($data, $user)
 
         // Delete old image if it exists
         if (!empty($currentItem['photo'])) {
-            $oldPath = $uploadDir . $currentItem['photo'];
+            $oldPath = $uploadDir . basename($currentItem['photo']);
             if (file_exists($oldPath)) {
                 unlink($oldPath);
             }
@@ -247,7 +247,8 @@ public function updateItem($data, $user)
             return ["status" => "error", "message" => "Failed to upload image."];
         }
 
-        $data['photo'] = $newPhotoFilename;
+        // Save full photo URL in DB
+        $data['photo'] = "https://api.runnix.africa/uploads/items/" . $newPhotoFilename;
     }
 
     // Step 6: Update item in DB
@@ -258,11 +259,9 @@ public function updateItem($data, $user)
         return ["status" => "error", "message" => "Failed to update item in database."];
     }
 
-    // Step 7: Always return updated photo URL
-    $finalPhoto = $newPhotoFilename ?? $currentItem['photo'];
-    $updateResult['photo_url'] = $finalPhoto 
-        ? "https://api.runnix.africa/uploads/items/" . $finalPhoto 
-        : null;
+    // Step 7: Return updated photo URL
+    $finalPhotoUrl = $data['photo'] ?? $currentItem['photo'];
+    $updateResult['photo_url'] = $finalPhotoUrl;
 
     return [
         "status" => "success",
