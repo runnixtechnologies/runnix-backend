@@ -132,23 +132,19 @@ public function deletePacksBulk($data)
     $packs = $this->packModel->getAll($storeId, $limit, $offset);
     $total = $this->packModel->countByStore($storeId);
 
-    if ($packs) {
-        http_response_code(200);
-        return [
-            'status' => 'success',
-            'data' => $packs,
-            'pagination' => [
-                'current_page' => $page,
-                'limit'        => $limit,
-                'total'        => (int) $total,
-                'total_pages'  => ceil($total / $limit),
-            ]
-        ];
-    } else {
-        http_response_code(404);
-        return ['status' => 'error', 'message' => 'No packs found'];
-    }
+    http_response_code(200);
+    return [
+        'status' => 'success',
+        'data' => $packs ?: [],  // Return empty array if no packs
+        'pagination' => [
+            'current_page' => $page,
+            'limit'        => $limit,
+            'total'        => (int) $total,
+            'total_pages'  => ceil($total / $limit),
+        ]
+    ];
 }
+
 
     public function getPackById($id)
     {
