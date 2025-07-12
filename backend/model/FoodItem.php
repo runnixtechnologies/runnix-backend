@@ -356,6 +356,14 @@ public function bulkUpdateFoodSideStatus($ids, $status)
     return $stmt->execute($params);
 }
 
+public function getFoodSidesByIds($ids)
+{
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $query = "SELECT id, store_id FROM food_sides WHERE id IN ($placeholders)";
+    $stmt = $this->conn->prepare($query);
+    $stmt->execute($ids);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // CREATE Food Item Side Mapping with Extra Price
 public function createFoodItemSide($data)

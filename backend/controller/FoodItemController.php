@@ -375,25 +375,56 @@ public function deleteFoodSide($id,$user)
 
 public function activateFoodSide($id, $user)
 {
+    // Fetch the food side to verify ownership
+    $foodSide = $this->foodItem->getFoodSideById($id);
+    
+    if (!$foodSide) {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Food side not found'];
+    }
+
+    // Check if the user owns the store
+    if ($foodSide['store_id'] != $user['store_id']) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Unauthorized'];
+    }
+
     $result = $this->foodItem->updateFoodSideStatus($id, 'active');
+
     if ($result) {
         http_response_code(200);
         return ['status' => 'success', 'message' => 'Food side activated'];
     } else {
-        http_response_code(404);
-        return ['status' => 'error', 'message' => 'Food side not found or update failed'];
+        http_response_code(500);
+        return ['status' => 'error', 'message' => 'Failed to update food side'];
     }
 }
 
+
 public function deactivateFoodSide($id, $user)
 {
-    $result = $this->foodItem->updateFoodSideStatus($id, 'inactive');
+    // Fetch the food side to verify ownership
+    $foodSide = $this->foodItem->getFoodSideById($id);
+    
+    if (!$foodSide) {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Food side not found'];
+    }
+
+    // Check if the user owns the store
+    if ($foodSide['store_id'] != $user['store_id']) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Unauthorized'];
+    }
+
+    $result = $this->foodItem->updateFoodSideStatus($id, 'Inactive');
+
     if ($result) {
         http_response_code(200);
         return ['status' => 'success', 'message' => 'Food side deactivated'];
     } else {
-        http_response_code(404);
-        return ['status' => 'error', 'message' => 'Food side not found or update failed'];
+        http_response_code(500);
+        return ['status' => 'error', 'message' => 'Failed to update food side'];
     }
 }
 
@@ -404,27 +435,54 @@ public function bulkDeleteFoodSides($ids, $user)
         return ['status' => 'error', 'message' => 'Invalid food side IDs'];
     }
 
+    // Fetch all food sides by IDs
+    $foodSides = $this->foodItem->getFoodSidesByIds($ids);
+
+    // Check if all belong to the user's store
+    foreach ($foodSides as $side) {
+        if ($side['store_id'] != $user['store_id']) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Unauthorized to modify one or more food sides'];
+        }
+    }
+
     $result = $this->foodItem->bulkDeleteFoodSides($ids);
     http_response_code(200);
     return ['status' => 'success', 'message' => "$result food sides deleted"];
 }
+
 public function bulkActivateFoodSides($ids, $user)
 {
-    return $this->bulkUpdateFoodSideStatus($ids, 'active');
+    return $this->bulkUpdateFoodSideStatus($ids, 'active', $user);
 }
+
 public function bulkDeactivateFoodSides($ids, $user)
 {
-    return $this->bulkUpdateFoodSideStatus($ids, 'inactive');
+    return $this->bulkUpdateFoodSideStatus($ids, 'inactive', $user);
 }
-public function bulkUpdateFoodSideStatus($ids, $status)
+
+public function bulkUpdateFoodSideStatus($ids, $status, $user)
 {
     if (empty($ids) || !is_array($ids)) {
         http_response_code(400);
         return ['status' => 'error', 'message' => 'Invalid food side IDs'];
     }
 
+    // Fetch food sides by ID and check store ownership
+    $foodSides = $this->foodItem->getFoodSidesByIds($ids);
+
+    foreach ($foodSides as $side) {
+        if ($side['store_id'] != $user['store_id']) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Unauthorized to update one or more food sides'];
+        }
+    }
+
     $updated = $this->foodItem->bulkUpdateFoodSideStatus($ids, $status);
-    return ['status' => 'success', 'message' => "$updated food sides updated to $status"];
+    return [
+        'status' => 'success',
+        'message' => "$updated food sides updated to $status"
+    ];
 }
 
 
