@@ -371,6 +371,7 @@ public function deleteFoodSide($id,$user)
     }
 }
 
+// File: app/controllers/FoodSideController.php
 
 public function activateFoodSide($id, $user)
 {
@@ -386,7 +387,14 @@ public function activateFoodSide($id, $user)
 
 public function deactivateFoodSide($id, $user)
 {
-    return $this->activateFoodSide($id, $user); // Reuses same method
+    $result = $this->foodItem->updateFoodSideStatus($id, 'inactive');
+    if ($result) {
+        http_response_code(200);
+        return ['status' => 'success', 'message' => 'Food side deactivated'];
+    } else {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Food side not found or update failed'];
+    }
 }
 
 public function bulkDeleteFoodSides($ids, $user)

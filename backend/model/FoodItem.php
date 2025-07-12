@@ -322,14 +322,19 @@ public function deleteFoodSide($id)
     return $stmt->execute();
 }
 
+
+
 public function updateFoodSideStatus($id, $status)
 {
-    $query = "UPDATE food_sides SET status = :status WHERE id = :id";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':status', $status);
-    $stmt->bindParam(':id', $id);
-    return $stmt->execute();
+    $sql = "UPDATE food_sides SET status = :status WHERE id = :id";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindValue(':status', $status);
+    $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->rowCount() > 0;
 }
+
 
 public function bulkDeleteFoodSides($ids)
 {

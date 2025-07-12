@@ -10,9 +10,16 @@ use Controller\FoodItemController;
 use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
+$user = authenticateRequest();
 $data = json_decode(file_get_contents("php://input"), true);
 
-$user = authenticateRequest();
+if (!isset($data['id'])) {
+    http_response_code(400);
+    echo json_encode(["status" => "error", "message" => "Missing food side ID"]);
+    exit;
+}
+
 $controller = new FoodItemController();
-$response = $controller->deactivateFoodSide($data['id'], $user);
+$response = $controller->deactivateFoodSide((int)$data['id'], $user);
+
 echo json_encode($response);
