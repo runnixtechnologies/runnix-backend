@@ -340,6 +340,7 @@ public function bulkDeleteFoodSides($ids)
 {
     try {
         if (empty($ids) || !is_array($ids)) {
+            error_log("bulkDeleteFoodSides: Invalid input - empty or not array");
             return false;
         }
 
@@ -352,7 +353,21 @@ public function bulkDeleteFoodSides($ids)
         $checkStmt = $this->conn->prepare($checkQuery);
         $checkStmt->execute($ids);
         
-        if ($checkStmt->fetchColumn() != count($ids)) {
+        $existingCount = $checkStmt->fetchColumn();
+        if ($existingCount != count($ids)) {
+            error_log("bulkDeleteFoodSides: Only $existingCount out of " . count($ids) . " IDs exist");
+            $this->conn->rollBack();
+            return false;
+        }
+
+        // Check for foreign key constraints (food_item_sides table)
+        $fkCheckQuery = "SELECT COUNT(*) FROM food_item_sides WHERE side_id IN ($placeholders)";
+        $fkCheckStmt = $this->conn->prepare($fkCheckQuery);
+        $fkCheckStmt->execute($ids);
+        $fkCount = $fkCheckStmt->fetchColumn();
+        
+        if ($fkCount > 0) {
+            error_log("bulkDeleteFoodSides: Cannot delete - $fkCount food sides are linked to food items");
             $this->conn->rollBack();
             return false;
         }
@@ -364,9 +379,16 @@ public function bulkDeleteFoodSides($ids)
         
         $deletedCount = $deleteStmt->rowCount();
         
+        if ($deletedCount == 0) {
+            error_log("bulkDeleteFoodSides: No rows were deleted");
+            $this->conn->rollBack();
+            return false;
+        }
+        
         // Commit transaction
         $this->conn->commit();
         
+        error_log("bulkDeleteFoodSides: Successfully deleted $deletedCount food sides");
         return $deletedCount;
         
     } catch (PDOException $e) {

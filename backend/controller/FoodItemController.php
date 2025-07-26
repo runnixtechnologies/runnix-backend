@@ -437,10 +437,16 @@ public function bulkDeleteFoodSides($ids, $user)
             return ['status' => 'error', 'message' => 'Invalid food side IDs'];
         }
 
-        // Validate user has store_id
-        if (!isset($user['store_id']) || empty($user['store_id'])) {
-            http_response_code(403);
-            return ['status' => 'error', 'message' => 'Store ID not found for user'];
+        // Get store_id from database if not in JWT token
+        $storeId = $user['store_id'] ?? null;
+        if (!$storeId) {
+            // Fetch store from database using user_id
+            $store = $this->storeModel->getStoreByUserId($user['user_id']);
+            if (!$store) {
+                http_response_code(403);
+                return ['status' => 'error', 'message' => 'Store not found for user'];
+            }
+            $storeId = $store['id'];
         }
 
         // Fetch all food sides by IDs
@@ -453,7 +459,7 @@ public function bulkDeleteFoodSides($ids, $user)
 
         // Check if all belong to the user's store
         foreach ($foodSides as $side) {
-            if ($side['store_id'] != $user['store_id']) {
+            if ($side['store_id'] != $storeId) {
                 http_response_code(403);
                 return ['status' => 'error', 'message' => 'Unauthorized to modify one or more food sides'];
             }
@@ -464,7 +470,7 @@ public function bulkDeleteFoodSides($ids, $user)
         
         if ($result === false) {
             http_response_code(500);
-            return ['status' => 'error', 'message' => 'Failed to delete food sides'];
+            return ['status' => 'error', 'message' => 'Failed to delete food sides. They may be linked to food items.'];
         }
 
         http_response_code(200);
