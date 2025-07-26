@@ -437,6 +437,8 @@ public function bulkDeleteFoodSides($ids, $user)
             return ['status' => 'error', 'message' => 'Invalid food side IDs'];
         }
 
+        error_log("bulkDeleteFoodSides controller: Processing " . count($ids) . " IDs: " . implode(',', $ids));
+
         // Get store_id from database if not in JWT token
         $storeId = $user['store_id'] ?? null;
         if (!$storeId) {
@@ -449,6 +451,8 @@ public function bulkDeleteFoodSides($ids, $user)
             $storeId = $store['id'];
         }
 
+        error_log("bulkDeleteFoodSides controller: Store ID: $storeId");
+
         // Fetch all food sides by IDs
         $foodSides = $this->foodItem->getFoodSidesByIds($ids);
         
@@ -456,6 +460,8 @@ public function bulkDeleteFoodSides($ids, $user)
             http_response_code(404);
             return ['status' => 'error', 'message' => 'No food sides found with provided IDs'];
         }
+
+        error_log("bulkDeleteFoodSides controller: Found " . count($foodSides) . " food sides");
 
         // Check if all belong to the user's store
         foreach ($foodSides as $side) {
@@ -465,8 +471,12 @@ public function bulkDeleteFoodSides($ids, $user)
             }
         }
 
+        error_log("bulkDeleteFoodSides controller: Authorization check passed, proceeding with deletion");
+
         // Perform bulk delete
         $result = $this->foodItem->bulkDeleteFoodSides($ids);
+        
+        error_log("bulkDeleteFoodSides controller: Model returned: " . var_export($result, true));
         
         if ($result === false) {
             http_response_code(500);
@@ -474,9 +484,10 @@ public function bulkDeleteFoodSides($ids, $user)
         }
 
         http_response_code(200);
-        return ['status' => 'success', 'message' => "$result food sides deleted successfully"];
+        return ['status' => 'success', 'message' => "Food sides deleted successfully"];
         
     } catch (Exception $e) {
+        error_log("bulkDeleteFoodSides controller exception: " . $e->getMessage());
         http_response_code(500);
         return ['status' => 'error', 'message' => 'Internal server error: ' . $e->getMessage()];
     }

@@ -344,16 +344,21 @@ public function bulkDeleteFoodSides($ids)
             return false;
         }
 
+        // Log the IDs being processed
+        error_log("bulkDeleteFoodSides: Processing IDs: " . implode(',', $ids));
+
         // Begin transaction
         $this->conn->beginTransaction();
 
         // First, check if all IDs exist and are valid
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $checkQuery = "SELECT COUNT(*) FROM food_sides WHERE id IN ($placeholders)";
+        $checkPlaceholders = implode(',', array_fill(0, count($ids), '?'));
+        $checkQuery = "SELECT COUNT(*) FROM food_sides WHERE id IN ($checkPlaceholders)";
         $checkStmt = $this->conn->prepare($checkQuery);
         $checkStmt->execute($ids);
         
         $existingCount = $checkStmt->fetchColumn();
+        error_log("bulkDeleteFoodSides: Found $existingCount existing food sides out of " . count($ids) . " requested");
+        
         if ($existingCount != count($ids)) {
             error_log("bulkDeleteFoodSides: Only $existingCount out of " . count($ids) . " IDs exist");
             $this->conn->rollBack();
@@ -361,10 +366,13 @@ public function bulkDeleteFoodSides($ids)
         }
 
         // Check for foreign key constraints (food_item_sides table)
-        $fkCheckQuery = "SELECT COUNT(*) FROM food_item_sides WHERE side_id IN ($placeholders)";
+        $fkPlaceholders = implode(',', array_fill(0, count($ids), '?'));
+        $fkCheckQuery = "SELECT COUNT(*) FROM food_item_sides WHERE side_id IN ($fkPlaceholders)";
         $fkCheckStmt = $this->conn->prepare($fkCheckQuery);
         $fkCheckStmt->execute($ids);
         $fkCount = $fkCheckStmt->fetchColumn();
+        
+        error_log("bulkDeleteFoodSides: Found $fkCount food sides linked to food items");
         
         if ($fkCount > 0) {
             error_log("bulkDeleteFoodSides: Cannot delete - $fkCount food sides are linked to food items");
@@ -373,11 +381,13 @@ public function bulkDeleteFoodSides($ids)
         }
 
         // Delete the food sides
-        $deleteQuery = "DELETE FROM food_sides WHERE id IN ($placeholders)";
+        $deletePlaceholders = implode(',', array_fill(0, count($ids), '?'));
+        $deleteQuery = "DELETE FROM food_sides WHERE id IN ($deletePlaceholders)";
         $deleteStmt = $this->conn->prepare($deleteQuery);
         $deleteStmt->execute($ids);
         
         $deletedCount = $deleteStmt->rowCount();
+        error_log("bulkDeleteFoodSides: Attempted to delete, rowCount returned: $deletedCount");
         
         if ($deletedCount == 0) {
             error_log("bulkDeleteFoodSides: No rows were deleted");
@@ -397,6 +407,7 @@ public function bulkDeleteFoodSides($ids)
             $this->conn->rollBack();
         }
         error_log("Bulk delete food sides error: " . $e->getMessage());
+        error_log("Bulk delete food sides error trace: " . $e->getTraceAsString());
         return false;
     }
 }
@@ -415,11 +426,25 @@ public function bulkUpdateFoodSideStatus($ids, $status)
 
 public function getFoodSidesByIds($ids)
 {
-    $placeholders = implode(',', array_fill(0, count($ids), '?'));
-    $query = "SELECT id, store_id FROM food_sides WHERE id IN ($placeholders)";
-    $stmt = $this->conn->prepare($query);
-    $stmt->execute($ids);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        if (empty($ids) || !is_array($ids)) {
+            error_log("getFoodSidesByIds: Invalid input - empty or not array");
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $query = "SELECT id, store_id FROM food_sides WHERE id IN ($placeholders)";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute($ids);
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        error_log("getFoodSidesByIds: Found " . count($result) . " food sides for IDs: " . implode(',', $ids));
+        return $result;
+        
+    } catch (PDOException $e) {
+        error_log("getFoodSidesByIds error: " . $e->getMessage());
+        return [];
+    }
 }
 
 // CREATE Food Item Side Mapping with Extra Price
