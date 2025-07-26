@@ -430,25 +430,50 @@ public function deactivateFoodSide($id, $user)
 
 public function bulkDeleteFoodSides($ids, $user)
 {
-    if (empty($ids) || !is_array($ids)) {
-        http_response_code(400);
-        return ['status' => 'error', 'message' => 'Invalid food side IDs'];
-    }
-
-    // Fetch all food sides by IDs
-    $foodSides = $this->foodItem->getFoodSidesByIds($ids);
-
-    // Check if all belong to the user's store
-    foreach ($foodSides as $side) {
-        if ($side['store_id'] != $user['store_id']) {
-            http_response_code(403);
-            return ['status' => 'error', 'message' => 'Unauthorized to modify one or more food sides'];
+    try {
+        // Validate input
+        if (empty($ids) || !is_array($ids)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid food side IDs'];
         }
-    }
 
-    $result = $this->foodItem->bulkDeleteFoodSides($ids);
-    http_response_code(200);
-    return ['status' => 'success', 'message' => "$result food sides deleted"];
+        // Validate user has store_id
+        if (!isset($user['store_id']) || empty($user['store_id'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store ID not found for user'];
+        }
+
+        // Fetch all food sides by IDs
+        $foodSides = $this->foodItem->getFoodSidesByIds($ids);
+        
+        if (empty($foodSides)) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'No food sides found with provided IDs'];
+        }
+
+        // Check if all belong to the user's store
+        foreach ($foodSides as $side) {
+            if ($side['store_id'] != $user['store_id']) {
+                http_response_code(403);
+                return ['status' => 'error', 'message' => 'Unauthorized to modify one or more food sides'];
+            }
+        }
+
+        // Perform bulk delete
+        $result = $this->foodItem->bulkDeleteFoodSides($ids);
+        
+        if ($result === false) {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to delete food sides'];
+        }
+
+        http_response_code(200);
+        return ['status' => 'success', 'message' => "$result food sides deleted successfully"];
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        return ['status' => 'error', 'message' => 'Internal server error: ' . $e->getMessage()];
+    }
 }
 
 public function bulkActivateFoodSides($ids, $user)

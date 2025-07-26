@@ -338,10 +338,45 @@ public function updateFoodSideStatus($id, $status)
 
 public function bulkDeleteFoodSides($ids)
 {
-    $placeholders = implode(',', array_fill(0, count($ids), '?'));
-    $query = "DELETE FROM food_sides WHERE id IN ($placeholders)";
-    $stmt = $this->conn->prepare($query);
-    return $stmt->execute($ids) ? $stmt->rowCount() : 0;
+    try {
+        if (empty($ids) || !is_array($ids)) {
+            return false;
+        }
+
+        // Begin transaction
+        $this->conn->beginTransaction();
+
+        // First, check if all IDs exist and are valid
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $checkQuery = "SELECT COUNT(*) FROM food_sides WHERE id IN ($placeholders)";
+        $checkStmt = $this->conn->prepare($checkQuery);
+        $checkStmt->execute($ids);
+        
+        if ($checkStmt->fetchColumn() != count($ids)) {
+            $this->conn->rollBack();
+            return false;
+        }
+
+        // Delete the food sides
+        $deleteQuery = "DELETE FROM food_sides WHERE id IN ($placeholders)";
+        $deleteStmt = $this->conn->prepare($deleteQuery);
+        $deleteStmt->execute($ids);
+        
+        $deletedCount = $deleteStmt->rowCount();
+        
+        // Commit transaction
+        $this->conn->commit();
+        
+        return $deletedCount;
+        
+    } catch (PDOException $e) {
+        // Rollback on error
+        if ($this->conn->inTransaction()) {
+            $this->conn->rollBack();
+        }
+        error_log("Bulk delete food sides error: " . $e->getMessage());
+        return false;
+    }
 }
 public function bulkUpdateFoodSideStatus($ids, $status)
 {
