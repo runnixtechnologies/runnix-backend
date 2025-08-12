@@ -267,11 +267,15 @@ public function createFoodSide($data)
     }
 
     // Otherwise insert
-    $query = "INSERT INTO food_sides (store_id, name, price) VALUES (:store_id, :name, :price)";
+    $query = "INSERT INTO food_sides (store_id, name, price, discount, percentage, status, created_at, updated_at) 
+              VALUES (:store_id, :name, :price, :discount, :percentage, :status, NOW(), NOW())";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':store_id', $data['store_id']);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
+    $stmt->bindParam(':discount', $data['discount'] ?? 0);
+    $stmt->bindParam(':percentage', $data['percentage'] ?? 0);
+    $stmt->bindParam(':status', $data['status'] ?? 'active');
     $stmt->execute();
 
     return ['status' => 'success', 'message' => 'Food Side created successfully.'];
@@ -364,12 +368,22 @@ public function getFoodSidesCountByStoreId($store_id)
 // UPDATE Food Side
 public function updateFoodSide($data)
 {
-    $query = "UPDATE food_sides SET name = :name, price = :price WHERE id = :id AND store_id =:store_id";
+    $query = "UPDATE food_sides SET 
+              name = :name, 
+              price = :price, 
+              discount = :discount, 
+              percentage = :percentage, 
+              status = :status,
+              updated_at = NOW() 
+              WHERE id = :id AND store_id = :store_id";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
+    $stmt->bindParam(':discount', $data['discount'] ?? 0);
+    $stmt->bindParam(':percentage', $data['percentage'] ?? 0);
+    $stmt->bindParam(':status', $data['status'] ?? 'active');
     $stmt->bindParam(':id', $data['id']);
-     $stmt->bindParam(':store_id', $data['store_id']);
+    $stmt->bindParam(':store_id', $data['store_id']);
     return $stmt->execute();
 }
 

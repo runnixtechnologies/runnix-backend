@@ -17,15 +17,17 @@ class Pack
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (store_id, name, price, status, created_at, updated_at) 
-                VALUES 
-                (:store_id, :name, :price, :status, NOW(), NOW())";
+            (store_id, name, price, discount, percentage, status, created_at, updated_at) 
+            VALUES 
+            (:store_id, :name, :price, :discount, :percentage, :status, NOW(), NOW())";
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
             'store_id' => $data['store_id'],
             'name' => $data['name'],
             'price' => $data['price'],
+            'discount' => $data['discount'] ?? 0,
+            'percentage' => $data['percentage'] ?? 0,
             'status' => $data['status'] ?? 'active'
         ]);
     }
@@ -92,15 +94,20 @@ public function deleteBulk($packIds, $storeId)
     public function update($data)
     {
         $sql = "UPDATE {$this->table} 
-                SET name = :name, price = :price, updated_at = NOW() 
+                SET name = :name, 
+                    price = :price, 
+                    discount = :discount, 
+                    percentage = :percentage, 
+                    updated_at = NOW() 
                 WHERE id = :id";
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
             'id' => $data['id'],
             'name' => $data['name'],
-            'price' => $data['price']
-           
+            'price' => $data['price'],
+            'discount' => $data['discount'] ?? 0,
+            'percentage' => $data['percentage'] ?? 0
         ]);
     }
 

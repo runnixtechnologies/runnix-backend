@@ -272,6 +272,22 @@ public function createFoodSide($data, $user)
         return ['status' => 'error', 'message' => 'Food side price is required'];
     }
 
+    // Validate discount (optional)
+    if (isset($data['discount'])) {
+        if (!is_numeric($data['discount']) || $data['discount'] < 0) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Discount must be a non-negative number'];
+        }
+    }
+
+    // Validate percentage (optional)
+    if (isset($data['percentage'])) {
+        if (!is_numeric($data['percentage']) || $data['percentage'] < 0 || $data['percentage'] > 100) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Percentage must be between 0 and 100'];
+        }
+    }
+
     $result = $this->foodItem->createFoodSide($data);
 
     // Check result returned by the model
@@ -381,6 +397,22 @@ public function activateBulkFoodSides($ids, $user)
 // UPDATE Food Side
 public function updateFoodSide($data, $user)
 {
+    // Validate discount (optional)
+    if (isset($data['discount'])) {
+        if (!is_numeric($data['discount']) || $data['discount'] < 0) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Discount must be a non-negative number'];
+        }
+    }
+
+    // Validate percentage (optional)
+    if (isset($data['percentage'])) {
+        if (!is_numeric($data['percentage']) || $data['percentage'] < 0 || $data['percentage'] > 100) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Percentage must be between 0 and 100'];
+        }
+    }
+
     $result = $this->foodItem->updateFoodSide($data);
     if ($result) {
         http_response_code(200);
