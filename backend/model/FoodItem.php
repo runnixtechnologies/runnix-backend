@@ -266,6 +266,11 @@ public function createFoodSide($data)
         return ['status' => 'error', 'message' => 'Side Name already exists in this store. Please choose a different name.'];
     }
 
+    // Set default values for optional fields
+    $discount = $data['discount'] ?? 0;
+    $percentage = $data['percentage'] ?? 0;
+    $status = $data['status'] ?? 'active';
+
     // Otherwise insert
     $query = "INSERT INTO food_sides (store_id, name, price, discount, percentage, status, created_at, updated_at) 
               VALUES (:store_id, :name, :price, :discount, :percentage, :status, NOW(), NOW())";
@@ -273,9 +278,9 @@ public function createFoodSide($data)
     $stmt->bindParam(':store_id', $data['store_id']);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
-    $stmt->bindParam(':discount', $data['discount'] ?? 0);
-    $stmt->bindParam(':percentage', $data['percentage'] ?? 0);
-    $stmt->bindParam(':status', $data['status'] ?? 'active');
+    $stmt->bindParam(':discount', $discount);
+    $stmt->bindParam(':percentage', $percentage);
+    $stmt->bindParam(':status', $status);
     $stmt->execute();
 
     return ['status' => 'success', 'message' => 'Food Side created successfully.'];
@@ -368,6 +373,11 @@ public function getFoodSidesCountByStoreId($store_id)
 // UPDATE Food Side
 public function updateFoodSide($data)
 {
+    // Set default values for optional fields
+    $discount = $data['discount'] ?? 0;
+    $percentage = $data['percentage'] ?? 0;
+    $status = $data['status'] ?? 'active';
+
     $query = "UPDATE food_sides SET 
               name = :name, 
               price = :price, 
@@ -379,9 +389,9 @@ public function updateFoodSide($data)
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
-    $stmt->bindParam(':discount', $data['discount'] ?? 0);
-    $stmt->bindParam(':percentage', $data['percentage'] ?? 0);
-    $stmt->bindParam(':status', $data['status'] ?? 'active');
+    $stmt->bindParam(':discount', $discount);
+    $stmt->bindParam(':percentage', $percentage);
+    $stmt->bindParam(':status', $status);
     $stmt->bindParam(':id', $data['id']);
     $stmt->bindParam(':store_id', $data['store_id']);
     return $stmt->execute();
