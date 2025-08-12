@@ -283,33 +283,41 @@ public function getFoodSideById($id)
     try {
         error_log("getFoodSideById model: Looking for ID: $id");
         
-        // First get the food side data
+        // Get the food side data
         $query = "SELECT * FROM food_sides WHERE id = :id";
+        error_log("getFoodSideById model: Executing query: $query with ID: $id");
+        
         $stmt = $this->conn->prepare($query);
         $stmt->execute(['id' => $id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
+        error_log("getFoodSideById model: Query executed. Row count: " . $stmt->rowCount());
+        error_log("getFoodSideById model: Raw result: " . var_export($result, true));
+        
         if (!$result) {
             error_log("getFoodSideById model: No food side found with ID: $id");
+            
+            // Let's also check if the food_sides table exists and has data
+            $checkQuery = "SELECT COUNT(*) as total FROM food_sides";
+            $checkStmt = $this->conn->prepare($checkQuery);
+            $checkStmt->execute();
+            $totalCount = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            error_log("getFoodSideById model: Total food sides in table: " . $totalCount['total']);
+            
             return false;
         }
         
         error_log("getFoodSideById model: Found food side: " . json_encode($result));
         
-        // Then get the total orders count separately
-        $orderQuery = "SELECT COUNT(*) as total_orders FROM order_items WHERE side_id = :side_id";
-        $orderStmt = $this->conn->prepare($orderQuery);
-        $orderStmt->execute(['side_id' => $id]);
-        $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
+        // Set total_orders to 0 since we don't have the side_id column in order_items
+        $result['total_orders'] = 0;
         
-        // Add total_orders to the result
-        $result['total_orders'] = (int)$orderCount['total_orders'];
-        
-        error_log("getFoodSideById model: Total orders: " . $result['total_orders']);
+        error_log("getFoodSideById model: Final result: " . json_encode($result));
         
         return $result;
     } catch (PDOException $e) {
         error_log("getFoodSideById error: " . $e->getMessage());
+        error_log("getFoodSideById error trace: " . $e->getTraceAsString());
         return false;
     }
 }
@@ -318,14 +326,7 @@ public function getFoodSideById($id)
 public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
 {
     try {
-        $query = "SELECT fs.*, 
-                         COALESCE(COUNT(oi.id), 0) as total_orders
-                  FROM food_sides fs
-                  LEFT JOIN order_items oi ON fs.id = oi.side_id
-                  WHERE fs.store_id = :store_id 
-                  GROUP BY fs.id
-                  ORDER BY fs.created_at DESC 
-                  LIMIT :limit OFFSET :offset";
+        $query = "SELECT * FROM food_sides WHERE store_id = :store_id ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
@@ -333,9 +334,9 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
         $stmt->execute();
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Convert total_orders to integer for each result
+        // Set total_orders to 0 for each result since we don't have the side_id column
         foreach ($results as &$result) {
-            $result['total_orders'] = (int)$result['total_orders'];
+            $result['total_orders'] = 0;
         }
         
         return $results;

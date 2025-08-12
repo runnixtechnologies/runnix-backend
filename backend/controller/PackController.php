@@ -2,15 +2,18 @@
 namespace Controller;
 
 use Model\Pack;
+use Model\Store;
 use Config\JwtHandler;
 
 class PackController
 {
     private $packModel;
+    private $storeModel;
 
     public function __construct()
     {
         $this->packModel = new Pack();
+        $this->storeModel = new Store();
     }
 
     public function create($data)
@@ -146,10 +149,29 @@ public function deletePacksBulk($data)
 }
 
 
-    public function getPackById($id)
+    public function getPackById($id, $user)
     {
+        // Get store_id from database if not in JWT token
+        $storeId = $user['store_id'] ?? null;
+        if (!$storeId) {
+            // Fetch store from database using user_id
+            $store = $this->storeModel->getStoreByUserId($user['user_id']);
+            if (!$store) {
+                http_response_code(403);
+                return ['status' => 'error', 'message' => 'Store not found for user'];
+            }
+            $storeId = $store['id'];
+        }
+        
         $pack = $this->packModel->getPackById($id);
+        
         if ($pack) {
+            // Check if the pack belongs to the user's store
+            if ($pack['store_id'] != $storeId) {
+                http_response_code(403);
+                return ['status' => 'error', 'message' => 'Unauthorized to access this pack'];
+            }
+            
             http_response_code(200); // OK
             return ['status' => 'success', 'data' => $pack];
         } else {

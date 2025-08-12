@@ -11,16 +11,17 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
+// Validate input
+if (!isset($_GET['id']) || empty($_GET['id']) || !is_numeric($_GET['id'])) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Valid pack ID is required']);
+    exit;
+}
+
 $user = authenticateRequest();
 $controller = new PackController();
 
-$id = $_GET['id'] ?? null;
-
-if ($id) {
-    $response = $controller->getPackById($id);
-} else {
-    http_response_code(400); // Bad Request
-    $response = ['status' => 'error', 'message' => 'id parameter is required'];
-}
+$id = (int)$_GET['id'];
+$response = $controller->getPackById($id, $user);
 
 echo json_encode($response);

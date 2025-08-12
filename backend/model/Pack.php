@@ -113,15 +113,35 @@ public function deleteBulk($packIds, $storeId)
 
     public function getAll($storeId, $limit = 10, $offset = 0)
 {
-    $sql = "SELECT * FROM {$this->table} WHERE store_id = :store_id LIMIT :limit OFFSET :offset";
-    $stmt = $this->conn->prepare($sql);
-
-    $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $sql = "SELECT p.*, 
+                       COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
+                FROM {$this->table} p
+                LEFT JOIN item_packs ip ON p.id = ip.pack_id
+                LEFT JOIN order_items oi ON ip.item_id = oi.item_id
+                WHERE p.store_id = :store_id 
+                GROUP BY p.id
+                ORDER BY p.created_at DESC 
+                LIMIT :limit OFFSET :offset";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Convert total_orders to integer for each result
+        foreach ($results as &$result) {
+            $result['total_orders'] = (int)$result['total_orders'];
+        }
+        
+        return $results;
+    } catch (PDOException $e) {
+        error_log("getAll packs error: " . $e->getMessage());
+        return [];
+    }
 }
 
 
@@ -135,9 +155,33 @@ public function countByStore($storeId)
 
     public function getPackById($id)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE id = :id";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute(['id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            // Get the pack data
+            $sql = "SELECT * FROM {$this->table} WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute(['id' => $id]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$result) {
+                return false;
+            }
+            
+            // Get total orders count for all items in this pack
+            $orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders 
+                           FROM item_packs ip 
+                           JOIN order_items oi ON ip.item_id = oi.item_id 
+                           WHERE ip.pack_id = :pack_id";
+            $orderStmt = $this->conn->prepare($orderQuery);
+            $orderStmt->execute(['pack_id' => $id]);
+            $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Add total_orders to the result
+            $result['total_orders'] = (int)$orderCount['total_orders'];
+            
+            return $result;
+        } catch (PDOException $e) {
+            error_log("getPackById error: " . $e->getMessage());
+            return false;
+        }
     }
 }
