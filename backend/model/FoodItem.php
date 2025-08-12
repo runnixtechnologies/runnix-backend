@@ -280,23 +280,72 @@ public function createFoodSide($data)
 
 public function getFoodSideById($id)
 {
-    $query = "SELECT * FROM food_sides WHERE id = :id";
-    $stmt = $this->conn->prepare($query);
-    $stmt->execute(['id' => $id]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        $query = "SELECT fs.*, 
+                         COALESCE(COUNT(oi.id), 0) as total_orders
+                  FROM food_sides fs
+                  LEFT JOIN order_items oi ON fs.id = oi.side_id
+                  WHERE fs.id = :id
+                  GROUP BY fs.id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute(['id' => $id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result) {
+            $result['total_orders'] = (int)$result['total_orders'];
+        }
+        
+        return $result;
+    } catch (PDOException $e) {
+        error_log("getFoodSideById error: " . $e->getMessage());
+        return false;
+    }
 }
 
 // READ All Sides by Store
-
 public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
 {
-    $query = "SELECT * FROM food_sides WHERE store_id = :store_id LIMIT :limit OFFSET :offset";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
-    $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $query = "SELECT fs.*, 
+                         COALESCE(COUNT(oi.id), 0) as total_orders
+                  FROM food_sides fs
+                  LEFT JOIN order_items oi ON fs.id = oi.side_id
+                  WHERE fs.store_id = :store_id 
+                  GROUP BY fs.id
+                  ORDER BY fs.created_at DESC 
+                  LIMIT :limit OFFSET :offset";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Convert total_orders to integer for each result
+        foreach ($results as &$result) {
+            $result['total_orders'] = (int)$result['total_orders'];
+        }
+        
+        return $results;
+    } catch (PDOException $e) {
+        error_log("getAllFoodSidesByStoreId error: " . $e->getMessage());
+        return [];
+    }
+}
+
+// Get total count of food sides by store ID
+public function getFoodSidesCountByStoreId($store_id)
+{
+    try {
+        $query = "SELECT COUNT(*) FROM food_sides WHERE store_id = :store_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
+    } catch (PDOException $e) {
+        error_log("getFoodSidesCountByStoreId error: " . $e->getMessage());
+        return 0;
+    }
 }
 
 // UPDATE Food Side

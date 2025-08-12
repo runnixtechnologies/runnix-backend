@@ -14,8 +14,6 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$data = $_GET; // expecting 'food_item_id' parameter
-
 $user = authenticateRequest();
 if (!isset($user['store_id'])) {
     http_response_code(400);
@@ -23,8 +21,25 @@ if (!isset($user['store_id'])) {
     exit;
 }
 
+// Get pagination parameters
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+
+// Validate pagination parameters
+if ($page < 1) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Page must be greater than 0']);
+    exit;
+}
+
+if ($limit < 1 || $limit > 100) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Limit must be between 1 and 100']);
+    exit;
+}
+
 $store_id = $user['store_id'];
 $controller = new FoodItemController();
 
-$response = $controller->getAllFoodSidesByStoreId($store_id, $user);
+$response = $controller->getAllFoodSidesByStoreId($store_id, $user, $page, $limit);
 echo json_encode($response);

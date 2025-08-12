@@ -288,31 +288,59 @@ public function createFoodSide($data, $user)
 
 public function getFoodSideById($id, $user)
 {
+    // Get store_id from database if not in JWT token
+    $storeId = $user['store_id'] ?? null;
+    if (!$storeId) {
+        // Fetch store from database using user_id
+        $store = $this->storeModel->getStoreByUserId($user['user_id']);
+        if (!$store) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store not found for user'];
+        }
+        $storeId = $store['id'];
+    }
     
-     $side = $this->foodItem->getFoodSideById($id);
-       if ($side) {
+    $side = $this->foodItem->getFoodSideById($id);
+    
+    if ($side) {
+        // Check if the food side belongs to the user's store
+        if ($side['store_id'] != $storeId) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Unauthorized to access this food side'];
+        }
+        
         http_response_code(200); // OK
         return ['status' => 'success', 'data' => $side];
     } else {
         http_response_code(404); // Not Found
         return ['status' => 'error', 'message' => 'Food Side not found'];
     }
-
-    
-   
-    
 }
 
 // READ All Sides by Store
-public function getAllFoodSidesByStoreId($store_id, $user)
+public function getAllFoodSidesByStoreId($store_id, $user, $page = 1, $limit = 10)
 {
-    $page = $_GET['page'] ?? 1;
-    $limit = $_GET['limit'] ?? 10;
     $offset = ($page - 1) * $limit;
 
+    // Get total count for pagination
+    $totalCount = $this->foodItem->getFoodSidesCountByStoreId($store_id);
+    
+    // Get paginated results
     $result = $this->foodItem->getAllFoodSidesByStoreId($store_id, $limit, $offset);
+    
     http_response_code(200);
-    return ['status' => 'success', 'data' => $result];
+    return [
+        'status' => 'success', 
+        'data' => $result,
+        'meta' => [
+            'page' => $page,
+            'limit' => $limit,
+            'total' => $totalCount,
+            'total_pages' => ceil($totalCount / $limit),
+            'has_next' => ($page * $limit) < $totalCount,
+            'has_prev' => $page > 1
+        ]
+    ];
 }
 
 public function deactivateBulkFoodSides($ids, $user)
