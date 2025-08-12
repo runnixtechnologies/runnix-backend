@@ -300,9 +300,13 @@ public function getFoodSideById($id, $user)
         $storeId = $store['id'];
     }
     
+    error_log("getFoodSideById: Looking for food side ID: $id, Store ID: $storeId");
+    
     $side = $this->foodItem->getFoodSideById($id);
     
     if ($side) {
+        error_log("getFoodSideById: Found food side - Store ID: " . $side['store_id']);
+        
         // Check if the food side belongs to the user's store
         if ($side['store_id'] != $storeId) {
             http_response_code(403);
@@ -312,6 +316,7 @@ public function getFoodSideById($id, $user)
         http_response_code(200); // OK
         return ['status' => 'success', 'data' => $side];
     } else {
+        error_log("getFoodSideById: Food side not found for ID: $id");
         http_response_code(404); // Not Found
         return ['status' => 'error', 'message' => 'Food Side not found'];
     }
