@@ -122,10 +122,18 @@ public function deleteBulk($packIds, $storeId)
 {
     try {
         $sql = "SELECT p.id, p.store_id, p.name, p.price, p.discount as discount_price, p.percentage, p.status, p.created_at, p.updated_at,
-                       COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
+                       COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders,
+                       d.percentage as discount_percentage,
+                       d.start_date as discount_start_date,
+                       d.end_date as discount_end_date,
+                       d.id as discount_id,
+                       (p.price - (p.price * d.percentage / 100)) as calculated_discount_price
                 FROM {$this->table} p
                 LEFT JOIN item_packs ip ON p.id = ip.pack_id
                 LEFT JOIN order_items oi ON ip.item_id = oi.item_id
+                LEFT JOIN discount_items di ON p.id = di.item_id AND di.item_type = 'pack'
+                LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                    AND NOW() BETWEEN d.start_date AND d.end_date
                 WHERE p.store_id = :store_id 
                 GROUP BY p.id
                 ORDER BY p.created_at DESC 
@@ -145,6 +153,9 @@ public function deleteBulk($packIds, $storeId)
             $result['price'] = (float)$result['price'];
             $result['discount_price'] = (float)$result['discount_price'];
             $result['percentage'] = (float)$result['percentage'];
+            $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
+            $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
+            $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
         }
         
         return $results;
@@ -185,11 +196,38 @@ public function countByStore($storeId)
             $orderStmt->execute(['pack_id' => $id]);
             $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
             
+            // Get active discount information
+            $discountQuery = "SELECT d.percentage as discount_percentage, d.start_date, d.end_date, d.id as discount_id,
+                                    (p.price - (p.price * d.percentage / 100)) as calculated_discount_price
+                             FROM {$this->table} p
+                             LEFT JOIN discount_items di ON p.id = di.item_id AND di.item_type = 'pack'
+                             LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                                 AND NOW() BETWEEN d.start_date AND d.end_date
+                             WHERE p.id = :pack_id";
+            $discountStmt = $this->conn->prepare($discountQuery);
+            $discountStmt->execute(['pack_id' => $id]);
+            $discountInfo = $discountStmt->fetch(PDO::FETCH_ASSOC);
+            
             // Add total_orders to the result and convert numeric fields
             $result['total_orders'] = (int)$orderCount['total_orders'];
             $result['price'] = (float)$result['price'];
             $result['discount_price'] = (float)$result['discount_price'];
             $result['percentage'] = (float)$result['percentage'];
+            
+            // Add discount information
+            if ($discountInfo) {
+                $result['discount_percentage'] = (float)$discountInfo['discount_percentage'];
+                $result['discount_start_date'] = $discountInfo['start_date'];
+                $result['discount_end_date'] = $discountInfo['end_date'];
+                $result['discount_id'] = (int)$discountInfo['discount_id'];
+                $result['calculated_discount_price'] = (float)$discountInfo['calculated_discount_price'];
+            } else {
+                $result['discount_percentage'] = null;
+                $result['discount_start_date'] = null;
+                $result['discount_end_date'] = null;
+                $result['discount_id'] = null;
+                $result['calculated_discount_price'] = null;
+            }
             
             return $result;
         } catch (PDOException $e) {

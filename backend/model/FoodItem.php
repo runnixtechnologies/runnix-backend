@@ -141,7 +141,15 @@ class FoodItem
         $sql = "SELECT * FROM {$this->table} WHERE store_id = :store_id AND deleted = 0";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute(['store_id' => $store_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Convert numeric fields to appropriate types for each result
+        foreach ($results as &$result) {
+            $result['price'] = (float)$result['price'];
+            $result['max_qty'] = (int)$result['max_qty'];
+        }
+        
+        return $results;
     }
 
     // Get a single Food Item by id
@@ -150,7 +158,15 @@ public function getByItemId($id)
     $sql = "SELECT * FROM {$this->table} WHERE id = :id";
     $stmt = $this->conn->prepare($sql);
     $stmt->execute(['id' => $id]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($result) {
+        // Convert numeric fields to appropriate types
+        $result['price'] = (float)$result['price'];
+        $result['max_qty'] = (int)$result['max_qty'];
+    }
+    
+    return $result;
 }
 
 public function updateFoodItemSide($itemId, $sideId, $extraPrice)
@@ -188,7 +204,16 @@ public function updateFoodItemSide($itemId, $sideId, $extraPrice)
         $sql = "SELECT * FROM food_sides WHERE store_id = :store_id";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute(['store_id' => $store_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Convert numeric fields to appropriate types for each result
+        foreach ($results as &$result) {
+            $result['price'] = (float)$result['price'];
+            $result['discount'] = (float)$result['discount'];
+            $result['percentage'] = (float)$result['percentage'];
+        }
+        
+        return $results;
     }
 
     public function updateSide($data)
@@ -218,7 +243,16 @@ public function updateFoodItemSide($itemId, $sideId, $extraPrice)
         $sql = "SELECT fs.* FROM food_item_sides fis JOIN food_sides fs ON fis.food_side_id = fs.id WHERE fis.food_item_id = :food_item_id";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute(['food_item_id' => $food_item_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Convert numeric fields to appropriate types for each result
+        foreach ($results as &$result) {
+            $result['price'] = (float)$result['price'];
+            $result['discount'] = (float)$result['discount'];
+            $result['percentage'] = (float)$result['percentage'];
+        }
+        
+        return $results;
     }
 
     // Food Sections CRUD
@@ -292,8 +326,18 @@ public function getFoodSideById($id)
     try {
         error_log("getFoodSideById model: Looking for ID: $id");
         
-        // Get the food side data
-        $query = "SELECT id, store_id, name, price, discount as discount_price, percentage, status, created_at, updated_at FROM food_sides WHERE id = :id";
+        // Get the food side data with discount information
+        $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.discount as discount_price, fs.percentage, fs.status, fs.created_at, fs.updated_at,
+                         d.percentage as discount_percentage,
+                         d.start_date as discount_start_date,
+                         d.end_date as discount_end_date,
+                         d.id as discount_id,
+                         (fs.price - (fs.price * d.percentage / 100)) as calculated_discount_price
+                  FROM food_sides fs
+                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                      AND NOW() BETWEEN d.start_date AND d.end_date
+                  WHERE fs.id = :id";
         error_log("getFoodSideById model: Executing query: $query with ID: $id");
         
         $stmt = $this->conn->prepare($query);
@@ -323,6 +367,9 @@ public function getFoodSideById($id)
         $result['price'] = (float)$result['price'];
         $result['discount_price'] = (float)$result['discount_price'];
         $result['percentage'] = (float)$result['percentage'];
+        $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
+        $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
+        $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
         
         error_log("getFoodSideById model: Final result: " . json_encode($result));
         
@@ -338,7 +385,19 @@ public function getFoodSideById($id)
 public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
 {
     try {
-        $query = "SELECT id, store_id, name, price, discount as discount_price, percentage, status, created_at, updated_at FROM food_sides WHERE store_id = :store_id ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+        $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.discount as discount_price, fs.percentage, fs.status, fs.created_at, fs.updated_at,
+                         d.percentage as discount_percentage,
+                         d.start_date as discount_start_date,
+                         d.end_date as discount_end_date,
+                         d.id as discount_id,
+                         (fs.price - (fs.price * d.percentage / 100)) as calculated_discount_price
+                  FROM food_sides fs
+                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                      AND NOW() BETWEEN d.start_date AND d.end_date
+                  WHERE fs.store_id = :store_id 
+                  ORDER BY fs.created_at DESC 
+                  LIMIT :limit OFFSET :offset";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
@@ -352,6 +411,9 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
             $result['price'] = (float)$result['price'];
             $result['discount_price'] = (float)$result['discount_price'];
             $result['percentage'] = (float)$result['percentage'];
+            $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
+            $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
+            $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
         }
         
         return $results;
@@ -765,7 +827,15 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
         ':store_id' => $storeId,
         ':category_id' => $categoryId
     ]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['price'] = (float)$result['price'];
+        $result['max_qty'] = (int)$result['max_qty'];
+    }
+    
+    return $results;
 }
 
 
@@ -815,7 +885,15 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
     $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
     $stmt->execute();
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['price'] = (float)$result['price'];
+        $result['max_qty'] = (int)$result['max_qty'];
+    }
+    
+    return $results;
 }
 
 public function countItemsByStoreAndCategory($storeId, $categoryId)

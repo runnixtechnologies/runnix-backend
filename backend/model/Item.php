@@ -272,6 +272,11 @@ public function getItemById($itemId)
     $stmt->execute([':id' => $itemId]);
     $item = $stmt->fetch(PDO::FETCH_ASSOC);
     
+    if ($item) {
+        // Convert numeric fields to appropriate types
+        $item['price'] = (float)$item['price'];
+    }
+    
     return $item ?: null; // returns null if not found
 }
 
@@ -284,7 +289,14 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
         ':store_id' => $storeId,
         ':category_id' => $categoryId
     ]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['price'] = (float)$result['price'];
+    }
+    
+    return $results;
 }
 public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset)
 {

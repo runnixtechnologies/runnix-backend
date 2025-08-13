@@ -112,4 +112,58 @@ public function deleteDiscount($id, $storeId)
     }
 }
 
+public function getDiscountsBySideId($sideId)
+{
+    if (empty($sideId)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Side ID is required'];
+    }
+
+    $discounts = $this->discountModel->getBySideId($sideId);
+
+    if ($discounts) {
+        http_response_code(200);
+        return ['status' => 'success', 'data' => $discounts];
+    } else {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'No discounts found for this side'];
+    }
+}
+
+public function getDiscountsByPackId($packId)
+{
+    if (empty($packId)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Pack ID is required'];
+    }
+
+    $discounts = $this->discountModel->getByPackId($packId);
+
+    if ($discounts) {
+        http_response_code(200);
+        return ['status' => 'success', 'data' => $discounts];
+    } else {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'No discounts found for this pack'];
+    }
+}
+
+public function getAllDiscountsByStoreWithDetails($storeId)
+{
+    if (empty($storeId)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Store ID is required'];
+    }
+
+    $discounts = $this->discountModel->getAllByStoreIdWithDetails($storeId);
+
+    if ($discounts) {
+        http_response_code(200);
+        return ['status' => 'success', 'data' => $discounts];
+    } else {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'No discounts found for this store'];
+    }
+}
+
 }

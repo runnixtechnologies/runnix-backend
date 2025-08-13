@@ -1,26 +1,67 @@
-# Discount and Percentage API Guide
+# Discount API Guide
 
 ## Overview
-Merchants can now set discount amounts and percentage discounts for both food sides and food packs.
+The discount system now supports discounts for all item types in the Runnix marketplace:
+- **Food Items** (`item_type: 'food_item'`)
+- **General Store Items** (`item_type: 'item'`)
+- **Food Sides** (`item_type: 'side'`)
+- **Packs** (`item_type: 'pack'`)
 
-## Database Changes
-- Added `discount` column (DECIMAL(10,2)) to `food_sides` table
-- Added `percentage` column (DECIMAL(5,2)) to `food_sides` table
-- Added `discount` column (DECIMAL(10,2)) to `packages` table
-- Added `percentage` column (DECIMAL(5,2)) to `packages` table
+## Database Structure
 
-## Food Sides Discount API
+### Discounts Table
+```sql
+id (Primary Key)
+store_id
+store_type_id
+percentage
+start_date
+end_date
+status
+created_at
+updated_at
+```
 
-### Create Food Side with Discount
-**POST** `/api/add_side.php`
+### Discount Items Table
+```sql
+id (Primary Key)
+discount_id (Foreign Key to discounts.id)
+item_id (ID of the item/side/pack)
+item_type (food_item, item, side, pack)
+created_at
+```
 
+## API Endpoints
+
+### 1. Create Discount
+**Endpoint:** `POST /api/create_discount.php`
+
+**Request Body:**
 ```json
 {
-    "name": "French Fries",
-    "price": "5.00",
-    "discount": "1.00",
-    "percentage": "20.00",
-    "store_id": 123
+    "store_id": 1,
+    "store_type_id": 1,
+    "percentage": 15.5,
+    "start_date": "2024-01-01",
+    "end_date": "2024-12-31",
+    "items": [
+        {
+            "item_id": 1,
+            "item_type": "food_item"
+        },
+        {
+            "item_id": 5,
+            "item_type": "side"
+        },
+        {
+            "item_id": 3,
+            "item_type": "pack"
+        },
+        {
+            "item_id": 10,
+            "item_type": "item"
+        }
+    ]
 }
 ```
 
@@ -28,189 +69,259 @@ Merchants can now set discount amounts and percentage discounts for both food si
 ```json
 {
     "status": "success",
-    "message": "Food side created successfully"
+    "message": "Discount created",
+    "discount_id": 123
 }
 ```
 
-### Update Food Side with Discount
-**POST** `/api/update_food_side.php`
+### 2. Get Discounts by Item ID
+**Endpoint:** `GET /api/get_discounts_by_item.php?item_id=1`
 
+**Response:**
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 123,
+            "store_id": 1,
+            "store_type_id": 1,
+            "percentage": 15.5,
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "status": "active"
+        }
+    ]
+}
+```
+
+### 3. Get Discounts by Side ID
+**Endpoint:** `GET /api/get_discounts_by_side.php?side_id=5`
+
+**Response:**
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 123,
+            "store_id": 1,
+            "store_type_id": 1,
+            "percentage": 15.5,
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "status": "active"
+        }
+    ]
+}
+```
+
+### 4. Get Discounts by Pack ID
+**Endpoint:** `GET /api/get_discounts_by_pack.php?pack_id=3`
+
+**Response:**
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 123,
+            "store_id": 1,
+            "store_type_id": 1,
+            "percentage": 15.5,
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "status": "active"
+        }
+    ]
+}
+```
+
+### 5. Get All Discounts by Store
+**Endpoint:** `GET /api/get_all_discounts_by_store.php?store_id=1`
+
+**Response:**
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 123,
+            "store_id": 1,
+            "store_type_id": 1,
+            "percentage": 15.5,
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "status": "active"
+        }
+    ]
+}
+```
+
+### 6. Get All Discounts by Store with Details
+**Endpoint:** `GET /api/get_all_discounts_by_store_with_details.php?store_id=1`
+
+**Response:**
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 123,
+            "store_id": 1,
+            "store_type_id": 1,
+            "percentage": 15.5,
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "status": "active",
+            "item_id": 1,
+            "item_type": "food_item",
+            "item_name": "Chicken Burger"
+        },
+        {
+            "id": 123,
+            "store_id": 1,
+            "store_type_id": 1,
+            "percentage": 15.5,
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "status": "active",
+            "item_id": 5,
+            "item_type": "side",
+            "item_name": "French Fries"
+        }
+    ]
+}
+```
+
+## Item Type Values
+
+When creating discounts, use these `item_type` values:
+
+| Item Type | Value | Description |
+|-----------|-------|-------------|
+| Food Items | `food_item` | Items from food_items table |
+| General Items | `item` | Items from items table |
+| Food Sides | `side` | Items from food_sides table |
+| Packs | `pack` | Items from packages table |
+
+## Enhanced Response Data
+
+When retrieving items, sides, and packs, the API now includes discount information:
+
+### Pack Response Example:
 ```json
 {
     "id": 1,
-    "name": "French Fries",
-    "price": "5.00",
-    "discount": "1.50",
-    "percentage": "25.00",
-    "store_id": 123
-}
-```
-
-**Response:**
-```json
-{
-    "status": "success",
-    "message": "Food side updated successfully"
-}
-```
-
-### Get Food Side (includes discount info)
-**GET** `/api/get_foodside_by_id.php?id=1`
-
-**Response:**
-```json
-{
-    "status": "success",
-    "data": {
-        "id": 1,
-        "name": "French Fries",
-        "price": "5.00",
-        "discount": "1.00",
-        "percentage": "20.00",
-        "store_id": 123,
-        "status": "active",
-        "created_at": "2024-01-15 10:30:00",
-        "updated_at": "2024-01-15 10:30:00",
-        "total_orders": 8
-    }
-}
-```
-
-## Food Packs Discount API
-
-### Create Pack with Discount
-**POST** `/api/create_pack.php`
-
-```json
-{
-    "name": "Combo Meal",
-    "price": "15.00",
-    "discount": "3.00",
-    "percentage": "15.00",
-    "store_id": 123
-}
-```
-
-**Response:**
-```json
-{
-    "status": "success",
-    "message": "Pack created successfully"
-}
-```
-
-### Update Pack with Discount
-**POST** `/api/update_pack.php`
-
-```json
-{
-    "id": 1,
-    "name": "Combo Meal",
-    "price": "15.00",
-    "discount": "4.00",
-    "percentage": "20.00"
-}
-```
-
-**Response:**
-```json
-{
-    "status": "success",
-    "message": "Pack updated successfully"
-}
-```
-
-### Get Pack (includes discount info)
-**GET** `/api/get_packby_id.php?id=1`
-
-**Response:**
-```json
-{
-    "status": "success",
-    "data": {
-        "id": 1,
-        "name": "Combo Meal",
-        "price": "15.00",
-        "discount": "3.00",
-        "percentage": "15.00",
-        "store_id": 123,
-        "status": "active",
-        "created_at": "2024-01-15 10:30:00",
-        "updated_at": "2024-01-15 10:30:00",
-        "total_orders": 12
-    }
-}
-```
-
-## Field Descriptions
-
-### Discount Field
-- **Type**: DECIMAL(10,2)
-- **Default**: 0.00
-- **Description**: Fixed discount amount in currency (e.g., $1.50 off)
-- **Validation**: Must be non-negative number
-
-### Percentage Field
-- **Type**: DECIMAL(5,2)
-- **Default**: 0.00
-- **Description**: Percentage discount (e.g., 20.00 = 20% off)
-- **Validation**: Must be between 0 and 100
-
-## Usage Examples
-
-### Example 1: Fixed Discount Only
-```json
-{
-    "name": "Side Salad",
-    "price": "8.00",
-    "discount": "2.00",
-    "percentage": 0
-}
-```
-**Result**: $8.00 - $2.00 = $6.00 final price
-
-### Example 2: Percentage Discount Only
-```json
-{
+    "store_id": 1,
     "name": "Combo Pack",
-    "price": "20.00",
-    "discount": 0,
-    "percentage": "25.00"
+    "price": 25.00,
+    "discount_price": 0.00,
+    "percentage": 0.00,
+    "status": "active",
+    "total_orders": 15,
+    "discount_percentage": 15.5,
+    "discount_start_date": "2024-01-01",
+    "discount_end_date": "2024-12-31",
+    "discount_id": 123,
+    "calculated_discount_price": 21.13
 }
 ```
-**Result**: $20.00 - 25% = $15.00 final price
 
-### Example 3: Both Discount and Percentage
+### Food Side Response Example:
 ```json
 {
-    "name": "Premium Meal",
-    "price": "25.00",
-    "discount": "5.00",
-    "percentage": "10.00"
+    "id": 5,
+    "store_id": 1,
+    "name": "French Fries",
+    "price": 5.00,
+    "discount_price": 0.00,
+    "percentage": 0.00,
+    "status": "active",
+    "total_orders": 0,
+    "discount_percentage": 15.5,
+    "discount_start_date": "2024-01-01",
+    "discount_end_date": "2024-12-31",
+    "discount_id": 123,
+    "calculated_discount_price": 4.23
 }
 ```
-**Result**: $25.00 - $5.00 - 10% = $18.00 final price
+
+## Discount Calculation
+
+The system automatically calculates discounted prices using the formula:
+```
+calculated_discount_price = original_price - (original_price * discount_percentage / 100)
+```
+
+## Validation Rules
+
+1. **Percentage**: Must be between 0 and 100
+2. **Dates**: start_date must be before end_date
+3. **Status**: Only active discounts are applied
+4. **Time Range**: Only discounts within their date range are active
+5. **Item Types**: Must be one of: `food_item`, `item`, `side`, `pack`
 
 ## Error Responses
 
-### Invalid Discount
+### Missing Required Fields
 ```json
 {
     "status": "error",
-    "message": "Discount must be a non-negative number"
+    "message": "Required fields are missing"
 }
 ```
 
-### Invalid Percentage
+### Invalid Item Type
 ```json
 {
     "status": "error",
-    "message": "Percentage must be between 0 and 100"
+    "message": "Invalid item_type. Must be one of: food_item, item, side, pack"
 }
 ```
 
-## Migration
-Run the migration script to add the new columns:
-```bash
-php backend/migrations/add_discount_columns.php
+### Item Not Found
+```json
+{
+    "status": "error",
+    "message": "No discounts found for this item"
+}
 ```
+
+## Usage Examples
+
+### Creating a Discount for Multiple Item Types
+```javascript
+const discountData = {
+    store_id: 1,
+    store_type_id: 1,
+    percentage: 20.0,
+    start_date: "2024-01-01",
+    end_date: "2024-12-31",
+    items: [
+        { item_id: 1, item_type: "food_item" },
+        { item_id: 5, item_type: "side" },
+        { item_id: 3, item_type: "pack" }
+    ]
+};
+
+fetch('/api/create_discount.php', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify(discountData)
+});
+```
+
+### Getting Discounts for a Side
+```javascript
+fetch('/api/get_discounts_by_side.php?side_id=5', {
+    headers: {
+        'Authorization': 'Bearer ' + token
+    }
+});
+```
+
+This updated discount system provides comprehensive support for all item types in your marketplace, ensuring consistent discount functionality across food items, general items, sides, and packs.

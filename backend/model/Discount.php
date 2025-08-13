@@ -51,7 +51,16 @@ class Discount
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':store_id', $storeId);
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['percentage'] = (float)$result['percentage'];
+        $result['store_id'] = (int)$result['store_id'];
+        $result['store_type_id'] = (int)$result['store_type_id'];
+    }
+    
+    return $results;
 }
 
 public function getByItemId($itemId)
@@ -66,7 +75,104 @@ public function getByItemId($itemId)
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':item_id', $itemId);
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['percentage'] = (float)$result['percentage'];
+        $result['store_id'] = (int)$result['store_id'];
+        $result['store_type_id'] = (int)$result['store_type_id'];
+    }
+    
+    return $results;
+}
+
+public function getBySideId($sideId)
+{
+    $query = "
+        SELECT d.* 
+        FROM discounts d
+        INNER JOIN discount_items di ON di.discount_id = d.id
+        WHERE di.item_id = :side_id AND di.item_type = 'side'
+    ";
+
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':side_id', $sideId);
+    $stmt->execute();
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['percentage'] = (float)$result['percentage'];
+        $result['store_id'] = (int)$result['store_id'];
+        $result['store_type_id'] = (int)$result['store_type_id'];
+    }
+    
+    return $results;
+}
+
+public function getByPackId($packId)
+{
+    $query = "
+        SELECT d.* 
+        FROM discounts d
+        INNER JOIN discount_items di ON di.discount_id = d.id
+        WHERE di.item_id = :pack_id AND di.item_type = 'pack'
+    ";
+
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':pack_id', $packId);
+    $stmt->execute();
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['percentage'] = (float)$result['percentage'];
+        $result['store_id'] = (int)$result['store_id'];
+        $result['store_type_id'] = (int)$result['store_type_id'];
+    }
+    
+    return $results;
+}
+
+public function getAllByStoreIdWithDetails($storeId)
+{
+    $query = "
+        SELECT 
+            d.*,
+            di.item_id,
+            di.item_type,
+            CASE 
+                WHEN di.item_type = 'food_item' THEN fi.name
+                WHEN di.item_type = 'item' THEN i.name
+                WHEN di.item_type = 'side' THEN fs.name
+                WHEN di.item_type = 'pack' THEN p.name
+                ELSE NULL
+            END as item_name
+        FROM {$this->table} d
+        LEFT JOIN discount_items di ON d.id = di.discount_id
+        LEFT JOIN food_items fi ON di.item_id = fi.id AND di.item_type = 'food_item'
+        LEFT JOIN items i ON di.item_id = i.id AND di.item_type = 'item'
+        LEFT JOIN food_sides fs ON di.item_id = fs.id AND di.item_type = 'side'
+        LEFT JOIN packages p ON di.item_id = p.id AND di.item_type = 'pack'
+        WHERE d.store_id = :store_id
+        ORDER BY d.created_at DESC
+    ";
+    
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':store_id', $storeId);
+    $stmt->execute();
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['percentage'] = (float)$result['percentage'];
+        $result['store_id'] = (int)$result['store_id'];
+        $result['store_type_id'] = (int)$result['store_type_id'];
+        $result['item_id'] = $result['item_id'] ? (int)$result['item_id'] : null;
+    }
+    
+    return $results;
 }
 
 public function getById($id)
@@ -74,7 +180,16 @@ public function getById($id)
     $sql = "SELECT * FROM {$this->table} WHERE id = :id LIMIT 1";
     $stmt = $this->conn->prepare($sql);
     $stmt->execute(['id' => $id]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($result) {
+        // Convert numeric fields to appropriate types
+        $result['percentage'] = (float)$result['percentage'];
+        $result['store_id'] = (int)$result['store_id'];
+        $result['store_type_id'] = (int)$result['store_type_id'];
+    }
+    
+    return $result;
 }
 
 
