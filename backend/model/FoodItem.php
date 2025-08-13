@@ -293,7 +293,7 @@ public function getFoodSideById($id)
         error_log("getFoodSideById model: Looking for ID: $id");
         
         // Get the food side data
-        $query = "SELECT * FROM food_sides WHERE id = :id";
+        $query = "SELECT id, store_id, name, price, discount as discount_price, percentage, status, created_at, updated_at FROM food_sides WHERE id = :id";
         error_log("getFoodSideById model: Executing query: $query with ID: $id");
         
         $stmt = $this->conn->prepare($query);
@@ -335,7 +335,7 @@ public function getFoodSideById($id)
 public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
 {
     try {
-        $query = "SELECT * FROM food_sides WHERE store_id = :store_id ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+        $query = "SELECT id, store_id, name, price, discount as discount_price, percentage, status, created_at, updated_at FROM food_sides WHERE store_id = :store_id ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
@@ -548,7 +548,7 @@ public function createFoodItemSide($data)
 // READ All Sides for a Food Item (with extra_price included)
 public function getAllSidesForFoodItem($itemId)
 {
-    $query = "SELECT fs.*, fis.extra_price 
+    $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.discount as discount_price, fs.percentage, fs.status, fs.created_at, fs.updated_at, fis.extra_price 
               FROM food_sides fs
               INNER JOIN food_item_sides fis ON fs.id = fis.side_id
               WHERE fis.item_id = :item_id";

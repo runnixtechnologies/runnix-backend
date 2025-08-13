@@ -121,7 +121,7 @@ public function deleteBulk($packIds, $storeId)
     public function getAll($storeId, $limit = 10, $offset = 0)
 {
     try {
-        $sql = "SELECT p.*, 
+        $sql = "SELECT p.id, p.store_id, p.name, p.price, p.discount as discount_price, p.percentage, p.status, p.created_at, p.updated_at,
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} p
                 LEFT JOIN item_packs ip ON p.id = ip.pack_id
@@ -164,7 +164,7 @@ public function countByStore($storeId)
     {
         try {
             // Get the pack data
-            $sql = "SELECT * FROM {$this->table} WHERE id = :id";
+            $sql = "SELECT id, store_id, name, price, discount as discount_price, percentage, status, created_at, updated_at FROM {$this->table} WHERE id = :id";
             $stmt = $this->conn->prepare($sql);
             $stmt->execute(['id' => $id]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
