@@ -139,9 +139,12 @@ public function deleteBulk($packIds, $storeId)
         
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Convert total_orders to integer for each result
+        // Convert numeric fields to appropriate types for each result
         foreach ($results as &$result) {
             $result['total_orders'] = (int)$result['total_orders'];
+            $result['price'] = (float)$result['price'];
+            $result['discount_price'] = (float)$result['discount_price'];
+            $result['percentage'] = (float)$result['percentage'];
         }
         
         return $results;
@@ -182,8 +185,11 @@ public function countByStore($storeId)
             $orderStmt->execute(['pack_id' => $id]);
             $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
             
-            // Add total_orders to the result
+            // Add total_orders to the result and convert numeric fields
             $result['total_orders'] = (int)$orderCount['total_orders'];
+            $result['price'] = (float)$result['price'];
+            $result['discount_price'] = (float)$result['discount_price'];
+            $result['percentage'] = (float)$result['percentage'];
             
             return $result;
         } catch (PDOException $e) {

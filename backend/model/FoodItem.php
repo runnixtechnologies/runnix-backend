@@ -318,8 +318,11 @@ public function getFoodSideById($id)
         
         error_log("getFoodSideById model: Found food side: " . json_encode($result));
         
-        // Set total_orders to 0 since we don't have the side_id column in order_items
+        // Set total_orders to 0 and convert numeric fields
         $result['total_orders'] = 0;
+        $result['price'] = (float)$result['price'];
+        $result['discount_price'] = (float)$result['discount_price'];
+        $result['percentage'] = (float)$result['percentage'];
         
         error_log("getFoodSideById model: Final result: " . json_encode($result));
         
@@ -343,9 +346,12 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
         $stmt->execute();
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Set total_orders to 0 for each result since we don't have the side_id column
+        // Convert numeric fields to appropriate types for each result
         foreach ($results as &$result) {
             $result['total_orders'] = 0;
+            $result['price'] = (float)$result['price'];
+            $result['discount_price'] = (float)$result['discount_price'];
+            $result['percentage'] = (float)$result['percentage'];
         }
         
         return $results;
@@ -555,7 +561,17 @@ public function getAllSidesForFoodItem($itemId)
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':item_id', $itemId);
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Convert numeric fields to appropriate types for each result
+    foreach ($results as &$result) {
+        $result['price'] = (float)$result['price'];
+        $result['discount_price'] = (float)$result['discount_price'];
+        $result['percentage'] = (float)$result['percentage'];
+        $result['extra_price'] = (float)$result['extra_price'];
+    }
+    
+    return $results;
 }
 
 // DELETE Food Item Side Mapping
