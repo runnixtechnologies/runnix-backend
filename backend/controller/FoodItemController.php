@@ -241,14 +241,10 @@ public function getAllFoodItemsByStoreId($data, $user)
 
     // Fetch food items
     $foodItems = $this->foodItem->getAllByStoreId($storeId);
-    if ($foodItems ){
-     http_response_code(200);
-    return ["status" => "success", "data" => $foodItems];
-    }
-    else{
-         http_response_code(400); // Bad Request
-        return ["status" => "error", "message" => "No Food Items Found."];
-    }
+    
+    // Always return success with data (empty array if no items found)
+    http_response_code(200);
+    return ["status" => "success", "data" => $foodItems ?: []];
  
 }
 
