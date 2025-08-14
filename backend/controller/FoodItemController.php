@@ -890,9 +890,13 @@ public function createFoodSection($data, $user)
     }
 
     $result = $this->foodItem->createFoodSection($data);
-    if ($result) {
+    if ($result && is_array($result)) {
         http_response_code(201);
-        return ['status' => 'success', 'message' => 'Section created successfully.'];
+        return [
+            'status' => 'success', 
+            'message' => 'Section created successfully.',
+            'data' => $result
+        ];
     } else {
         http_response_code(500);
         return ['status' => 'error', 'message' => 'Something went wrong. Unable to create the section. Please try again.'];

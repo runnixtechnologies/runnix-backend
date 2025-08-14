@@ -892,7 +892,30 @@ public function createFoodSection($data)
 
         // Commit transaction
         $this->conn->commit();
-        return true;
+        
+        // Get the created items if any
+        $items = [];
+        if (!empty($data['items']) && is_array($data['items'])) {
+            $itemQuery = "SELECT id, name, price, status 
+                          FROM food_section_items 
+                          WHERE section_id = :section_id AND status = 'active'";
+            $itemStmt = $this->conn->prepare($itemQuery);
+            $itemStmt->bindParam(':section_id', $sectionId);
+            $itemStmt->execute();
+            $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        
+        // Return the created section data with items
+        return [
+            'id' => $sectionId,
+            'store_id' => $data['store_id'],
+            'section_name' => $data['section_name'],
+            'max_quantity' => $maxQuantity,
+            'required' => $required,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+            'items' => $items
+        ];
 
     } catch (\PDOException $e) {
         // Rollback on error
