@@ -137,8 +137,10 @@ public function createWithOptions($data)
         ];
 
     } catch (\Exception $e) {
-        // Rollback on error
-        $this->conn->rollBack();
+        // Rollback on error if transaction is active
+        if ($this->conn->inTransaction()) {
+            $this->conn->rollBack();
+        }
         error_log("createWithOptions error: " . $e->getMessage());
         return ['status' => 'error', 'message' => $e->getMessage()];
     }
@@ -714,7 +716,9 @@ public function bulkDeleteFoodSides($ids)
         
         if ($existingCount != count($ids)) {
             error_log("bulkDeleteFoodSides: Only $existingCount out of " . count($ids) . " IDs exist");
-            $this->conn->rollBack();
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
             return false;
         }
 
@@ -729,7 +733,9 @@ public function bulkDeleteFoodSides($ids)
         
         if ($fkCount > 0) {
             error_log("bulkDeleteFoodSides: Cannot delete - $fkCount food sides are linked to food items");
-            $this->conn->rollBack();
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
             return false;
         }
 
@@ -744,7 +750,9 @@ public function bulkDeleteFoodSides($ids)
         
         if ($deletedCount == 0) {
             error_log("bulkDeleteFoodSides: No rows were deleted");
-            $this->conn->rollBack();
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
             return false;
         }
         
@@ -888,7 +896,9 @@ public function createFoodSection($data)
 
     } catch (\PDOException $e) {
         // Rollback on error
-        $this->conn->rollBack();
+        if ($this->conn->inTransaction()) {
+            $this->conn->rollBack();
+        }
         throw new \Exception("Error creating food section: " . $e->getMessage());
     }
 }
@@ -1001,7 +1011,9 @@ public function updateFoodSection($data)
 
     } catch (PDOException $e) {
         // Rollback on error
-        $this->conn->rollBack();
+        if ($this->conn->inTransaction()) {
+            $this->conn->rollBack();
+        }
         throw new \Exception("Error updating food section: " . $e->getMessage());
     }
 }
