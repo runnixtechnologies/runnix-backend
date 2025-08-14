@@ -177,8 +177,14 @@ class FoodItemController
         return ['status' => 'error', 'message' => 'Food item does not exist in the DB'];
     }
 
-    // Authorization check
-    if (!$this->foodItem->isFoodOwnedByUser($data['id'], $user['user_id'])) {
+    // Authorization check - verify the food item belongs to the user's store
+    $existingItem = $this->foodItem->getById($data['id']);
+    if (!$existingItem) {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Food item not found'];
+    }
+    
+    if ($existingItem['store_id'] != $user['store_id']) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }
@@ -335,7 +341,19 @@ class FoodItemController
         return false;
     }
 
-    return $this->foodItem->isFoodOwnedByUser($id, $userId);
+    // Check if the food item belongs to the user's store
+    $existingItem = $this->foodItem->getById($id);
+    if (!$existingItem) {
+        return false;
+    }
+    
+    // Get the user's store_id
+    $store = $this->storeModel->getStoreByUserId($userId);
+    if (!$store) {
+        return false;
+    }
+    
+    return $existingItem['store_id'] == $store['id'];
 }
 
     public function getByItemId($id,$user)
