@@ -4,16 +4,19 @@ namespace Controller;
 use Model\FoodItem;
 use Model\Store;
 use Config\JwtHandler;
+use Config\Database;
 
 class FoodItemController
 {
     private $foodItem;
     private $storeModel;
+    private $conn;
 
     public function __construct()
     {
         $this->foodItem = new FoodItem();
-         $this->storeModel = new Store();
+        $this->storeModel = new Store();
+        $this->conn = (new Database())->getConnection();
     }
 
    public function create($data,$user)
@@ -70,15 +73,48 @@ class FoodItemController
         return ['status' => 'error', 'message' => 'Valid price is required'];
     }
 
-    if (!isset($data['store_id']) || empty($data['store_id'])) {
-        http_response_code(400);
-        return ['status' => 'error', 'message' => 'Store ID is required'];
+    // Extract user_id from authenticated user
+    if (!isset($user['user_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'User ID not found in authentication token'];
     }
+    $data['user_id'] = $user['user_id'];
 
+    // Extract store_id from authenticated user (for merchants)
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+    }
+    $data['store_id'] = $user['store_id'];
+
+    // Validate store exists
     if (!$this->storeModel->storeIdExists($data['store_id'])) {
         http_response_code(400);
-    return ['status' => 'error', 'message' => 'Invalid store_id. Store does not exist.'];
-}
+        return ['status' => 'error', 'message' => 'Invalid store_id. Store does not exist.'];
+    }
+
+    // Validate category_id is required
+    if (!isset($data['category_id']) || empty($data['category_id'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Category ID is required. Please select a category for this food item.'];
+    }
+
+    // Validate category exists and belongs to the merchant's store type
+    $categoryCheck = $this->conn->prepare("
+        SELECT c.id FROM categories c 
+        JOIN store_types st ON c.store_type_id = st.id 
+        JOIN stores s ON s.store_type_id = st.id 
+        WHERE c.id = :category_id AND s.id = :store_id
+    ");
+    $categoryCheck->execute([
+        'category_id' => $data['category_id'],
+        'store_id' => $data['store_id']
+    ]);
+    
+    if ($categoryCheck->fetchColumn() == 0) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid category ID. Please select a category that belongs to your store type.'];
+    }
 
     // Validate sides data if provided
     if (isset($data['sides']) && is_array($data['sides'])) {
@@ -947,6 +983,32 @@ private function bulkUpdateStatus($data, $user, $status)
     }
 
     return $this->foodItem->updateItemsStatusBulk($data['ids'], $status);
+}
+
+public function getCategoriesByStoreType($storeId)
+{
+    try {
+        $sql = "SELECT c.id, c.name, c.description, c.image_url, c.status 
+                FROM categories c 
+                JOIN store_types st ON c.store_type_id = st.id 
+                JOIN stores s ON s.store_type_id = st.id 
+                WHERE s.id = :store_id AND c.status = 'active'
+                ORDER BY c.name ASC";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['store_id' => $storeId]);
+        $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        return [
+            'status' => 'success',
+            'data' => $categories
+        ];
+        
+    } catch (\Exception $e) {
+        error_log("getCategoriesByStoreType error: " . $e->getMessage());
+        http_response_code(500);
+        return ['status' => 'error', 'message' => 'Failed to fetch categories'];
+    }
 }
 
 }
