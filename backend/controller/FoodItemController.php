@@ -77,8 +77,8 @@ class FoodItemController
 
     if (!$this->storeModel->storeIdExists($data['store_id'])) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Invalid store_id. Store does not exist.'];
-    }
+    return ['status' => 'error', 'message' => 'Invalid store_id. Store does not exist.'];
+}
 
     // Validate sides data if provided
     if (isset($data['sides']) && is_array($data['sides'])) {
@@ -295,7 +295,7 @@ public function getAllFoodItemsByStoreId($data, $user)
     $foodItems = $this->foodItem->getAllByStoreId($storeId);
     
     // Always return success with data (empty array if no items found)
-    http_response_code(200);
+     http_response_code(200);
     return ["status" => "success", "data" => $foodItems ?: []];
  
 }
