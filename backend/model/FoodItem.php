@@ -967,37 +967,37 @@ public function updateFoodSection($data)
         $this->conn->beginTransaction();
 
         // Set defaults if not provided
-        $maxQuantity = isset($data['max_quantity']) ? $data['max_quantity'] : null;
-        $required = isset($data['required']) ? $data['required'] : 0;
+        $maxQuantity = isset($data['max_qty']) ? $data['max_qty'] : null;
+        $required = isset($data['is_required']) ? $data['is_required'] : 0;
 
         // Update the section details
         $query = "UPDATE food_sections 
                   SET section_name = :section_name, max_quantity = :max_quantity, required = :required
-                  WHERE id = :section_id AND store_id = :store_id";
+                  WHERE id = :section_id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':section_name', $data['section_name']);
         $stmt->bindParam(':max_quantity', $maxQuantity);
         $stmt->bindParam(':required', $required);
         $stmt->bindParam(':section_id', $data['section_id']);
-        $stmt->bindParam(':store_id', $data['store_id']);
         $stmt->execute();
 
-        // Handle sides if provided
-        if (isset($data['side_ids']) && is_array($data['side_ids'])) {
-            // First, delete all existing sides for this section
-            $deleteQuery = "DELETE FROM food_section_sides WHERE section_id = :section_id";
+        // Handle items if provided
+        if (isset($data['items']) && is_array($data['items'])) {
+            // First, delete all existing items for this section
+            $deleteQuery = "DELETE FROM food_section_items WHERE section_id = :section_id";
             $deleteStmt = $this->conn->prepare($deleteQuery);
             $deleteStmt->bindParam(':section_id', $data['section_id']);
             $deleteStmt->execute();
 
-            // Insert the new sides
-            if (!empty($data['side_ids'])) {
-                $insertQuery = "INSERT INTO food_section_sides (section_id, side_id) VALUES (:section_id, :side_id)";
+            // Insert the new items
+            if (!empty($data['items'])) {
+                $insertQuery = "INSERT INTO food_section_items (section_id, name, price) VALUES (:section_id, :name, :price)";
                 $insertStmt = $this->conn->prepare($insertQuery);
 
-                foreach ($data['side_ids'] as $sideId) {
+                foreach ($data['items'] as $item) {
                     $insertStmt->bindValue(':section_id', $data['section_id']);
-                    $insertStmt->bindValue(':side_id', $sideId);
+                    $insertStmt->bindValue(':name', $item['name']);
+                    $insertStmt->bindValue(':price', $item['price']);
                     $insertStmt->execute();
                 }
             }
@@ -1010,7 +1010,7 @@ public function updateFoodSection($data)
     } catch (PDOException $e) {
         // Rollback on error
         if ($this->conn->inTransaction()) {
-        $this->conn->rollBack();
+            $this->conn->rollBack();
         }
         throw new \Exception("Error updating food section: " . $e->getMessage());
     }

@@ -916,9 +916,25 @@ public function updateFoodSection($id, $data, $user)
         return ['status' => 'error', 'message' => 'Please provide the section ID and name.'];
     }
 
-    if (isset($data['side_ids']) && !is_array($data['side_ids'])) {
-        http_response_code(400);
-        return ['status' => 'error', 'message' => 'Invalid sides format. Please select valid sides from the list.'];
+    // Validate items array if provided
+    if (isset($data['items'])) {
+        if (!is_array($data['items'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Items must be an array.'];
+        }
+        
+        // Validate each item in the array
+        foreach ($data['items'] as $index => $item) {
+            if (!isset($item['name']) || empty($item['name'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => "Item at index {$index} must have a name."];
+            }
+            
+            if (!isset($item['price']) || !is_numeric($item['price']) || $item['price'] < 0) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => "Item '{$item['name']}' must have a valid price (non-negative number)."];
+            }
+        }
     }
 
     if (isset($data['is_required'])) {
@@ -934,6 +950,9 @@ public function updateFoodSection($id, $data, $user)
             }
         }
     }
+
+    // Add section_id to data for the model
+    $data['section_id'] = $id;
 
     $result = $this->foodItem->updateFoodSection($data);
     if ($result) {
