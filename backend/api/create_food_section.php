@@ -49,6 +49,39 @@ if (empty($data['section_name'])) {
     exit;
 }
 
+// Validate items array if provided
+if (isset($data['items'])) {
+    if (!is_array($data['items'])) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Items must be an array.'
+        ]);
+        exit;
+    }
+    
+    // Validate each item in the array
+    foreach ($data['items'] as $index => $item) {
+        if (!isset($item['name']) || empty($item['name'])) {
+            http_response_code(400);
+            echo json_encode([
+                'status' => 'error',
+                'message' => "Item at index {$index} must have a name."
+            ]);
+            exit;
+        }
+        
+        if (!isset($item['price']) || !is_numeric($item['price']) || $item['price'] < 0) {
+            http_response_code(400);
+            echo json_encode([
+                'status' => 'error',
+                'message' => "Item '{$item['name']}' must have a valid price (non-negative number)."
+            ]);
+            exit;
+        }
+    }
+}
+
 // Validate is_required and max_qty dependency
 if (isset($data['is_required']) && $data['is_required'] == 1) {
     if (!isset($data['max_qty']) || empty($data['max_qty'])) {

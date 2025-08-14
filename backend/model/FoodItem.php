@@ -717,7 +717,7 @@ public function bulkDeleteFoodSides($ids)
         if ($existingCount != count($ids)) {
             error_log("bulkDeleteFoodSides: Only $existingCount out of " . count($ids) . " IDs exist");
             if ($this->conn->inTransaction()) {
-                $this->conn->rollBack();
+            $this->conn->rollBack();
             }
             return false;
         }
@@ -734,7 +734,7 @@ public function bulkDeleteFoodSides($ids)
         if ($fkCount > 0) {
             error_log("bulkDeleteFoodSides: Cannot delete - $fkCount food sides are linked to food items");
             if ($this->conn->inTransaction()) {
-                $this->conn->rollBack();
+            $this->conn->rollBack();
             }
             return false;
         }
@@ -751,7 +751,7 @@ public function bulkDeleteFoodSides($ids)
         if ($deletedCount == 0) {
             error_log("bulkDeleteFoodSides: No rows were deleted");
             if ($this->conn->inTransaction()) {
-                $this->conn->rollBack();
+            $this->conn->rollBack();
             }
             return false;
         }
@@ -861,8 +861,8 @@ public function createFoodSection($data)
         $this->conn->beginTransaction();
 
         // Set defaults if not provided
-        $maxQuantity = isset($data['max_quantity']) ? $data['max_quantity'] : null;
-        $required = isset($data['required']) ? $data['required'] : 0;
+        $maxQuantity = isset($data['max_qty']) ? $data['max_qty'] : null;
+        $required = isset($data['is_required']) ? $data['is_required'] : 0;
 
         // Insert new section
         $query = "INSERT INTO food_sections (store_id, section_name, max_quantity, required) 
@@ -877,16 +877,16 @@ public function createFoodSection($data)
         // Get the new section ID
         $sectionId = $this->conn->lastInsertId();
 
-        // Attach sides if provided and valid
-        if (!empty($data['side_ids']) && is_array($data['side_ids'])) {
-            $sideQuery = "INSERT INTO food_section_sides (section_id, side_id) VALUES (:section_id, :side_id)";
-            $sideStmt = $this->conn->prepare($sideQuery);
+        // Create section items if provided
+        if (!empty($data['items']) && is_array($data['items'])) {
+            $itemQuery = "INSERT INTO food_section_items (section_id, name, price) VALUES (:section_id, :name, :price)";
+            $itemStmt = $this->conn->prepare($itemQuery);
 
-            foreach ($data['side_ids'] as $sideId) {
-                // Use bindValue inside the loop to avoid PDO binding issues
-                $sideStmt->bindValue(':section_id', $sectionId);
-                $sideStmt->bindValue(':side_id', $sideId);
-                $sideStmt->execute();
+            foreach ($data['items'] as $item) {
+                $itemStmt->bindValue(':section_id', $sectionId);
+                $itemStmt->bindValue(':name', $item['name']);
+                $itemStmt->bindValue(':price', $item['price']);
+                $itemStmt->execute();
             }
         }
 
@@ -914,19 +914,18 @@ public function getAllFoodSectionsByStoreId($storeId)
     $stmt->execute();
     $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // For each section, get attached sides
+    // For each section, get attached items
     foreach ($sections as &$section) {
-        $sideQuery = "SELECT fs.side_id, s.name 
-                      FROM food_section_sides fs
-                      JOIN food_sides s ON fs.side_id = s.id
-                      WHERE fs.section_id = :section_id";
-        $sideStmt = $this->conn->prepare($sideQuery);
-        $sideStmt->bindParam(':section_id', $section['id']);
-        $sideStmt->execute();
-        $sides = $sideStmt->fetchAll(PDO::FETCH_ASSOC);
+        $itemQuery = "SELECT id, name, price, status 
+                      FROM food_section_items 
+                      WHERE section_id = :section_id AND status = 'active'";
+        $itemStmt = $this->conn->prepare($itemQuery);
+        $itemStmt->bindParam(':section_id', $section['id']);
+        $itemStmt->execute();
+        $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Attach sides to this section
-        $section['sides'] = $sides;
+        // Attach items to this section
+        $section['items'] = $items;
     }
 
     return $sections;
@@ -944,17 +943,16 @@ public function getFoodSectionById($id)
     $section = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($section) {
-        // Get attached sides
-        $sideQuery = "SELECT fs.side_id, s.name 
-                      FROM food_section_sides fs
-                      JOIN food_sides s ON fs.side_id = s.id
-                      WHERE fs.section_id = :id";
-        $sideStmt = $this->conn->prepare($sideQuery);
-        $sideStmt->bindParam(':id', $id);
-        $sideStmt->execute();
-        $sides = $sideStmt->fetchAll(PDO::FETCH_ASSOC);
+        // Get attached items
+        $itemQuery = "SELECT id, name, price, status 
+                      FROM food_section_items 
+                      WHERE section_id = :id AND status = 'active'";
+        $itemStmt = $this->conn->prepare($itemQuery);
+        $itemStmt->bindParam(':id', $id);
+        $itemStmt->execute();
+        $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $section['sides'] = $sides;
+        $section['items'] = $items;
     }
 
     return $section ?: null;
@@ -1012,7 +1010,7 @@ public function updateFoodSection($data)
     } catch (PDOException $e) {
         // Rollback on error
         if ($this->conn->inTransaction()) {
-            $this->conn->rollBack();
+        $this->conn->rollBack();
         }
         throw new \Exception("Error updating food section: " . $e->getMessage());
     }
