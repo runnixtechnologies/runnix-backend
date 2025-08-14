@@ -368,7 +368,7 @@ class FoodItemController
         }
     }
 
-    public function getAllFoodItems($user)
+    public function getAllFoodItems($user, $page = 1, $limit = 10)
 {
     // Check if user is merchant
     if ($user['role'] !== 'merchant') {
@@ -385,12 +385,25 @@ class FoodItemController
     }
 
     $storeId = $store['id'];
+    $offset = ($page - 1) * $limit;
 
-    // Get food items using the store_id
-    $foodItems = $this->foodItem->getAllByStoreId($storeId);
+    // Get food items using the store_id with pagination
+    $foodItems = $this->foodItem->getAllByStoreIdPaginated($storeId, $limit, $offset);
+    $totalCount = $this->foodItem->countFoodItemsByStoreId($storeId);
 
     http_response_code(200); // OK
-    return ["status" => "success", "data" => $foodItems];
+    return [
+        "status" => "success", 
+        "data" => $foodItems,
+        "meta" => [
+            "page" => $page,
+            "limit" => $limit,
+            "total" => $totalCount,
+            "total_pages" => ceil($totalCount / $limit),
+            "has_next" => ($page * $limit) < $totalCount,
+            "has_prev" => $page > 1
+        ]
+    ];
 }
 
 
@@ -417,13 +430,29 @@ public function getAllFoodItemsByStoreId($data, $user)
         return ["status" => "error", "message" => "Access denied. You can only view your own store's food items."];
     }
 
-    // Fetch food items
-    $foodItems = $this->foodItem->getAllByStoreId($storeId);
+    // Get pagination parameters
+    $page = isset($data['page']) ? (int) $data['page'] : 1;
+    $limit = isset($data['limit']) ? (int) $data['limit'] : 10;
+    $offset = ($page - 1) * $limit;
+
+    // Fetch food items with pagination
+    $foodItems = $this->foodItem->getAllByStoreIdPaginated($storeId, $limit, $offset);
+    $totalCount = $this->foodItem->countFoodItemsByStoreId($storeId);
     
     // Always return success with data (empty array if no items found)
-     http_response_code(200);
-    return ["status" => "success", "data" => $foodItems ?: []];
- 
+    http_response_code(200);
+    return [
+        "status" => "success", 
+        "data" => $foodItems ?: [],
+        "meta" => [
+            "page" => $page,
+            "limit" => $limit,
+            "total" => $totalCount,
+            "total_pages" => ceil($totalCount / $limit),
+            "has_next" => ($page * $limit) < $totalCount,
+            "has_prev" => $page > 1
+        ]
+    ];
 }
 
 // CREATE Food Side
@@ -889,15 +918,27 @@ public function createFoodSection($data, $user)
         }
     }
 
-    $result = $this->foodItem->createFoodSection($data);
-    if ($result && is_array($result)) {
-        http_response_code(201);
-        return [
-            'status' => 'success', 
-            'message' => 'Section created successfully.',
-            'data' => $result['id']
-        ];
-    } else {
+    try {
+        $result = $this->foodItem->createFoodSection($data);
+        if ($result && is_array($result)) {
+            http_response_code(201);
+            return [
+                'status' => 'success', 
+                'message' => 'Section created successfully.',
+                'data' => $result['id']
+            ];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Something went wrong. Unable to create the section. Please try again.'];
+        }
+    } catch (\Exception $e) {
+        // Handle duplicate section name error
+        if (strpos($e->getMessage(), 'already exists') !== false) {
+            http_response_code(409); // Conflict
+            return ['status' => 'error', 'message' => $e->getMessage()];
+        }
+        
+        // Handle other errors
         http_response_code(500);
         return ['status' => 'error', 'message' => 'Something went wrong. Unable to create the section. Please try again.'];
     }

@@ -297,12 +297,30 @@ private function getFoodItemWithOptions($foodItemId)
     $stmt->execute([':id' => $id, ':userId' => $userId]);
     return $stmt->fetch() !== false;
 }
-    // Get All Food Items by Store
-    public function getAllByStoreId($store_id)
+    // Get All Food Items by Store (with pagination)
+    public function getAllByStoreId($store_id, $limit = null, $offset = null)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE store_id = :store_id AND deleted = 0";
+        $sql = "SELECT * FROM {$this->table} WHERE store_id = :store_id AND deleted = 0 ORDER BY created_at DESC";
+        
+        // Add pagination if limit is provided
+        if ($limit !== null) {
+            $sql .= " LIMIT :limit";
+            if ($offset !== null) {
+                $sql .= " OFFSET :offset";
+            }
+        }
+        
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute(['store_id' => $store_id]);
+        $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
+        
+        if ($limit !== null) {
+            $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+            if ($offset !== null) {
+                $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+            }
+        }
+        
+        $stmt->execute();
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Convert numeric fields to appropriate types for each result
@@ -312,6 +330,22 @@ private function getFoodItemWithOptions($foodItemId)
         }
         
         return $results;
+    }
+
+    // Get All Food Items by Store (paginated version)
+    public function getAllByStoreIdPaginated($store_id, $limit, $offset)
+    {
+        return $this->getAllByStoreId($store_id, $limit, $offset);
+    }
+
+    // Count total food items by store
+    public function countFoodItemsByStoreId($store_id)
+    {
+        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND deleted = 0";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
     }
 
     // Get a single Food Item by id
@@ -853,10 +887,26 @@ public function deleteFoodItemSide($itemId, $sideId)
     $stmt->bindParam(':side_id', $sideId);
     return $stmt->execute();
 }
+// Check if section name already exists for this store
+private function sectionNameExists($storeId, $sectionName)
+{
+    $query = "SELECT COUNT(*) FROM food_sections WHERE store_id = :store_id AND section_name = :section_name";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':store_id', $storeId);
+    $stmt->bindParam(':section_name', $sectionName);
+    $stmt->execute();
+    return $stmt->fetchColumn() > 0;
+}
+
 // CREATE Food Section (ensure unique section name per store)
 public function createFoodSection($data)
 {
     try {
+        // Check for duplicate section name
+        if ($this->sectionNameExists($data['store_id'], $data['section_name'])) {
+            throw new \Exception("A section with the name '{$data['section_name']}' already exists in your store.");
+        }
+
         // Begin transaction
         $this->conn->beginTransaction();
 
