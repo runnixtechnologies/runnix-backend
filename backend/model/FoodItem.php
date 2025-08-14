@@ -63,6 +63,253 @@ class FoodItem
     return ['status' => 'success', 'message' => 'Item created successfully.'];
 }
 
+// Create Food Item with Sides, Packs, and Sections
+public function createWithOptions($data)
+{
+    try {
+        // Begin transaction
+        $this->conn->beginTransaction();
+
+        // Validate store_id exists
+        $storeCheck = $this->conn->prepare("SELECT COUNT(*) FROM stores WHERE id = :store_id");
+        $storeCheck->execute(['store_id' => $data['store_id']]);
+        if ($storeCheck->fetchColumn() == 0) {
+            throw new \Exception('Invalid store_id: no such store found.');
+        }
+
+        // Check if item with the same name exists in the store
+        $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND name = :name AND deleted = 0");
+        $nameCheck->execute([
+            'store_id' => $data['store_id'],
+            'name' => $data['name']
+        ]);
+        if ($nameCheck->fetchColumn() > 0) {
+            throw new \Exception('Item with this name already exists in this store. Please choose a different name.');
+        }
+
+        // Insert new food item
+        $sql = "INSERT INTO {$this->table} 
+                (store_id, category_id, section_id, user_id, name, price, photo, short_description, max_qty, status, created_at, updated_at)
+                VALUES 
+                (:store_id, :category_id, :section_id, :user_id, :name, :price, :photo, :short_description, :max_qty, :status, NOW(), NOW())";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            'store_id' => $data['store_id'],
+            'category_id' => $data['category_id'] ?? null,
+            'section_id' => $data['section_id'] ?? null,
+            'user_id' => $data['user_id'],
+            'name' => $data['name'],
+            'price' => $data['price'],
+            'photo' => $data['photo'] ?? null,
+            'short_description' => $data['short_description'] ?? null,
+            'max_qty' => $data['max_qty'] ?? null,
+            'status' => $data['status'] ?? 'active'
+        ]);
+
+        $foodItemId = $this->conn->lastInsertId();
+
+        // Handle sides if provided
+        if (isset($data['sides']) && is_array($data['sides']) && !empty($data['sides']['items'])) {
+            $this->createFoodItemSides($foodItemId, $data['sides']);
+        }
+
+        // Handle packs if provided
+        if (isset($data['packs']) && is_array($data['packs']) && !empty($data['packs']['items'])) {
+            $this->createFoodItemPacks($foodItemId, $data['packs']);
+        }
+
+        // Handle sections if provided
+        if (isset($data['sections']) && is_array($data['sections']) && !empty($data['sections']['items'])) {
+            $this->createFoodItemSections($foodItemId, $data['sections']);
+        }
+
+        // Commit transaction
+        $this->conn->commit();
+
+        // Get the created food item with all its options
+        $createdItem = $this->getFoodItemWithOptions($foodItemId);
+
+        return [
+            'status' => 'success', 
+            'message' => 'Food item created successfully with all options',
+            'data' => $createdItem
+        ];
+
+    } catch (\Exception $e) {
+        // Rollback on error
+        $this->conn->rollBack();
+        error_log("createWithOptions error: " . $e->getMessage());
+        return ['status' => 'error', 'message' => $e->getMessage()];
+    }
+}
+
+// Helper method to create food item sides
+private function createFoodItemSides($foodItemId, $sidesData)
+{
+    // First, create the food item sides configuration
+    $configSql = "INSERT INTO food_item_sides_config (item_id, required, max_quantity) 
+                  VALUES (:item_id, :required, :max_quantity)";
+    $configStmt = $this->conn->prepare($configSql);
+    $configStmt->execute([
+        'item_id' => $foodItemId,
+        'required' => $sidesData['required'] ?? false,
+        'max_quantity' => $sidesData['max_quantity'] ?? 0
+    ]);
+
+    // Then, create the side relationships
+    if (!empty($sidesData['items']) && is_array($sidesData['items'])) {
+        $sideSql = "INSERT INTO food_item_sides (item_id, side_id, extra_price) VALUES (:item_id, :side_id, :extra_price)";
+        $sideStmt = $this->conn->prepare($sideSql);
+
+        foreach ($sidesData['items'] as $sideItem) {
+            $sideId = is_array($sideItem) ? $sideItem['id'] : $sideItem;
+            $extraPrice = is_array($sideItem) ? ($sideItem['extra_price'] ?? 0) : 0;
+            
+            $sideStmt->execute([
+                'item_id' => $foodItemId,
+                'side_id' => $sideId,
+                'extra_price' => $extraPrice
+            ]);
+        }
+    }
+}
+
+// Helper method to create food item packs
+private function createFoodItemPacks($foodItemId, $packsData)
+{
+    // First, create the food item packs configuration
+    $configSql = "INSERT INTO food_item_packs_config (item_id, required, max_quantity) 
+                  VALUES (:item_id, :required, :max_quantity)";
+    $configStmt = $this->conn->prepare($configSql);
+    $configStmt->execute([
+        'item_id' => $foodItemId,
+        'required' => $packsData['required'] ?? false,
+        'max_quantity' => $packsData['max_quantity'] ?? 0
+    ]);
+
+    // Then, create the pack relationships
+    if (!empty($packsData['items']) && is_array($packsData['items'])) {
+        $packSql = "INSERT INTO food_item_packs (item_id, pack_id, extra_price) VALUES (:item_id, :pack_id, :extra_price)";
+        $packStmt = $this->conn->prepare($packSql);
+
+        foreach ($packsData['items'] as $packItem) {
+            $packId = is_array($packItem) ? $packItem['id'] : $packItem;
+            $extraPrice = is_array($packItem) ? ($packItem['extra_price'] ?? 0) : 0;
+            
+            $packStmt->execute([
+                'item_id' => $foodItemId,
+                'pack_id' => $packId,
+                'extra_price' => $extraPrice
+            ]);
+        }
+    }
+}
+
+// Helper method to create food item sections
+private function createFoodItemSections($foodItemId, $sectionsData)
+{
+    // First, create the food item sections configuration
+    $configSql = "INSERT INTO food_item_sections_config (item_id, required, max_quantity) 
+                  VALUES (:item_id, :required, :max_quantity)";
+    $configStmt = $this->conn->prepare($configSql);
+    $configStmt->execute([
+        'item_id' => $foodItemId,
+        'required' => $sectionsData['required'] ?? false,
+        'max_quantity' => $sectionsData['max_quantity'] ?? 0
+    ]);
+
+    // Then, create the section relationships
+    if (!empty($sectionsData['items']) && is_array($sectionsData['items'])) {
+        $sectionSql = "INSERT INTO food_item_sections (item_id, section_id) VALUES (:item_id, :section_id)";
+        $sectionStmt = $this->conn->prepare($sectionSql);
+
+        foreach ($sectionsData['items'] as $sectionId) {
+            $sectionStmt->execute([
+                'item_id' => $foodItemId,
+                'section_id' => $sectionId
+            ]);
+        }
+    }
+}
+
+// Helper method to get food item with all options
+private function getFoodItemWithOptions($foodItemId)
+{
+    // Get basic food item info
+    $itemSql = "SELECT * FROM {$this->table} WHERE id = :id AND deleted = 0";
+    $itemStmt = $this->conn->prepare($itemSql);
+    $itemStmt->execute(['id' => $foodItemId]);
+    $foodItem = $itemStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$foodItem) {
+        return null;
+    }
+
+    // Get sides configuration and items
+    $sidesConfigSql = "SELECT required, max_quantity FROM food_item_sides_config WHERE item_id = :item_id";
+    $sidesConfigStmt = $this->conn->prepare($sidesConfigSql);
+    $sidesConfigStmt->execute(['item_id' => $foodItemId]);
+    $sidesConfig = $sidesConfigStmt->fetch(PDO::FETCH_ASSOC);
+
+    $sidesSql = "SELECT fs.*, fis.extra_price 
+                  FROM food_sides fs 
+                  INNER JOIN food_item_sides fis ON fs.id = fis.side_id 
+                  WHERE fis.item_id = :item_id";
+    $sidesStmt = $this->conn->prepare($sidesSql);
+    $sidesStmt->execute(['item_id' => $foodItemId]);
+    $sides = $sidesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get packs configuration and items
+    $packsConfigSql = "SELECT required, max_quantity FROM food_item_packs_config WHERE item_id = :item_id";
+    $packsConfigStmt = $this->conn->prepare($packsConfigSql);
+    $packsConfigStmt->execute(['item_id' => $foodItemId]);
+    $packsConfig = $packsConfigStmt->fetch(PDO::FETCH_ASSOC);
+
+    $packsSql = "SELECT p.*, fip.extra_price 
+                  FROM packages p 
+                  INNER JOIN food_item_packs fip ON p.id = fip.pack_id 
+                  WHERE fip.item_id = :item_id";
+    $packsStmt = $this->conn->prepare($packsSql);
+    $packsStmt->execute(['item_id' => $foodItemId]);
+    $packs = $packsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get sections configuration and items
+    $sectionsConfigSql = "SELECT required, max_quantity FROM food_item_sections_config WHERE item_id = :item_id";
+    $sectionsConfigStmt = $this->conn->prepare($sectionsConfigSql);
+    $sectionsConfigStmt->execute(['item_id' => $foodItemId]);
+    $sectionsConfig = $sectionsConfigStmt->fetch(PDO::FETCH_ASSOC);
+
+    $sectionsSql = "SELECT fs.* 
+                    FROM food_sections fs 
+                    INNER JOIN food_item_sections fis ON fs.id = fis.section_id 
+                    WHERE fis.item_id = :item_id";
+    $sectionsStmt = $this->conn->prepare($sectionsSql);
+    $sectionsStmt->execute(['item_id' => $foodItemId]);
+    $sections = $sectionsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Build the complete response
+    $foodItem['sides'] = [
+        'required' => $sidesConfig ? (bool)$sidesConfig['required'] : false,
+        'max_quantity' => $sidesConfig ? (int)$sidesConfig['max_quantity'] : 0,
+        'items' => $sides
+    ];
+
+    $foodItem['packs'] = [
+        'required' => $packsConfig ? (bool)$packsConfig['required'] : false,
+        'max_quantity' => $packsConfig ? (int)$packsConfig['max_quantity'] : 0,
+        'items' => $packs
+    ];
+
+    $foodItem['sections'] = [
+        'required' => $sectionsConfig ? (bool)$sectionsConfig['required'] : false,
+        'max_quantity' => $sectionsConfig ? (int)$sectionsConfig['max_quantity'] : 0,
+        'items' => $sections
+    ];
+
+    return $foodItem;
+}
+
 
 
 
@@ -982,6 +1229,172 @@ public function updateItemsStatusBulk($ids, $status)
         http_response_code(500);
         return ["status" => "error", "message" => "Bulk status update failed."];
     }
+}
+
+// Helper method to create food item sides
+private function createFoodItemSides($foodItemId, $sidesData)
+{
+    // First, create the food item sides configuration
+    $configSql = "INSERT INTO food_item_sides_config (item_id, required, max_quantity) 
+                  VALUES (:item_id, :required, :max_quantity)";
+    $configStmt = $this->conn->prepare($configSql);
+    $configStmt->execute([
+        'item_id' => $foodItemId,
+        'required' => $sidesData['required'] ?? false,
+        'max_quantity' => $sidesData['max_quantity'] ?? 0
+    ]);
+
+    // Then, create the side relationships
+    if (!empty($sidesData['items']) && is_array($sidesData['items'])) {
+        $sideSql = "INSERT INTO food_item_sides (item_id, side_id, extra_price) VALUES (:item_id, :side_id, :extra_price)";
+        $sideStmt = $this->conn->prepare($sideSql);
+
+        foreach ($sidesData['items'] as $sideItem) {
+            $sideId = is_array($sideItem) ? $sideItem['id'] : $sideItem;
+            $extraPrice = is_array($sideItem) ? ($sideItem['extra_price'] ?? 0) : 0;
+            
+            $sideStmt->execute([
+                'item_id' => $foodItemId,
+                'side_id' => $sideId,
+                'extra_price' => $extraPrice
+            ]);
+        }
+    }
+}
+
+// Helper method to create food item packs
+private function createFoodItemPacks($foodItemId, $packsData)
+{
+    // First, create the food item packs configuration
+    $configSql = "INSERT INTO food_item_packs_config (item_id, required, max_quantity) 
+                  VALUES (:item_id, :required, :max_quantity)";
+    $configStmt = $this->conn->prepare($configSql);
+    $configStmt->execute([
+        'item_id' => $foodItemId,
+        'required' => $packsData['required'] ?? false,
+        'max_quantity' => $packsData['max_quantity'] ?? 0
+    ]);
+
+    // Then, create the pack relationships
+    if (!empty($packsData['items']) && is_array($packsData['items'])) {
+        $packSql = "INSERT INTO food_item_packs (item_id, pack_id, extra_price) VALUES (:item_id, :pack_id, :extra_price)";
+        $packStmt = $this->conn->prepare($packSql);
+
+        foreach ($packsData['items'] as $packItem) {
+            $packId = is_array($packItem) ? $packItem['id'] : $packItem;
+            $extraPrice = is_array($packItem) ? ($packItem['extra_price'] ?? 0) : 0;
+            
+            $packStmt->execute([
+                'item_id' => $foodItemId,
+                'pack_id' => $packId,
+                'extra_price' => $extraPrice
+            ]);
+        }
+    }
+}
+
+// Helper method to create food item sections
+private function createFoodItemSections($foodItemId, $sectionsData)
+{
+    // First, create the food item sections configuration
+    $configSql = "INSERT INTO food_item_sections_config (item_id, required, max_quantity) 
+                  VALUES (:item_id, :required, :max_quantity)";
+    $configStmt = $this->conn->prepare($configSql);
+    $configStmt->execute([
+        'item_id' => $foodItemId,
+        'required' => $sectionsData['required'] ?? false,
+        'max_quantity' => $sectionsData['max_quantity'] ?? 0
+    ]);
+
+    // Then, create the section relationships
+    if (!empty($sectionsData['items']) && is_array($sectionsData['items'])) {
+        $sectionSql = "INSERT INTO food_item_sections (item_id, section_id) VALUES (:item_id, :section_id)";
+        $sectionStmt = $this->conn->prepare($sectionSql);
+
+        foreach ($sectionsData['items'] as $sectionId) {
+            $sectionStmt->execute([
+                'item_id' => $foodItemId,
+                'section_id' => $sectionId
+            ]);
+        }
+    }
+}
+
+// Helper method to get food item with all options
+private function getFoodItemWithOptions($foodItemId)
+{
+    // Get basic food item info
+    $itemSql = "SELECT * FROM {$this->table} WHERE id = :id AND deleted = 0";
+    $itemStmt = $this->conn->prepare($itemSql);
+    $itemStmt->execute(['id' => $foodItemId]);
+    $foodItem = $itemStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$foodItem) {
+        return null;
+    }
+
+    // Get sides configuration and items
+    $sidesConfigSql = "SELECT required, max_quantity FROM food_item_sides_config WHERE item_id = :item_id";
+    $sidesConfigStmt = $this->conn->prepare($sidesConfigSql);
+    $sidesConfigStmt->execute(['item_id' => $foodItemId]);
+    $sidesConfig = $sidesConfigStmt->fetch(PDO::FETCH_ASSOC);
+
+    $sidesSql = "SELECT fs.*, fis.extra_price 
+                  FROM food_sides fs 
+                  INNER JOIN food_item_sides fis ON fs.id = fis.side_id 
+                  WHERE fis.item_id = :item_id";
+    $sidesStmt = $this->conn->prepare($sidesSql);
+    $sidesStmt->execute(['item_id' => $foodItemId]);
+    $sides = $sidesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get packs configuration and items
+    $packsConfigSql = "SELECT required, max_quantity FROM food_item_packs_config WHERE item_id = :item_id";
+    $packsConfigStmt = $this->conn->prepare($packsConfigSql);
+    $packsConfigStmt->execute(['item_id' => $foodItemId]);
+    $packsConfig = $packsConfigStmt->fetch(PDO::FETCH_ASSOC);
+
+    $packsSql = "SELECT p.*, fip.extra_price 
+                  FROM packages p 
+                  INNER JOIN food_item_packs fip ON p.id = fip.pack_id 
+                  WHERE fip.item_id = :item_id";
+    $packsStmt = $this->conn->prepare($packsSql);
+    $packsStmt->execute(['item_id' => $foodItemId]);
+    $packs = $packsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get sections configuration and items
+    $sectionsConfigSql = "SELECT required, max_quantity FROM food_item_sections_config WHERE item_id = :item_id";
+    $sectionsConfigStmt = $this->conn->prepare($sectionsConfigSql);
+    $sectionsConfigStmt->execute(['item_id' => $foodItemId]);
+    $sectionsConfig = $sectionsConfigStmt->fetch(PDO::FETCH_ASSOC);
+
+    $sectionsSql = "SELECT fs.* 
+                    FROM food_sections fs 
+                    INNER JOIN food_item_sections fis ON fs.id = fis.section_id 
+                    WHERE fis.item_id = :item_id";
+    $sectionsStmt = $this->conn->prepare($sectionsSql);
+    $sectionsStmt->execute(['item_id' => $foodItemId]);
+    $sections = $sectionsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Build the complete response
+    $foodItem['sides'] = [
+        'required' => $sidesConfig ? (bool)$sidesConfig['required'] : false,
+        'max_quantity' => $sidesConfig ? (int)$sidesConfig['max_quantity'] : 0,
+        'items' => $sides
+    ];
+
+    $foodItem['packs'] = [
+        'required' => $packsConfig ? (bool)$packsConfig['required'] : false,
+        'max_quantity' => $packsConfig ? (int)$packsConfig['max_quantity'] : 0,
+        'items' => $packs
+    ];
+
+    $foodItem['sections'] = [
+        'required' => $sectionsConfig ? (bool)$sectionsConfig['required'] : false,
+        'max_quantity' => $sectionsConfig ? (int)$sectionsConfig['max_quantity'] : 0,
+        'items' => $sections
+    ];
+
+    return $foodItem;
 }
 
 }

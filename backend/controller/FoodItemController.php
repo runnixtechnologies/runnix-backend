@@ -59,15 +59,67 @@ class FoodItemController
     // Attach photo to data
     $data['photo'] = $photo;
 
-    if (!$this->storeModel->storeIdExists($data['store_id'])) {
-    http_response_code(400); // Bad Request
-    return ['status' => 'error', 'message' => 'Invalid store_id. Store does not exist.'];
-}
+    // Validate required fields
+    if (!isset($data['name']) || empty(trim($data['name']))) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Food item name is required'];
+    }
 
-    $result = $this->foodItem->create($data);
-    if ($result) {
+    if (!isset($data['price']) || !is_numeric($data['price']) || $data['price'] < 0) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Valid price is required'];
+    }
+
+    if (!isset($data['store_id']) || empty($data['store_id'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Store ID is required'];
+    }
+
+    if (!$this->storeModel->storeIdExists($data['store_id'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid store_id. Store does not exist.'];
+    }
+
+    // Validate sides data if provided
+    if (isset($data['sides']) && is_array($data['sides'])) {
+        if (isset($data['sides']['required']) && !is_bool($data['sides']['required'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sides required must be a boolean'];
+        }
+        if (isset($data['sides']['max_quantity']) && (!is_numeric($data['sides']['max_quantity']) || $data['sides']['max_quantity'] < 0)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sides max quantity must be a non-negative number'];
+        }
+    }
+
+    // Validate packs data if provided
+    if (isset($data['packs']) && is_array($data['packs'])) {
+        if (isset($data['packs']['required']) && !is_bool($data['packs']['required'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Packs required must be a boolean'];
+        }
+        if (isset($data['packs']['max_quantity']) && (!is_numeric($data['packs']['max_quantity']) || $data['packs']['max_quantity'] < 0)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Packs max quantity must be a non-negative number'];
+        }
+    }
+
+    // Validate sections data if provided
+    if (isset($data['sections']) && is_array($data['sections'])) {
+        if (isset($data['sections']['required']) && !is_bool($data['sections']['required'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sections required must be a boolean'];
+        }
+        if (isset($data['sections']['max_quantity']) && (!is_numeric($data['sections']['max_quantity']) || $data['sections']['max_quantity'] < 0)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sections max quantity must be a non-negative number'];
+        }
+    }
+
+    $result = $this->foodItem->createWithOptions($data);
+    if ($result && isset($result['status']) && $result['status'] === 'success') {
         http_response_code(201); // Created
-        return ['status' => 'success', 'message' => 'Food item created successfully', 'data' => $result];
+        return $result;
     } else {
         http_response_code(500); // Internal Server Error
         return ['status' => 'error', 'message' => 'Failed to create food item'];
