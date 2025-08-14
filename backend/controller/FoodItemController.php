@@ -916,6 +916,18 @@ public function updateFoodSection($id, $data, $user)
         return ['status' => 'error', 'message' => 'Please provide the section ID and name.'];
     }
 
+    // Authorization check - verify the section belongs to the user's store
+    $existingSection = $this->foodItem->getFoodSectionById($id);
+    if (!$existingSection) {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Food section not found'];
+    }
+
+    if ($existingSection['store_id'] != $user['store_id']) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Unauthorized to update this food section.'];
+    }
+
     // Validate items array if provided
     if (isset($data['items'])) {
         if (!is_array($data['items'])) {
@@ -966,7 +978,7 @@ public function updateFoodSection($id, $data, $user)
 
 // get foodsectionbyID
 
-public function getFoodSectionById($id)
+public function getFoodSectionById($id, $user)
 {
     if (empty($id)) {
         http_response_code(400); // Bad Request
@@ -975,26 +987,49 @@ public function getFoodSectionById($id)
 
     $section = $this->foodItem->getFoodSectionById($id);
 
-    if ($section) {
-        http_response_code(200); // OK
-        return ['status' => 'success', 'data' => $section];
-    } else {
+    if (!$section) {
         http_response_code(404); // Not Found
         return ['status' => 'error', 'message' => 'Food section not found'];
     }
+
+    // Authorization check - verify the section belongs to the user's store
+    if ($section['store_id'] != $user['store_id']) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Unauthorized to access this food section.'];
+    }
+
+    http_response_code(200); // OK
+    return ['status' => 'success', 'data' => $section];
 }
 
 
 // DELETE Food Section
 public function deleteFoodSection($id, $user)
 {
+    if (empty($id)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Section ID is required'];
+    }
+
+    // Authorization check - verify the section belongs to the user's store
+    $existingSection = $this->foodItem->getFoodSectionById($id);
+    if (!$existingSection) {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Food section not found'];
+    }
+
+    if ($existingSection['store_id'] != $user['store_id']) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Unauthorized to delete this food section.'];
+    }
+
     $result = $this->foodItem->deleteFoodSection($id);
     if ($result) {
         http_response_code(200);
         return ['status' => 'success', 'message' => 'Food section deleted successfully'];
     } else {
-        http_response_code(404);
-        return ['status' => 'error', 'message' => 'Food section not found or not deleted'];
+        http_response_code(500);
+        return ['status' => 'error', 'message' => 'Failed to delete food section'];
     }
 }
 
