@@ -99,12 +99,12 @@ class FoodItemController
         return ['status' => 'error', 'message' => 'Category ID is required. Please select a category for this food item.'];
     }
 
-    // Validate category exists and belongs to the merchant's store type
+    // Validate category exists, is active, and belongs to the merchant's store type
     $categoryCheck = $this->conn->prepare("
         SELECT c.id FROM categories c 
         JOIN store_types st ON c.store_type_id = st.id 
         JOIN stores s ON s.store_type_id = st.id 
-        WHERE c.id = :category_id AND s.id = :store_id
+        WHERE c.id = :category_id AND s.id = :store_id AND c.status = 'active'
     ");
     $categoryCheck->execute([
         'category_id' => $data['category_id'],
@@ -113,7 +113,7 @@ class FoodItemController
     
     if ($categoryCheck->fetchColumn() == 0) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Invalid category ID. Please select a category that belongs to your store type.'];
+        return ['status' => 'error', 'message' => 'Invalid category ID. Please select an active category that belongs to your store type.'];
     }
 
     // Validate sides data if provided
@@ -165,28 +165,26 @@ class FoodItemController
 
    public function update($data, $user)
 {
-    $photo = null;
-
+    // Validate required fields
     if (!isset($data['id']) || empty($data['id'])) {
-       
-
-    return ['status' => 'error', 'message' => 'Food item does not exist'];
-    
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Food item ID is required'];
     }
-
 
     // Check if item exists
     if (!$this->foodItem->itemExists($data['id'])) {
         http_response_code(404);
         return ['status' => 'error', 'message' => 'Food item does not exist in the DB'];
     }
-    // Authorization check placeholder (implement your own logic)
-    if (!$this->foodItem->isFoodOwnedByUser($data['id'],$user['user_id'])) {
+
+    // Authorization check
+    if (!$this->foodItem->isFoodOwnedByUser($data['id'], $user['user_id'])) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }
 
     // Handle photo upload if new photo is provided
+    $photo = null;
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $allowedTypes = [
             'image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'
@@ -219,7 +217,7 @@ class FoodItemController
             return ["status" => "error", "message" => "Failed to upload image."];
         }
 
-        $photo = $filename;
+        $photo = 'https://api.runnix.africa/uploads/food-items/' . $filename;
     }
 
     // If new photo is uploaded, update the photo field
@@ -227,15 +225,89 @@ class FoodItemController
         $data['photo'] = $photo;
     }
 
-    $result = $this->foodItem->update($data);
-    if ($result) {
-        http_response_code(200); // OK
-        return ['status' => 'success', 'message' => 'Food item updated successfully'];
-    } else {
-        http_response_code(404); // Not Found
-        return ['status' => 'error', 'message' => 'Food item not found or not updated'];
+    // Validate basic fields if provided
+    if (isset($data['name']) && empty(trim($data['name']))) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Food item name cannot be empty'];
     }
-    
+
+    if (isset($data['price']) && (!is_numeric($data['price']) || $data['price'] < 0)) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Price must be a valid positive number'];
+    }
+
+    // Validate category_id if provided
+    if (isset($data['category_id']) && !empty($data['category_id'])) {
+        // Get the food item to check its store_id
+        $existingItem = $this->foodItem->getById($data['id']);
+        if (!$existingItem) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Food item not found'];
+        }
+
+        // Validate category exists, is active, and belongs to the merchant's store type
+        $categoryCheck = $this->conn->prepare("
+            SELECT c.id FROM categories c 
+            JOIN store_types st ON c.store_type_id = st.id 
+            JOIN stores s ON s.store_type_id = st.id 
+            WHERE c.id = :category_id AND s.id = :store_id AND c.status = 'active'
+        ");
+        $categoryCheck->execute([
+            'category_id' => $data['category_id'],
+            'store_id' => $existingItem['store_id']
+        ]);
+        
+        if ($categoryCheck->fetchColumn() == 0) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid category ID. Please select an active category that belongs to your store type.'];
+        }
+    }
+
+    // Validate sides data if provided
+    if (isset($data['sides']) && is_array($data['sides'])) {
+        if (isset($data['sides']['required']) && !is_bool($data['sides']['required'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sides required must be a boolean'];
+        }
+        if (isset($data['sides']['max_quantity']) && (!is_numeric($data['sides']['max_quantity']) || $data['sides']['max_quantity'] < 0)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sides max quantity must be a non-negative number'];
+        }
+    }
+
+    // Validate packs data if provided
+    if (isset($data['packs']) && is_array($data['packs'])) {
+        if (isset($data['packs']['required']) && !is_bool($data['packs']['required'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Packs required must be a boolean'];
+        }
+        if (isset($data['packs']['max_quantity']) && (!is_numeric($data['packs']['max_quantity']) || $data['packs']['max_quantity'] < 0)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Packs max quantity must be a non-negative number'];
+        }
+    }
+
+    // Validate sections data if provided
+    if (isset($data['sections']) && is_array($data['sections'])) {
+        if (isset($data['sections']['required']) && !is_bool($data['sections']['required'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sections required must be a boolean'];
+        }
+        if (isset($data['sections']['max_quantity']) && (!is_numeric($data['sections']['max_quantity']) || $data['sections']['max_quantity'] < 0)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sections max quantity must be a non-negative number'];
+        }
+    }
+
+    // Use the enhanced update method
+    $result = $this->foodItem->updateWithOptions($data);
+    if ($result && isset($result['status']) && $result['status'] === 'success') {
+        http_response_code(200); // OK
+        return $result;
+    } else {
+        http_response_code(500); // Internal Server Error
+        return ['status' => 'error', 'message' => 'Failed to update food item'];
+    }
 }
 
 
