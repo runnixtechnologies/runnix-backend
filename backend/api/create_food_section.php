@@ -16,12 +16,35 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true) ?? [];
 $user = authenticateRequest();
 
+// Check if user is a merchant
+if ($user['role'] !== 'merchant') {
+    http_response_code(403);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Only merchants can create food sections.'
+    ]);
+    exit;
+}
+
+// Extract store_id from authenticated user
+if (!isset($user['store_id'])) {
+    http_response_code(403);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'
+    ]);
+    exit;
+}
+
+// Add store_id to data
+$data['store_id'] = $user['store_id'];
+
 // Basic Validation
-if (empty($data['store_id']) || empty($data['section_name'])) {
+if (empty($data['section_name'])) {
     http_response_code(400);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Please provide the store and section name.'
+        'message' => 'Section name is required.'
     ]);
     exit;
 }
