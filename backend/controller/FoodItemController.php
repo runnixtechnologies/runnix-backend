@@ -895,7 +895,7 @@ public function createFoodSection($data, $user)
         return [
             'status' => 'success', 
             'message' => 'Section created successfully.',
-            'data' => $result
+            'data' => $result['id']
         ];
     } else {
         http_response_code(500);
