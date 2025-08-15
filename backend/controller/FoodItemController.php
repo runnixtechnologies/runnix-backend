@@ -1184,22 +1184,7 @@ public function bulkUpdateCategory($data, $user)
 
 
 
-public function bulkDeleteItems($data, $user)
-{
-    if (!isset($data['ids']) || !is_array($data['ids']) || empty($data['ids'])) {
-        http_response_code(400);
-        return ["status" => "error", "message" => "Missing or invalid field: ids (array required)."];
-    }
 
-    foreach ($data['ids'] as $id) {
-        if (!$this->userOwnsItem($id, $user['user_id'])) {
-            http_response_code(403);
-            return ["status" => "error", "message" => "Unauthorized to delete item ID"];
-        }
-    }
-
-    return $this->foodItem->deleteItemsBulk($data['ids']);
-}
 
     public function bulkActivateItems($data, $user)
     {
