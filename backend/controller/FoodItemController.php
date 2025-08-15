@@ -102,15 +102,30 @@ class FoodItemController
     // Validate category exists and is active
     $categoryCheck = $this->conn->prepare("
         SELECT c.id FROM categories c 
-        WHERE c.id = :category_id AND c.status = 'active'
+        WHERE c.id = :category_id AND (c.status = 'active' OR c.status = '1')
     ");
     $categoryCheck->execute([
         'category_id' => $data['category_id']
     ]);
     
     if ($categoryCheck->fetchColumn() == 0) {
-        http_response_code(400);
-        return ['status' => 'error', 'message' => 'Invalid category ID. Please select an active category.'];
+        // Temporarily log the issue for debugging
+        error_log("Category validation failed for category_id: " . $data['category_id']);
+        
+        // Check if category exists at all
+        $categoryExistsCheck = $this->conn->prepare("SELECT id, name, status FROM categories WHERE id = :category_id");
+        $categoryExistsCheck->execute(['category_id' => $data['category_id']]);
+        $categoryInfo = $categoryExistsCheck->fetch(PDO::FETCH_ASSOC);
+        
+        if ($categoryInfo) {
+            error_log("Category exists but status is: " . $categoryInfo['status']);
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Category exists but is not active. Status: ' . $categoryInfo['status'] . '. Expected: active or 1'];
+        } else {
+            error_log("Category does not exist");
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Category ID ' . $data['category_id'] . ' does not exist in database.'];
+        }
     }
 
     // Parse JSON strings to arrays if needed
