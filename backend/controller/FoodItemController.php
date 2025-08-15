@@ -99,21 +99,18 @@ class FoodItemController
         return ['status' => 'error', 'message' => 'Category ID is required. Please select a category for this food item.'];
     }
 
-    // Validate category exists, is active, and belongs to the merchant's store type
+    // Validate category exists and is active
     $categoryCheck = $this->conn->prepare("
         SELECT c.id FROM categories c 
-        JOIN store_types st ON c.store_type_id = st.id 
-        JOIN stores s ON s.store_type_id = st.id 
-        WHERE c.id = :category_id AND s.id = :store_id AND c.status = 'active'
+        WHERE c.id = :category_id AND c.status = 'active'
     ");
     $categoryCheck->execute([
-        'category_id' => $data['category_id'],
-        'store_id' => $data['store_id']
+        'category_id' => $data['category_id']
     ]);
     
     if ($categoryCheck->fetchColumn() == 0) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Invalid category ID. Please select an active category that belongs to your store type.'];
+        return ['status' => 'error', 'message' => 'Invalid category ID. Please select an active category.'];
     }
 
     // Validate sides data if provided
