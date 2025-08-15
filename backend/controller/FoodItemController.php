@@ -1201,15 +1201,89 @@ public function bulkDeleteItems($data, $user)
     return $this->foodItem->deleteItemsBulk($data['ids']);
 }
 
-public function bulkActivateItems($data, $user)
-{
-    return $this->bulkUpdateStatus($data, $user, 'active');
-}
+    public function bulkActivateItems($data, $user)
+    {
+        return $this->bulkUpdateStatus($data, $user, 'active');
+    }
 
-public function bulkDeactivateItems($data, $user)
-{
-    return $this->bulkUpdateStatus($data, $user, 'inactive');
-}
+    public function bulkDeactivateItems($data, $user)
+    {
+        return $this->bulkUpdateStatus($data, $user, 'inactive');
+    }
+
+    // Bulk delete food items
+    public function bulkDeleteItems($data, $user)
+    {
+        if (!isset($data['ids']) || !is_array($data['ids']) || empty($data['ids'])) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Missing or invalid field: ids (array required)."];
+        }
+
+        // Check authorization for all items
+        foreach ($data['ids'] as $id) {
+            if (!$this->userOwnsItem($id, $user['user_id'])) {
+                http_response_code(403);
+                return ["status" => "error", "message" => "Unauthorized to delete this item"];
+            }
+        }
+
+        $result = $this->foodItem->deleteItemsBulk($data['ids']);
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Food items deleted successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to delete food items'];
+        }
+    }
+
+    // Activate single food item
+    public function activateFoodItem($data, $user)
+    {
+        if (!isset($data['id']) || !is_numeric($data['id'])) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Missing or invalid required field: id."];
+        }
+
+        // Authorization check
+        if (!$this->userOwnsItem($data['id'], $user['user_id'])) {
+            http_response_code(403);
+            return ["status" => "error", "message" => "Unauthorized to activate this food item."];
+        }
+
+        $result = $this->foodItem->setFoodItemStatus($data['id'], 'active');
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Food item activated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to activate food item'];
+        }
+    }
+
+    // Deactivate single food item
+    public function deactivateFoodItem($data, $user)
+    {
+        if (!isset($data['id']) || !is_numeric($data['id'])) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Missing or invalid required field: id."];
+        }
+
+        // Authorization check
+        if (!$this->userOwnsItem($data['id'], $user['user_id'])) {
+            http_response_code(403);
+            return ["status" => "error", "message" => "Unauthorized to deactivate this food item."];
+        }
+
+        $result = $this->foodItem->setFoodItemStatus($data['id'], 'inactive');
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Food item deactivated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to deactivate food item'];
+        }
+    }
 
 private function bulkUpdateStatus($data, $user, $status)
 {

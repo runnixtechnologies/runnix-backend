@@ -1349,6 +1349,22 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
     }
 }
 
+    // Set food item status (activate/deactivate)
+    public function setFoodItemStatus($id, $status)
+    {
+        try {
+            $sql = "UPDATE {$this->table} SET status = :status, updated_at = NOW() WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindValue(':status', $status);
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            return $stmt->rowCount() > 0;
+        } catch (PDOException $e) {
+            error_log("setFoodItemStatus error: " . $e->getMessage());
+            return false;
+        }
+    }
 }
 
 
