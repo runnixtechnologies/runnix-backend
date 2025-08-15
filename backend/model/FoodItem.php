@@ -583,25 +583,17 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
     try {
         $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.discount as discount_price, fs.percentage, fs.status, fs.created_at, fs.updated_at,
                          d.id as discount_id,
-                         d.store_id as discount_store_id,
-                         d.store_type_id as discount_store_type_id,
-                         d.percentage as discount_percentage,
                          d.start_date as discount_start_date,
                          d.end_date as discount_end_date,
-                         d.status as discount_status,
-                         d.created_at as discount_created_at,
-                         d.updated_at as discount_updated_at,
-                         (fs.price - (fs.price * d.percentage / 100)) as calculated_discount_price,
-                         CASE 
-                             WHEN d.id IS NOT NULL AND d.status = 'active' 
-                                  AND NOW() BETWEEN d.start_date AND d.end_date 
-                             THEN true 
-                             ELSE false 
-                         END as has_active_discount
+                         COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                   FROM food_sides fs
                   LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
-                  LEFT JOIN discounts d ON di.discount_id = d.id
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                      AND NOW() BETWEEN d.start_date AND d.end_date
+                  LEFT JOIN food_item_sides fis ON fs.id = fis.side_id
+                  LEFT JOIN order_items oi ON fis.item_id = oi.item_id
                   WHERE fs.store_id = :store_id 
+                  GROUP BY fs.id
                   ORDER BY fs.created_at DESC 
                   LIMIT :limit OFFSET :offset";
         $stmt = $this->conn->prepare($query);
@@ -613,42 +605,13 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
         
         // Convert numeric fields to appropriate types for each result
         foreach ($results as &$result) {
-            $result['total_orders'] = 0;
+            $result['total_orders'] = (int)$result['total_orders'];
             $result['price'] = (float)$result['price'];
             $result['discount_price'] = (float)$result['discount_price'];
             $result['percentage'] = (float)$result['percentage'];
-            
-            // Convert discount fields
             $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
-            $result['discount_store_id'] = $result['discount_store_id'] ? (int)$result['discount_store_id'] : null;
-            $result['discount_store_type_id'] = $result['discount_store_type_id'] ? (int)$result['discount_store_type_id'] : null;
-            $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
-            $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
-            $result['has_active_discount'] = (bool)$result['has_active_discount'];
-            
-            // Create a discount object for better structure
-            if ($result['discount_id']) {
-                $result['discount'] = [
-                    'id' => $result['discount_id'],
-                    'store_id' => $result['discount_store_id'],
-                    'store_type_id' => $result['discount_store_type_id'],
-                    'percentage' => $result['discount_percentage'],
-                    'start_date' => $result['discount_start_date'],
-                    'end_date' => $result['discount_end_date'],
-                    'status' => $result['discount_status'],
-                    'created_at' => $result['discount_created_at'],
-                    'updated_at' => $result['discount_updated_at'],
-                    'is_active' => $result['has_active_discount']
-                ];
-            } else {
-                $result['discount'] = null;
-            }
-            
-            // Remove individual discount fields to avoid duplication
-            unset($result['discount_id'], $result['discount_store_id'], $result['discount_store_type_id'], 
-                  $result['discount_percentage'], $result['discount_start_date'], $result['discount_end_date'], 
-                  $result['discount_status'], $result['discount_created_at'], $result['discount_updated_at'], 
-                  $result['has_active_discount']);
+            $result['discount_start_date'] = $result['discount_start_date'] ? date('Y-m-d', strtotime($result['discount_start_date'])) : null;
+            $result['discount_end_date'] = $result['discount_end_date'] ? date('Y-m-d', strtotime($result['discount_end_date'])) : null;
         }
         
         return $results;

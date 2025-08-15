@@ -171,11 +171,13 @@ public function deletePacksBulk($data)
     return [
         'status' => 'success',
         'data' => $packs ?: [],  // Return empty array if no packs
-        'pagination' => [
-            'current_page' => $page,
-            'limit'        => $limit,
-            'total'        => (int) $total,
-            'total_pages'  => ceil($total / $limit),
+        'meta' => [
+            'page' => $page,
+            'limit' => $limit,
+            'total' => (int) $total,
+            'total_pages' => ceil($total / $limit),
+            'has_next' => ($page * $limit) < $total,
+            'has_prev' => $page > 1
         ]
     ];
 }
