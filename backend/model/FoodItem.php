@@ -977,13 +977,30 @@ public function createFoodSection($data)
 }
 
 
-// READ All Sections by Store
-public function getAllFoodSectionsByStoreId($storeId)
+// READ All Sections by Store (with pagination)
+public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = null)
 {
-    // First, get all sections for this store
-    $query = "SELECT * FROM food_sections WHERE store_id = :store_id";
+    // First, get all sections for this store with pagination
+    $query = "SELECT * FROM food_sections WHERE store_id = :store_id ORDER BY created_at DESC";
+    
+    // Add pagination if limit is provided
+    if ($limit !== null) {
+        $query .= " LIMIT :limit";
+        if ($offset !== null) {
+            $query .= " OFFSET :offset";
+        }
+    }
+    
     $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':store_id', $storeId);
+    $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
+    
+    if ($limit !== null) {
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        if ($offset !== null) {
+            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        }
+    }
+    
     $stmt->execute();
     $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1002,6 +1019,22 @@ public function getAllFoodSectionsByStoreId($storeId)
     }
 
     return $sections;
+}
+
+// READ All Sections by Store (paginated version)
+public function getAllFoodSectionsByStoreIdPaginated($storeId, $limit, $offset)
+{
+    return $this->getAllFoodSectionsByStoreId($storeId, $limit, $offset);
+}
+
+// Count total food sections by store
+public function countFoodSectionsByStoreId($storeId)
+{
+    $query = "SELECT COUNT(*) FROM food_sections WHERE store_id = :store_id";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
+    $stmt->execute();
+    return (int)$stmt->fetchColumn();
 }
 
 

@@ -946,11 +946,26 @@ public function createFoodSection($data, $user)
 
 
 // READ All Sections by Store
-public function getAllFoodSectionsByStoreId($storeId)
+public function getAllFoodSectionsByStoreId($storeId, $page = 1, $limit = 10)
 {
-    $result = $this->foodItem->getAllFoodSectionsByStoreId($storeId);
+    $offset = ($page - 1) * $limit;
+    
+    $result = $this->foodItem->getAllFoodSectionsByStoreIdPaginated($storeId, $limit, $offset);
+    $totalCount = $this->foodItem->countFoodSectionsByStoreId($storeId);
+    
     http_response_code(200);
-    return ['status' => 'success', 'data' => $result];
+    return [
+        'status' => 'success', 
+        'data' => $result,
+        'meta' => [
+            'page' => $page,
+            'limit' => $limit,
+            'total' => $totalCount,
+            'total_pages' => ceil($totalCount / $limit),
+            'has_next' => ($page * $limit) < $totalCount,
+            'has_prev' => $page > 1
+        ]
+    ];
 }
 
 // UPDATE Food Section

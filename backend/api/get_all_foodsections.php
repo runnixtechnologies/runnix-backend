@@ -24,8 +24,12 @@ if (!isset($user['store_id'])) {
 
 $storeId = $user['store_id'];
 
+// Get pagination parameters
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
+
 $controller = new FoodItemController();
-$response = $controller->getAllFoodSectionsByStoreId($storeId);
+$response = $controller->getAllFoodSectionsByStoreId($storeId, $page, $limit);
 
 echo json_encode($response);
 ?>
