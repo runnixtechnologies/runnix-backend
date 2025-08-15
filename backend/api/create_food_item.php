@@ -23,6 +23,12 @@ if (stripos($contentType, 'application/json') !== false) {
     $data = $_POST;
 }
 
+// Debug: Log the received data
+error_log("Received data: " . json_encode($data));
+error_log("Content-Type: " . $contentType);
+error_log("POST data: " . json_encode($_POST));
+error_log("Raw input: " . file_get_contents("php://input"));
+
 $user = authenticateRequest();
 $controller = new FoodItemController();
 $response = $controller->create($data,$user);

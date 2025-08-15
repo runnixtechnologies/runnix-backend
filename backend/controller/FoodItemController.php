@@ -113,6 +113,17 @@ class FoodItemController
         return ['status' => 'error', 'message' => 'Invalid category ID. Please select an active category.'];
     }
 
+    // Parse JSON strings to arrays if needed
+    if (isset($data['sides']) && is_string($data['sides'])) {
+        $data['sides'] = json_decode($data['sides'], true);
+    }
+    if (isset($data['packs']) && is_string($data['packs'])) {
+        $data['packs'] = json_decode($data['packs'], true);
+    }
+    if (isset($data['sections']) && is_string($data['sections'])) {
+        $data['sections'] = json_decode($data['sections'], true);
+    }
+
     // Validate sides data if provided
     if (isset($data['sides']) && is_array($data['sides'])) {
         if (isset($data['sides']['required']) && !is_bool($data['sides']['required'])) {
