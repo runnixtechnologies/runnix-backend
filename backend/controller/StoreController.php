@@ -128,13 +128,27 @@ public function getStatus($user) {
 
 public function getActiveCategoriesByStoreType($user)
 {
-    // Extract store_type_id from authenticated user
-    if (!isset($user['store_type_id'])) {
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
         http_response_code(403);
-        return ["status" => "error", "message" => "Store type ID not found. Please ensure you are logged in as a merchant with a store setup."];
+        return ["status" => "error", "message" => "Store ID not found. Please ensure you are logged in as a merchant with a store setup."];
     }
     
-    $storeTypeId = $user['store_type_id'];
+    $storeId = $user['store_id'];
+    
+    // Try to get store_type_id from JWT token first
+    $storeTypeId = $user['store_type_id'] ?? null;
+    
+    // If not in JWT token, fetch it from database using store_id
+    if (!$storeTypeId) {
+        $store = $this->store->getStoreById($storeId);
+        if (!$store) {
+            http_response_code(404);
+            return ["status" => "error", "message" => "Store not found"];
+        }
+        $storeTypeId = $store['store_type_id'];
+    }
+    
     $categories = $this->store->fetchActiveCategoriesByStoreType($storeTypeId);
 
     if (empty($categories)) {

@@ -84,7 +84,8 @@ class UserController
     $payload = [
         "user_id" => $user['id'],
         "role"    => $user['role'],
-        "store_id" => $user['store_id'] ?? null
+        "store_id" => $user['store_id'] ?? null,
+        "store_type_id" => $user['store_type_id'] ?? null
     ];
 
     $token = $jwt->encode($payload);
