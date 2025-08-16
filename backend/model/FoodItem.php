@@ -337,7 +337,7 @@ private function getFoodItemWithOptions($foodItemId)
                        fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} fi
-                LEFT JOIN order_items oi ON fi.id = oi.item_id AND oi.item_type = 'food_item'
+                LEFT JOIN order_items oi ON fi.id = oi.item_id
                 WHERE fi.store_id = :store_id AND fi.deleted = 0 
                 GROUP BY fi.id
                 ORDER BY fi.created_at DESC";
@@ -396,7 +396,7 @@ public function getByItemId($id)
                    fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM {$this->table} fi
-            LEFT JOIN order_items oi ON fi.id = oi.item_id AND oi.item_type = 'food_item'
+            LEFT JOIN order_items oi ON fi.id = oi.item_id
             WHERE fi.id = :id
             GROUP BY fi.id";
     $stmt = $this->conn->prepare($sql);
@@ -1150,7 +1150,7 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
                    fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM food_items fi
-            LEFT JOIN order_items oi ON fi.id = oi.item_id AND oi.item_type = 'food_item'
+            LEFT JOIN order_items oi ON fi.id = oi.item_id
             WHERE fi.store_id = :store_id AND fi.category_id = :category_id AND fi.deleted = 0
             GROUP BY fi.id";
     $stmt = $this->conn->prepare($sql);
@@ -1209,7 +1209,7 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
                    fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM food_items fi
-            LEFT JOIN order_items oi ON fi.id = oi.item_id AND oi.item_type = 'food_item'
+            LEFT JOIN order_items oi ON fi.id = oi.item_id
             WHERE fi.store_id = :store_id AND fi.category_id = :category_id AND fi.deleted = 0
             GROUP BY fi.id
             ORDER BY fi.created_at DESC 
