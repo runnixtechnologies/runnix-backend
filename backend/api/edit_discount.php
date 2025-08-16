@@ -28,16 +28,9 @@ if (!isset($data['id'])) {
     exit;
 }
 
-// Optional: enforce store ownership check
-if ($user['store_id'] != $data['store_id']) {
-    http_response_code(403);
-    echo json_encode(['status' => 'error', 'message' => 'Forbidden: You do not own this discount']);
-    exit;
-}
-
 // Update the discount
 $controller = new DiscountController();
-$response = $controller->updateDiscount($data['id'], $data);
+$response = $controller->updateDiscount($data['id'], $data, $user);
 
 echo json_encode($response);
 ?>

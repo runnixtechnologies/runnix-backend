@@ -12,9 +12,18 @@ class DiscountController
         $this->discountModel = new Discount();
     }
 
-    public function createDiscount($data)
+    public function createDiscount($data, $user)
     {
-        if (empty($data['store_id']) || empty($data['store_type_id']) || empty($data['percentage']) || empty($data['items'])) {
+        // Extract store_id and store_type_id from authenticated user
+        if (!isset($user['store_id'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+        }
+        
+        $data['store_id'] = $user['store_id'];
+        $data['store_type_id'] = $user['store_type_id'] ?? null;
+        
+        if (empty($data['percentage']) || empty($data['items'])) {
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Required fields are missing'];
         }
@@ -29,12 +38,19 @@ class DiscountController
         }
     }
 
-    public function updateDiscount($discountId, $data)
+    public function updateDiscount($discountId, $data, $user)
 {
+    // Extract store_id and store_type_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+    }
+    
+    $data['store_id'] = $user['store_id'];
+    $data['store_type_id'] = $user['store_type_id'] ?? null;
+    
     if (
         empty($discountId) || 
-        empty($data['store_id']) || 
-        empty($data['store_type_id']) || 
         empty($data['percentage']) || 
         empty($data['items'])
     ) {
@@ -52,8 +68,16 @@ class DiscountController
     }
 }
 
-public function deleteDiscount($id, $storeId)
+public function deleteDiscount($id, $user)
 {
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+    }
+    
+    $storeId = $user['store_id'];
+    
     // Fetch discount and validate ownership
     $discount = $this->discountModel->getById($id);
 
@@ -73,12 +97,15 @@ public function deleteDiscount($id, $storeId)
 }
 
 
-    public function getAllDiscountsByStore($storeId)
+    public function getAllDiscountsByStore($user)
 {
-    if (empty($storeId)) {
-        http_response_code(400);
-        return ['status' => 'error', 'message' => 'Store ID is required'];
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
     }
+    
+    $storeId = $user['store_id'];
 
     $discounts = $this->discountModel->getAllByStoreId($storeId);
 
@@ -148,12 +175,15 @@ public function getDiscountsByPackId($packId)
     }
 }
 
-public function getAllDiscountsByStoreWithDetails($storeId)
+public function getAllDiscountsByStoreWithDetails($user)
 {
-    if (empty($storeId)) {
-        http_response_code(400);
-        return ['status' => 'error', 'message' => 'Store ID is required'];
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
     }
+    
+    $storeId = $user['store_id'];
 
     $discounts = $this->discountModel->getAllByStoreIdWithDetails($storeId);
 

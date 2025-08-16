@@ -15,5 +15,5 @@ $data = json_decode(file_get_contents("php://input"), true) ?? [];
 $user = authenticateRequest();
 $controller = new PackController();
 
-$response = $controller->update($data);
+$response = $controller->update($data, $user);
 echo json_encode($response);

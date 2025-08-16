@@ -15,5 +15,5 @@ $data = json_decode(file_get_contents("php://input"), true) ?? [];
 $user = authenticateRequest();
 
 $controller = new PackController();
-$response = $controller->deactivatePack($data);
+$response = $controller->deactivatePack($data, $user);
 echo json_encode($response);

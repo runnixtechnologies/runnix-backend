@@ -12,7 +12,7 @@ use function Middleware\authenticateRequest;
 header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
-authenticateRequest();
+$user = authenticateRequest();
 $controller = new PackController();
-$response = $controller->deletePacksBulk($data);
+$response = $controller->deletePacksBulk($data, $user);
 echo json_encode($response);

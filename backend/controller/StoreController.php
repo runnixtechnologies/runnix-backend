@@ -85,20 +85,26 @@ public function getActiveCategories()
 
 
 public function setStoreStatus($data, $user) {
-    if (!isset($data['store_id'], $data['is_online'])) {
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ["status" => "error", "message" => "Store ID not found. Please ensure you are logged in as a merchant with a store setup."];
+    }
+    
+    if (!isset($data['is_online'])) {
         http_response_code(400);
-        return ["status" => "error", "message" => "store_id and is_online are required."];
+        return ["status" => "error", "message" => "is_online is required."];
     }
 
-    // Optional: verify store belongs to the user
-    $store = $this->store->getStoreById($data['store_id']);
+    // Verify store belongs to the user
+    $store = $this->store->getStoreById($user['store_id']);
 
     if (!$store || $store['user_id'] != $user['user_id']) {
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized access to store."];
     }
 
-    return $this->store->updateStoreStatus($data['store_id'], $data['is_online']);
+    return $this->store->updateStoreStatus($user['store_id'], $data['is_online']);
 }
 
 public function getStatus($user) {
@@ -120,13 +126,15 @@ public function getStatus($user) {
     return $this->store->getStoreStatus($storeId);
 }
 
-public function getActiveCategoriesByStoreType($storeTypeId)
+public function getActiveCategoriesByStoreType($user)
 {
-    if (empty($storeTypeId)) {
-        http_response_code(400);
-        return ["status" => "error", "message" => "store_type_id is required"];
+    // Extract store_type_id from authenticated user
+    if (!isset($user['store_type_id'])) {
+        http_response_code(403);
+        return ["status" => "error", "message" => "Store type ID not found. Please ensure you are logged in as a merchant with a store setup."];
     }
-
+    
+    $storeTypeId = $user['store_type_id'];
     $categories = $this->store->fetchActiveCategoriesByStoreType($storeTypeId);
 
     if (empty($categories)) {

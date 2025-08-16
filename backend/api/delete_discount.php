@@ -13,8 +13,7 @@ header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
 $user = authenticateRequest(); // Auth middleware should return user/store info
-$storeId = $user['store_id'] ?? 0;
 
 $controller = new DiscountController();
-$response = $controller->deleteDiscount($data['id'] ?? 0, $storeId);
+$response = $controller->deleteDiscount($data['id'] ?? 0, $user);
 echo json_encode($response);

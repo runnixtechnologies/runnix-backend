@@ -14,5 +14,5 @@ $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
 $user = authenticateRequest();
 $controller = new DiscountController();
-$response = $controller->createDiscount($data);
+$response = $controller->createDiscount($data, $user);
 echo json_encode($response);

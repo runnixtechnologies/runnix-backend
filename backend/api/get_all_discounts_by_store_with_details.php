@@ -11,16 +11,8 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-// Validate input
-if (!isset($_GET['store_id']) || empty($_GET['store_id']) || !is_numeric($_GET['store_id'])) {
-    http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'Valid store ID is required']);
-    exit;
-}
-
-$storeId = (int)$_GET['store_id'];
 $user = authenticateRequest();
 $controller = new DiscountController();
 
-$response = $controller->getAllDiscountsByStoreWithDetails($storeId);
+$response = $controller->getAllDiscountsByStoreWithDetails($user);
 echo json_encode($response);

@@ -5,13 +5,14 @@ error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
 require_once '../config/cors.php';
+require_once '../middleware/authMiddleware.php';
 
 use Controller\StoreController;
+use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$storeTypeId = $_GET['store_type_id'] ?? null;
-
+$user = authenticateRequest();
 $storeController = new StoreController();
-$response = $storeController->getActiveCategoriesByStoreType($storeTypeId);
+$response = $storeController->getActiveCategoriesByStoreType($user);
 echo json_encode($response);

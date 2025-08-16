@@ -16,8 +16,16 @@ class PackController
         $this->storeModel = new Store();
     }
 
-    public function create($data)
+    public function create($data, $user)
     {
+        // Extract store_id from authenticated user
+        if (!isset($user['store_id'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+        }
+        
+        $data['store_id'] = $user['store_id'];
+        
         // Validate discount (optional)
         if (isset($data['discount'])) {
             if (!is_numeric($data['discount']) || $data['discount'] < 0) {
@@ -44,14 +52,20 @@ class PackController
         }
     }
 
-    public function deactivatePack($data)
+    public function deactivatePack($data, $user)
 {
-    if (empty($data['id']) || empty($data['store_id'])) {
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+    }
+    
+    if (empty($data['id'])) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Pack ID and store ID are required'];
+        return ['status' => 'error', 'message' => 'Pack ID is required'];
     }
 
-    $result = $this->packModel->deactivate($data['id'], $data['store_id']);
+    $result = $this->packModel->deactivate($data['id'], $user['store_id']);
     if ($result) {
         http_response_code(200);
         return ['status' => 'success', 'message' => 'Pack deactivated successfully'];
@@ -61,14 +75,20 @@ class PackController
     }
 }
 
-public function activatePack($data)
+public function activatePack($data, $user)
 {
-    if (empty($data['id']) || empty($data['store_id'])) {
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+    }
+    
+    if (empty($data['id'])) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Pack ID and store ID are required'];
+        return ['status' => 'error', 'message' => 'Pack ID is required'];
     }
 
-    $result = $this->packModel->activate($data['id'], $data['store_id']);
+    $result = $this->packModel->activate($data['id'], $user['store_id']);
     if ($result) {
         http_response_code(200);
         return ['status' => 'success', 'message' => 'Pack activated successfully'];
@@ -79,40 +99,58 @@ public function activatePack($data)
 }
 
 
-public function activatePacksBulk($data)
+public function activatePacksBulk($data, $user)
 {
-    if (empty($data['ids']) || empty($data['store_id'])) {
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+    }
+    
+    if (empty($data['ids'])) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Pack IDs and store ID are required'];
+        return ['status' => 'error', 'message' => 'Pack IDs are required'];
     }
 
-    $result = $this->packModel->activateBulk($data['ids'], $data['store_id']);
+    $result = $this->packModel->activateBulk($data['ids'], $user['store_id']);
     return $result
         ? ['status' => 'success', 'message' => 'Packs activated']
         : ['status' => 'error', 'message' => 'Failed to activate packs'];
 }
 
-public function deactivatePacksBulk($data)
+public function deactivatePacksBulk($data, $user)
 {
-    if (empty($data['ids']) || empty($data['store_id'])) {
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+    }
+    
+    if (empty($data['ids'])) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Pack IDs and store ID are required'];
+        return ['status' => 'error', 'message' => 'Pack IDs are required'];
     }
 
-    $result = $this->packModel->deactivateBulk($data['ids'], $data['store_id']);
+    $result = $this->packModel->deactivateBulk($data['ids'], $user['store_id']);
     return $result
         ? ['status' => 'success', 'message' => 'Packs deactivated']
         : ['status' => 'error', 'message' => 'Failed to deactivate packs'];
 }
 
-public function deletePacksBulk($data)
+public function deletePacksBulk($data, $user)
 {
-    if (empty($data['ids']) || empty($data['store_id'])) {
+    // Extract store_id from authenticated user
+    if (!isset($user['store_id'])) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+    }
+    
+    if (empty($data['ids'])) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Pack IDs and store ID are required'];
+        return ['status' => 'error', 'message' => 'Pack IDs are required'];
     }
 
-    $result = $this->packModel->deleteBulk($data['ids'], $data['store_id']);
+    $result = $this->packModel->deleteBulk($data['ids'], $user['store_id']);
     return $result
         ? ['status' => 'success', 'message' => 'Packs deleted']
         : ['status' => 'error', 'message' => 'Failed to delete packs'];
@@ -120,8 +158,16 @@ public function deletePacksBulk($data)
 
 
 
-    public function update($data)
+    public function update($data, $user)
     {
+        // Extract store_id from authenticated user
+        if (!isset($user['store_id'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+        }
+        
+        $data['store_id'] = $user['store_id'];
+        
         // Validate discount (optional)
         if (isset($data['discount'])) {
             if (!is_numeric($data['discount']) || $data['discount'] < 0) {
@@ -148,8 +194,19 @@ public function deletePacksBulk($data)
         }
     }
 
-    public function delete($data)
+    public function delete($data, $user)
     {
+        // Extract store_id from authenticated user
+        if (!isset($user['store_id'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+        }
+        
+        if (empty($data['id'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Pack ID is required'];
+        }
+        
         $result = $this->packModel->delete($data['id']);
         if ($result) {
             http_response_code(200); // OK
