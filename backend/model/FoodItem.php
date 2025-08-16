@@ -110,18 +110,51 @@ public function createWithOptions($data)
         $foodItemId = $this->conn->lastInsertId();
 
         // Handle sides if provided
-        if (isset($data['sides']) && is_array($data['sides']) && !empty($data['sides']['items'])) {
-            $this->createFoodItemSidesWithConfig($foodItemId, $data['sides']);
+        if (isset($data['sides']) && is_array($data['sides'])) {
+            // Check if it's the old format (object with items array)
+            if (isset($data['sides']['items']) && is_array($data['sides']['items'])) {
+                // Old format
+                if (!empty($data['sides']['items'])) {
+                    $this->createFoodItemSidesWithConfig($foodItemId, $data['sides']);
+                }
+            } else {
+                // New format - array of objects with id
+                if (!empty($data['sides'])) {
+                    $this->createFoodItemSidesFromArray($foodItemId, $data['sides']);
+                }
+            }
         }
 
         // Handle packs if provided
-        if (isset($data['packs']) && is_array($data['packs']) && !empty($data['packs']['items'])) {
-            $this->createFoodItemPacksWithConfig($foodItemId, $data['packs']);
+        if (isset($data['packs']) && is_array($data['packs'])) {
+            // Check if it's the old format (object with items array)
+            if (isset($data['packs']['items']) && is_array($data['packs']['items'])) {
+                // Old format
+                if (!empty($data['packs']['items'])) {
+                    $this->createFoodItemPacksWithConfig($foodItemId, $data['packs']);
+                }
+            } else {
+                // New format - array of objects with id
+                if (!empty($data['packs'])) {
+                    $this->createFoodItemPacksFromArray($foodItemId, $data['packs']);
+                }
+            }
         }
 
         // Handle sections if provided
-        if (isset($data['sections']) && is_array($data['sections']) && !empty($data['sections']['items'])) {
-            $this->createFoodItemSectionsWithConfig($foodItemId, $data['sections']);
+        if (isset($data['sections']) && is_array($data['sections'])) {
+            // Check if it's the old format (object with items array)
+            if (isset($data['sections']['items']) && is_array($data['sections']['items'])) {
+                // Old format
+                if (!empty($data['sections']['items'])) {
+                    $this->createFoodItemSectionsWithConfig($foodItemId, $data['sections']);
+                }
+            } else {
+                // New format - array of objects with id
+                if (!empty($data['sections'])) {
+                    $this->createFoodItemSectionsFromArray($foodItemId, $data['sections']);
+                }
+            }
         }
 
         // Commit transaction
@@ -1311,6 +1344,71 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         }
     }
 }
+
+    // New method to handle sides from array format
+    private function createFoodItemSidesFromArray($foodItemId, $sidesArray)
+    {
+        // Create default config
+        $configSql = "INSERT INTO food_item_sides_config (item_id, required, max_quantity, created_at) VALUES (:item_id, false, 0, NOW())";
+        $configStmt = $this->conn->prepare($configSql);
+        $configStmt->execute(['item_id' => $foodItemId]);
+
+        // Add each side
+        foreach ($sidesArray as $side) {
+            if (isset($side['id']) && is_numeric($side['id'])) {
+                $sql = "INSERT INTO food_item_sides (item_id, side_id, extra_price, created_at) VALUES (:item_id, :side_id, :extra_price, NOW())";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    'item_id' => $foodItemId,
+                    'side_id' => $side['id'],
+                    'extra_price' => $side['extra_price'] ?? 0
+                ]);
+            }
+        }
+    }
+
+    // New method to handle packs from array format
+    private function createFoodItemPacksFromArray($foodItemId, $packsArray)
+    {
+        // Create default config
+        $configSql = "INSERT INTO food_item_packs_config (item_id, required, max_quantity, created_at) VALUES (:item_id, false, 0, NOW())";
+        $configStmt = $this->conn->prepare($configSql);
+        $configStmt->execute(['item_id' => $foodItemId]);
+
+        // Add each pack
+        foreach ($packsArray as $pack) {
+            if (isset($pack['id']) && is_numeric($pack['id'])) {
+                $sql = "INSERT INTO food_item_packs (item_id, pack_id, extra_price, created_at) VALUES (:item_id, :pack_id, :extra_price, NOW())";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    'item_id' => $foodItemId,
+                    'pack_id' => $pack['id'],
+                    'extra_price' => $pack['extra_price'] ?? 0
+                ]);
+            }
+        }
+    }
+
+    // New method to handle sections from array format
+    private function createFoodItemSectionsFromArray($foodItemId, $sectionsArray)
+    {
+        // Create default config
+        $configSql = "INSERT INTO food_item_sections_config (item_id, required, max_quantity, created_at) VALUES (:item_id, false, 0, NOW())";
+        $configStmt = $this->conn->prepare($configSql);
+        $configStmt->execute(['item_id' => $foodItemId]);
+
+        // Add each section
+        foreach ($sectionsArray as $section) {
+            if (isset($section['id']) && is_numeric($section['id'])) {
+                $sql = "INSERT INTO food_item_sections (item_id, section_id, created_at) VALUES (:item_id, :section_id, NOW())";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    'item_id' => $foodItemId,
+                    'section_id' => $section['id']
+                ]);
+            }
+        }
+    }
 
     // Set food item status (activate/deactivate)
     public function setFoodItemStatus($id, $status)

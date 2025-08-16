@@ -23,9 +23,49 @@ class DiscountController
         $data['store_id'] = $user['store_id'];
         $data['store_type_id'] = $user['store_type_id'] ?? null;
         
-        if (empty($data['percentage']) || empty($data['items'])) {
+
+        
+        if (!isset($data['percentage']) || !is_numeric($data['percentage']) || $data['percentage'] < 0 || $data['percentage'] > 100) {
             http_response_code(400);
-            return ['status' => 'error', 'message' => 'Required fields are missing'];
+            return ['status' => 'error', 'message' => 'Percentage must be a number between 0 and 100'];
+        }
+        
+        if (empty($data['items']) || !is_array($data['items'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Items array is required and must be an array'];
+        }
+        
+        // Validate start_date and end_date
+        if (empty($data['start_date']) || empty($data['end_date'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Start date and end date are required'];
+        }
+        
+        // Validate date format and logic
+        $startDate = strtotime($data['start_date']);
+        $endDate = strtotime($data['end_date']);
+        
+        if (!$startDate || !$endDate) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid date format. Use YYYY-MM-DD format'];
+        }
+        
+        if ($startDate >= $endDate) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'End date must be after start date'];
+        }
+        
+        // Validate each item in the items array
+        foreach ($data['items'] as $item) {
+            if (!isset($item['item_id']) || !is_numeric($item['item_id'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Each item must have a valid item_id'];
+            }
+            
+            if (!isset($item['item_type']) || !in_array($item['item_type'], ['food_item', 'food_side', 'pack'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Each item must have a valid item_type (food_item, food_side, or pack)'];
+            }
         }
 
         $discountId = $this->discountModel->create($data);
@@ -49,13 +89,52 @@ class DiscountController
     $data['store_id'] = $user['store_id'];
     $data['store_type_id'] = $user['store_type_id'] ?? null;
     
-    if (
-        empty($discountId) || 
-        empty($data['percentage']) || 
-        empty($data['items'])
-    ) {
+    if (empty($discountId)) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Required fields are missing'];
+        return ['status' => 'error', 'message' => 'Discount ID is required'];
+    }
+    
+    if (!isset($data['percentage']) || !is_numeric($data['percentage']) || $data['percentage'] < 0 || $data['percentage'] > 100) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Percentage must be a number between 0 and 100'];
+    }
+    
+    if (empty($data['items']) || !is_array($data['items'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Items array is required and must be an array'];
+    }
+    
+    // Validate start_date and end_date
+    if (empty($data['start_date']) || empty($data['end_date'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Start date and end date are required'];
+    }
+    
+    // Validate date format and logic
+    $startDate = strtotime($data['start_date']);
+    $endDate = strtotime($data['end_date']);
+    
+    if (!$startDate || !$endDate) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Invalid date format. Use YYYY-MM-DD format'];
+    }
+    
+    if ($startDate >= $endDate) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'End date must be after start date'];
+    }
+    
+    // Validate each item in the items array
+    foreach ($data['items'] as $item) {
+        if (!isset($item['item_id']) || !is_numeric($item['item_id'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Each item must have a valid item_id'];
+        }
+        
+        if (!isset($item['item_type']) || !in_array($item['item_type'], ['food_item', 'food_side', 'pack'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Each item must have a valid item_type (food_item, food_side, or pack)'];
+        }
     }
 
     $updated = $this->discountModel->update($discountId, $data);

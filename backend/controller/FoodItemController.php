@@ -139,39 +139,75 @@ class FoodItemController
         $data['sections'] = json_decode($data['sections'], true);
     }
 
-    // Validate sides data if provided
+    // Validate and normalize sides data if provided
     if (isset($data['sides']) && is_array($data['sides'])) {
-        if (isset($data['sides']['required']) && !is_bool($data['sides']['required'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sides required must be a boolean'];
-        }
-        if (isset($data['sides']['max_quantity']) && (!is_numeric($data['sides']['max_quantity']) || $data['sides']['max_quantity'] < 0)) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sides max quantity must be a non-negative number'];
+        // Check if it's the old format (object with required, max_quantity, items)
+        if (isset($data['sides']['required']) || isset($data['sides']['max_quantity']) || isset($data['sides']['items'])) {
+            // Old format - validate as before
+            if (isset($data['sides']['required']) && !is_bool($data['sides']['required'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sides required must be a boolean'];
+            }
+            if (isset($data['sides']['max_quantity']) && (!is_numeric($data['sides']['max_quantity']) || $data['sides']['max_quantity'] < 0)) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sides max quantity must be a non-negative number'];
+            }
+        } else {
+            // New format - array of objects
+            foreach ($data['sides'] as $side) {
+                if (!is_array($side) || !isset($side['id']) || !is_numeric($side['id'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each side must be an object with a valid id'];
+                }
+            }
         }
     }
 
-    // Validate packs data if provided
+    // Validate and normalize packs data if provided
     if (isset($data['packs']) && is_array($data['packs'])) {
-        if (isset($data['packs']['required']) && !is_bool($data['packs']['required'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Packs required must be a boolean'];
-        }
-        if (isset($data['packs']['max_quantity']) && (!is_numeric($data['packs']['max_quantity']) || $data['packs']['max_quantity'] < 0)) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Packs max quantity must be a non-negative number'];
+        // Check if it's the old format (object with required, max_quantity, items)
+        if (isset($data['packs']['required']) || isset($data['packs']['max_quantity']) || isset($data['packs']['items'])) {
+            // Old format - validate as before
+            if (isset($data['packs']['required']) && !is_bool($data['packs']['required'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Packs required must be a boolean'];
+            }
+            if (isset($data['packs']['max_quantity']) && (!is_numeric($data['packs']['max_quantity']) || $data['packs']['max_quantity'] < 0)) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Packs max quantity must be a non-negative number'];
+            }
+        } else {
+            // New format - array of objects
+            foreach ($data['packs'] as $pack) {
+                if (!is_array($pack) || !isset($pack['id']) || !is_numeric($pack['id'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each pack must be an object with a valid id'];
+                }
+            }
         }
     }
 
-    // Validate sections data if provided
+    // Validate and normalize sections data if provided
     if (isset($data['sections']) && is_array($data['sections'])) {
-        if (isset($data['sections']['required']) && !is_bool($data['sections']['required'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sections required must be a boolean'];
-        }
-        if (isset($data['sections']['max_quantity']) && (!is_numeric($data['sections']['max_quantity']) || $data['sections']['max_quantity'] < 0)) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sections max quantity must be a non-negative number'];
+        // Check if it's the old format (object with required, max_quantity, items)
+        if (isset($data['sections']['required']) || isset($data['sections']['max_quantity']) || isset($data['sections']['items'])) {
+            // Old format - validate as before
+            if (isset($data['sections']['required']) && !is_bool($data['sections']['required'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sections required must be a boolean'];
+            }
+            if (isset($data['sections']['max_quantity']) && (!is_numeric($data['sections']['max_quantity']) || $data['sections']['max_quantity'] < 0)) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sections max quantity must be a non-negative number'];
+            }
+        } else {
+            // New format - array of objects
+            foreach ($data['sections'] as $section) {
+                if (!is_array($section) || !isset($section['id']) || !is_numeric($section['id'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must be an object with a valid id'];
+                }
+            }
         }
     }
 

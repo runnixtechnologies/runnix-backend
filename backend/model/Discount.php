@@ -17,32 +17,47 @@ class Discount
 
     public function create($data)
     {
-        $sql = "INSERT INTO {$this->table} (store_id, store_type_id, percentage, start_date, end_date, status, created_at, updated_at)
-                VALUES (:store_id, :store_type_id, :percentage, :start_date, :end_date, 'active', NOW(), NOW())";
+        try {
+            $sql = "INSERT INTO {$this->table} (store_id, store_type_id, percentage, start_date, end_date, status, created_at, updated_at)
+                    VALUES (:store_id, :store_type_id, :percentage, :start_date, :end_date, 'active', NOW(), NOW())";
 
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
-            'store_id' => $data['store_id'],
-            'store_type_id' => $data['store_type_id'],
-            'percentage' => $data['percentage'],
-            'start_date' => $data['start_date'] ?? null,
-            'end_date' => $data['end_date'] ?? null
-        ]);
-
-        $discountId = $this->conn->lastInsertId();
-
-        // Insert into discount_items
-        foreach ($data['items'] as $item) {
-            $sqlItem = "INSERT INTO discount_items (discount_id, item_id, item_type, created_at) VALUES (:discount_id, :item_id, :item_type, NOW())";
-            $stmtItem = $this->conn->prepare($sqlItem);
-            $stmtItem->execute([
-                'discount_id' => $discountId,
-                'item_id' => $item['item_id'],
-                'item_type' => $item['item_type']
+            $stmt = $this->conn->prepare($sql);
+            $result = $stmt->execute([
+                'store_id' => $data['store_id'],
+                'store_type_id' => $data['store_type_id'] ?? null,
+                'percentage' => $data['percentage'],
+                'start_date' => $data['start_date'] ?? null,
+                'end_date' => $data['end_date'] ?? null
             ]);
-        }
 
-        return $discountId;
+            if (!$result) {
+                error_log("Discount creation failed: " . json_encode($stmt->errorInfo()));
+                return false;
+            }
+
+            $discountId = $this->conn->lastInsertId();
+
+            // Insert into discount_items
+            foreach ($data['items'] as $item) {
+                $sqlItem = "INSERT INTO discount_items (discount_id, item_id, item_type, created_at) VALUES (:discount_id, :item_id, :item_type, NOW())";
+                $stmtItem = $this->conn->prepare($sqlItem);
+                $resultItem = $stmtItem->execute([
+                    'discount_id' => $discountId,
+                    'item_id' => $item['item_id'],
+                    'item_type' => $item['item_type']
+                ]);
+
+                if (!$resultItem) {
+                    error_log("Discount item creation failed: " . json_encode($stmtItem->errorInfo()));
+                    return false;
+                }
+            }
+
+            return $discountId;
+        } catch (\Exception $e) {
+            error_log("Discount creation exception: " . $e->getMessage());
+            return false;
+        }
     }
 
     public function getAllByStoreId($storeId)
