@@ -333,7 +333,14 @@ private function getFoodItemWithOptions($foodItemId)
     // Get All Food Items by Store (with pagination)
     public function getAllByStoreId($store_id, $limit = null, $offset = null)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE store_id = :store_id AND deleted = 0 ORDER BY created_at DESC";
+        $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
+                       fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                       COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
+                FROM {$this->table} fi
+                LEFT JOIN order_items oi ON fi.id = oi.item_id AND oi.item_type = 'food_item'
+                WHERE fi.store_id = :store_id AND fi.deleted = 0 
+                GROUP BY fi.id
+                ORDER BY fi.created_at DESC";
         
         // Add pagination if limit is provided
         if ($limit !== null) {
@@ -360,6 +367,7 @@ private function getFoodItemWithOptions($foodItemId)
         foreach ($results as &$result) {
             $result['price'] = (float)$result['price'];
             $result['max_qty'] = (int)$result['max_qty'];
+            $result['total_orders'] = (int)$result['total_orders'];
         }
         
         return $results;
@@ -384,7 +392,13 @@ private function getFoodItemWithOptions($foodItemId)
     // Get a single Food Item by id
 public function getByItemId($id)
 {
-    $sql = "SELECT * FROM {$this->table} WHERE id = :id";
+    $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
+                   fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                   COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
+            FROM {$this->table} fi
+            LEFT JOIN order_items oi ON fi.id = oi.item_id AND oi.item_type = 'food_item'
+            WHERE fi.id = :id
+            GROUP BY fi.id";
     $stmt = $this->conn->prepare($sql);
     $stmt->execute(['id' => $id]);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -393,6 +407,7 @@ public function getByItemId($id)
         // Convert numeric fields to appropriate types
         $result['price'] = (float)$result['price'];
         $result['max_qty'] = (int)$result['max_qty'];
+        $result['total_orders'] = (int)$result['total_orders'];
     }
     
     return $result;
@@ -1131,8 +1146,13 @@ public function deleteFoodSection($id)
 
 public function getItemsByStoreAndCategory($storeId, $categoryId)
 {
-    $sql = "SELECT * FROM food_items 
-            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0";
+    $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
+                   fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                   COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
+            FROM food_items fi
+            LEFT JOIN order_items oi ON fi.id = oi.item_id AND oi.item_type = 'food_item'
+            WHERE fi.store_id = :store_id AND fi.category_id = :category_id AND fi.deleted = 0
+            GROUP BY fi.id";
     $stmt = $this->conn->prepare($sql);
     $stmt->execute([
         ':store_id' => $storeId,
@@ -1144,6 +1164,7 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
     foreach ($results as &$result) {
         $result['price'] = (float)$result['price'];
         $result['max_qty'] = (int)$result['max_qty'];
+        $result['total_orders'] = (int)$result['total_orders'];
     }
     
     return $results;
@@ -1184,9 +1205,14 @@ public function removeItemsFromCategory($itemIds, $storeId)
 
 public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset)
 {
-    $sql = "SELECT * FROM food_items 
-            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0
-            ORDER BY created_at DESC 
+    $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
+                   fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                   COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
+            FROM food_items fi
+            LEFT JOIN order_items oi ON fi.id = oi.item_id AND oi.item_type = 'food_item'
+            WHERE fi.store_id = :store_id AND fi.category_id = :category_id AND fi.deleted = 0
+            GROUP BY fi.id
+            ORDER BY fi.created_at DESC 
             LIMIT :limit OFFSET :offset";
 
     $stmt = $this->conn->prepare($sql);
@@ -1202,6 +1228,7 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
     foreach ($results as &$result) {
         $result['price'] = (float)$result['price'];
         $result['max_qty'] = (int)$result['max_qty'];
+        $result['total_orders'] = (int)$result['total_orders'];
     }
     
     return $results;
