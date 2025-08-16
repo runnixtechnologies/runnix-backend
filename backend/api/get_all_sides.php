@@ -38,8 +38,7 @@ if ($limit < 1 || $limit > 100) {
     exit;
 }
 
-$store_id = $user['store_id'];
 $controller = new FoodItemController();
 
-$response = $controller->getAllFoodSidesByStoreId($store_id, $user, $page, $limit);
+$response = $controller->getAllFoodSidesByStoreId($user, $page, $limit);
 echo json_encode($response);

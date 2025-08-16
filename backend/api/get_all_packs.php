@@ -34,10 +34,9 @@ if (!isset($user['store_id'])) {
 }
 
 $controller = new PackController();
-$storeId = $user['store_id'];
 $page     = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 $limit    = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
 
-$response = $controller->getAll($storeId, $page, $limit);
+$response = $controller->getAll($user, $page, $limit);
 
 echo json_encode($response);

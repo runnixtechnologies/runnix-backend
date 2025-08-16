@@ -13,9 +13,26 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$data = $_GET; // Or $_POST depending on request method
-
 $user = authenticateRequest();
+
+// Check if user is a merchant
+if ($user['role'] !== 'merchant') {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Only merchants can access food items']);
+    exit;
+}
+
+// Extract store_id from authenticated user
+if (!isset($user['store_id'])) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.']);
+    exit;
+}
+
+// Get pagination parameters
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+
 $controller = new FoodItemController();
-$response = $controller->getAllFoodItemsByStoreId($data, $user);
+$response = $controller->getAllFoodItemsByStoreId($user['store_id'], $user, $page, $limit);
 echo json_encode($response);

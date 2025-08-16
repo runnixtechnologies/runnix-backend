@@ -160,8 +160,16 @@ public function deletePacksBulk($data)
         }
     }
 
-    public function getAll($storeId, $page = 1, $limit = 10)
+    public function getAll($user, $page = 1, $limit = 10)
 {
+    // Extract store_id from authenticated user
+    $storeId = $user['store_id'];
+    
+    if (!$storeId) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found for user'];
+    }
+
     $offset = ($page - 1) * $limit;
 
     $packs = $this->packModel->getAll($storeId, $limit, $offset);

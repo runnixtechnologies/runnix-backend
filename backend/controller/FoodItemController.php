@@ -430,16 +430,8 @@ class FoodItemController
 }
 
 
-public function getAllFoodItemsByStoreId($data, $user)
+public function getAllFoodItemsByStoreId($storeId, $user, $page = 1, $limit = 10)
 {
-    // Validate store_id parameter
-    if (!isset($data['store_id']) || empty($data['store_id'])) {
-        http_response_code(400); // Bad Request
-        return ["status" => "error", "message" => "store_id is required."];
-    }
-
-    $storeId = $data['store_id'];
-
     // Check if store exists
     $store = $this->storeModel->getStoreById($storeId);
     if (!$store) {
@@ -453,9 +445,6 @@ public function getAllFoodItemsByStoreId($data, $user)
         return ["status" => "error", "message" => "Access denied. You can only view your own store's food items."];
     }
 
-    // Get pagination parameters
-    $page = isset($data['page']) ? (int) $data['page'] : 1;
-    $limit = isset($data['limit']) ? (int) $data['limit'] : 10;
     $offset = ($page - 1) * $limit;
 
     // Fetch food items with pagination
@@ -565,8 +554,16 @@ public function getFoodSideById($id, $user)
 }
 
 // READ All Sides by Store
-public function getAllFoodSidesByStoreId($store_id, $user, $page = 1, $limit = 10)
+public function getAllFoodSidesByStoreId($user, $page = 1, $limit = 10)
 {
+    // Extract store_id from authenticated user
+    $store_id = $user['store_id'];
+    
+    if (!$store_id) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found for user'];
+    }
+
     $offset = ($page - 1) * $limit;
 
     // Get total count for pagination
@@ -969,8 +966,16 @@ public function createFoodSection($data, $user)
 
 
 // READ All Sections by Store
-public function getAllFoodSectionsByStoreId($storeId, $page = 1, $limit = 10)
+public function getAllFoodSectionsByStoreId($user, $page = 1, $limit = 10)
 {
+    // Extract store_id from authenticated user
+    $storeId = $user['store_id'];
+    
+    if (!$storeId) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Store ID not found for user'];
+    }
+
     $offset = ($page - 1) * $limit;
     
     $result = $this->foodItem->getAllFoodSectionsByStoreIdPaginated($storeId, $limit, $offset);
