@@ -210,28 +210,26 @@ public function getById($id)
 
 public function update($discountId, $data)
 {
-    // Update discount only if it matches store and store_type
+    // Update discount with more flexible WHERE clause
     $sql = "UPDATE {$this->table} 
             SET percentage = :percentage, 
                 start_date = :start_date, 
                 end_date = :end_date, 
                 updated_at = NOW()
             WHERE id = :id 
-              AND store_id = :store_id 
-              AND store_type_id = :store_type_id";
+              AND store_id = :store_id";
 
     $stmt = $this->conn->prepare($sql);
     $stmt->execute([
         'id' => $discountId,
         'store_id' => $data['store_id'],
-        'store_type_id' => $data['store_type_id'],
         'percentage' => $data['percentage'],
         'start_date' => $data['start_date'] ?? null,
         'end_date' => $data['end_date'] ?? null
     ]);
 
     if ($stmt->rowCount() === 0) {
-        // No discount updated — maybe store_id/type mismatch
+        // No discount updated — maybe store_id mismatch
         return false;
     }
 
@@ -268,12 +266,31 @@ public function update($discountId, $data)
         // Step 1: Delete related discount_items
         $sqlItems = "DELETE FROM discount_items WHERE discount_id = :id";
         $stmtItems = $this->conn->prepare($sqlItems);
-        $stmtItems->execute(['id' => $id]);
+        $resultItems = $stmtItems->execute(['id' => $id]);
+        
+        if (!$resultItems) {
+            error_log("Failed to delete discount_items: " . json_encode($stmtItems->errorInfo()));
+            $this->conn->rollBack();
+            return false;
+        }
 
         // Step 2: Delete the main discount
         $sqlDiscount = "DELETE FROM {$this->table} WHERE id = :id";
         $stmtDiscount = $this->conn->prepare($sqlDiscount);
-        $stmtDiscount->execute(['id' => $id]);
+        $resultDiscount = $stmtDiscount->execute(['id' => $id]);
+        
+        if (!$resultDiscount) {
+            error_log("Failed to delete discount: " . json_encode($stmtDiscount->errorInfo()));
+            $this->conn->rollBack();
+            return false;
+        }
+
+        // Check if any rows were actually deleted
+        if ($stmtDiscount->rowCount() === 0) {
+            error_log("No discount found with ID: " . $id);
+            $this->conn->rollBack();
+            return false;
+        }
 
         $this->conn->commit();
         return true;

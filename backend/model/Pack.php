@@ -123,8 +123,10 @@ public function deleteBulk($packIds, $storeId)
     try {
         $sql = "SELECT p.id, p.store_id, p.name, p.price, p.discount as discount_price, p.percentage, p.status, p.created_at, p.updated_at,
                        d.id as discount_id,
+                       d.percentage as discount_percentage,
                        d.start_date as discount_start_date,
                        d.end_date as discount_end_date,
+                       (p.price - (p.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} p
                 LEFT JOIN discount_items di ON p.id = di.item_id AND di.item_type = 'pack'
@@ -152,8 +154,10 @@ public function deleteBulk($packIds, $storeId)
             $result['discount_price'] = (float)$result['discount_price'];
             $result['percentage'] = (float)$result['percentage'];
             $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
-            $result['discount_start_date'] = $result['discount_start_date'] ? date('Y-m-d', strtotime($result['discount_start_date'])) : null;
-            $result['discount_end_date'] = $result['discount_end_date'] ? date('Y-m-d', strtotime($result['discount_end_date'])) : null;
+            $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
+            $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
+            $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
+            $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
         }
         
         return $results;
