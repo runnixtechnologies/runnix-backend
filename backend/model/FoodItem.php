@@ -335,8 +335,16 @@ private function getFoodItemWithOptions($foodItemId)
     {
         $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
                        fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                       d.id as discount_id,
+                       d.percentage as discount_percentage,
+                       d.start_date as discount_start_date,
+                       d.end_date as discount_end_date,
+                       (fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} fi
+                LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
+                LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                    AND NOW() BETWEEN d.start_date AND d.end_date
                 LEFT JOIN order_items oi ON fi.id = oi.item_id
                 WHERE fi.store_id = :store_id AND fi.deleted = 0 
                 GROUP BY fi.id
@@ -368,6 +376,13 @@ private function getFoodItemWithOptions($foodItemId)
             $result['price'] = (float)$result['price'];
             $result['max_qty'] = (int)$result['max_qty'];
             $result['total_orders'] = (int)$result['total_orders'];
+            $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
+            $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
+            $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
+            
+            // Fix date formatting - use DATE() function to avoid timezone issues
+            $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
+            $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
         }
         
         return $results;
@@ -394,8 +409,16 @@ public function getByItemId($id)
 {
     $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
                    fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                   d.id as discount_id,
+                   d.percentage as discount_percentage,
+                   d.start_date as discount_start_date,
+                   d.end_date as discount_end_date,
+                   (fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM {$this->table} fi
+            LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
+            LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                AND NOW() BETWEEN d.start_date AND d.end_date
             LEFT JOIN order_items oi ON fi.id = oi.item_id
             WHERE fi.id = :id
             GROUP BY fi.id";
@@ -408,6 +431,13 @@ public function getByItemId($id)
         $result['price'] = (float)$result['price'];
         $result['max_qty'] = (int)$result['max_qty'];
         $result['total_orders'] = (int)$result['total_orders'];
+        $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
+        $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
+        $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
+        
+        // Fix date formatting - use DATE() function to avoid timezone issues
+        $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
+        $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
     }
     
     return $result;
@@ -1154,8 +1184,16 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
 {
     $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
                    fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                   d.id as discount_id,
+                   d.percentage as discount_percentage,
+                   d.start_date as discount_start_date,
+                   d.end_date as discount_end_date,
+                   (fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM food_items fi
+            LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
+            LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                AND NOW() BETWEEN d.start_date AND d.end_date
             LEFT JOIN order_items oi ON fi.id = oi.item_id
             WHERE fi.store_id = :store_id AND fi.category_id = :category_id AND fi.deleted = 0
             GROUP BY fi.id";
@@ -1171,6 +1209,13 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
         $result['price'] = (float)$result['price'];
         $result['max_qty'] = (int)$result['max_qty'];
         $result['total_orders'] = (int)$result['total_orders'];
+        $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
+        $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
+        $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
+        
+        // Fix date formatting - use DATE() function to avoid timezone issues
+        $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
+        $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
     }
     
     return $results;
@@ -1213,8 +1258,16 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
 {
     $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
                    fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                   d.id as discount_id,
+                   d.percentage as discount_percentage,
+                   d.start_date as discount_start_date,
+                   d.end_date as discount_end_date,
+                   (fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM food_items fi
+            LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
+            LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                AND NOW() BETWEEN d.start_date AND d.end_date
             LEFT JOIN order_items oi ON fi.id = oi.item_id
             WHERE fi.store_id = :store_id AND fi.category_id = :category_id AND fi.deleted = 0
             GROUP BY fi.id
@@ -1235,6 +1288,13 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
         $result['price'] = (float)$result['price'];
         $result['max_qty'] = (int)$result['max_qty'];
         $result['total_orders'] = (int)$result['total_orders'];
+        $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
+        $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
+        $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
+        
+        // Fix date formatting - use DATE() function to avoid timezone issues
+        $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
+        $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
     }
     
     return $results;
