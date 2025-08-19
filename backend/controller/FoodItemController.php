@@ -201,12 +201,39 @@ class FoodItemController
                 return ['status' => 'error', 'message' => 'Sections max quantity must be a non-negative number'];
             }
         } else {
-            // New format - array of objects
+            // New format - array of objects with enhanced section support
             foreach ($data['sections'] as $section) {
-                if (!is_array($section) || !isset($section['id']) || !is_numeric($section['id'])) {
+                if (!is_array($section)) {
                     http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Each section must be an object with a valid id'];
+                    return ['status' => 'error', 'message' => 'Each section must be an object'];
                 }
+                
+                // Support both simple section ID and enhanced format with selected items
+                if (isset($section['id']) && is_numeric($section['id'])) {
+                    // Simple section ID format
+                    if (isset($section['selected_items']) && is_array($section['selected_items'])) {
+                        // Enhanced format with selected items
+                        foreach ($section['selected_items'] as $itemId) {
+                            if (!is_numeric($itemId)) {
+                                http_response_code(400);
+                                return ['status' => 'error', 'message' => 'Each selected item ID must be a valid number'];
+                            }
+                        }
+                    }
+                } else {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must have a valid id'];
+                }
+            }
+        }
+    }
+
+    // Validate section_items data if provided (direct section item IDs)
+    if (isset($data['section_items']) && is_array($data['section_items'])) {
+        foreach ($data['section_items'] as $itemId) {
+            if (!is_numeric($itemId)) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Each section item ID must be a valid number'];
             }
         }
     }
