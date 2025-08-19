@@ -1354,5 +1354,161 @@ public function getCategoriesByStoreType($storeId)
     }
 }
 
+    // Activate single food section
+    public function activateFoodSection($data, $user)
+    {
+        if (!isset($data['id']) || !is_numeric($data['id'])) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Missing or invalid required field: id."];
+        }
+
+        // Authorization check - verify the section belongs to the user's store
+        $existingSection = $this->foodItem->getFoodSectionById($data['id']);
+        if (!$existingSection) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Food section not found'];
+        }
+
+        if ($existingSection['store_id'] != $user['store_id']) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Unauthorized to activate this food section.'];
+        }
+
+        $result = $this->foodItem->setFoodSectionStatus($data['id'], 'active');
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Food section activated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to activate food section'];
+        }
+    }
+
+    // Deactivate single food section
+    public function deactivateFoodSection($data, $user)
+    {
+        if (!isset($data['id']) || !is_numeric($data['id'])) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Missing or invalid required field: id."];
+        }
+
+        // Authorization check - verify the section belongs to the user's store
+        $existingSection = $this->foodItem->getFoodSectionById($data['id']);
+        if (!$existingSection) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Food section not found'];
+        }
+
+        if ($existingSection['store_id'] != $user['store_id']) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Unauthorized to deactivate this food section.'];
+        }
+
+        $result = $this->foodItem->setFoodSectionStatus($data['id'], 'inactive');
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Food section deactivated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to deactivate food section'];
+        }
+    }
+
+    // Bulk activate food sections
+    public function bulkActivateFoodSections($ids, $user)
+    {
+        if (empty($ids) || !is_array($ids)) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Missing or invalid field: ids (array required)."];
+        }
+
+        // Authorization check - verify all sections belong to the user's store
+        foreach ($ids as $id) {
+            $existingSection = $this->foodItem->getFoodSectionById($id);
+            if (!$existingSection) {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => "Food section with ID {$id} not found"];
+            }
+
+            if ($existingSection['store_id'] != $user['store_id']) {
+                http_response_code(403);
+                return ['status' => 'error', 'message' => "Unauthorized to activate food section with ID {$id}."];
+            }
+        }
+
+        $result = $this->foodItem->updateFoodSectionsStatusBulk($ids, 'active');
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Food sections activated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to activate food sections'];
+        }
+    }
+
+    // Bulk deactivate food sections
+    public function bulkDeactivateFoodSections($ids, $user)
+    {
+        if (empty($ids) || !is_array($ids)) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Missing or invalid field: ids (array required)."];
+        }
+
+        // Authorization check - verify all sections belong to the user's store
+        foreach ($ids as $id) {
+            $existingSection = $this->foodItem->getFoodSectionById($id);
+            if (!$existingSection) {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => "Food section with ID {$id} not found"];
+            }
+
+            if ($existingSection['store_id'] != $user['store_id']) {
+                http_response_code(403);
+                return ['status' => 'error', 'message' => "Unauthorized to deactivate food section with ID {$id}."];
+            }
+        }
+
+        $result = $this->foodItem->updateFoodSectionsStatusBulk($ids, 'inactive');
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Food sections deactivated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to deactivate food sections'];
+        }
+    }
+
+    // Bulk delete food sections
+    public function bulkDeleteFoodSections($ids, $user)
+    {
+        if (empty($ids) || !is_array($ids)) {
+            http_response_code(400);
+            return ["status" => "error", "message" => "Missing or invalid field: ids (array required)."];
+        }
+
+        // Authorization check - verify all sections belong to the user's store
+        foreach ($ids as $id) {
+            $existingSection = $this->foodItem->getFoodSectionById($id);
+            if (!$existingSection) {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => "Food section with ID {$id} not found"];
+            }
+
+            if ($existingSection['store_id'] != $user['store_id']) {
+                http_response_code(403);
+                return ['status' => 'error', 'message' => "Unauthorized to delete food section with ID {$id}."];
+            }
+        }
+
+        $result = $this->foodItem->deleteFoodSectionsBulk($ids);
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Food sections deleted successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to delete food sections'];
+        }
+    }
+
 }
 ?>

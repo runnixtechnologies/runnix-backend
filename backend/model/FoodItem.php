@@ -1459,6 +1459,56 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
             return false;
         }
     }
+
+    // Set food section status (activate/deactivate)
+    public function setFoodSectionStatus($id, $status)
+    {
+        try {
+            $sql = "UPDATE food_sections SET status = :status, updated_at = NOW() WHERE id = :id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindValue(':status', $status);
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            return $stmt->rowCount() > 0;
+        } catch (PDOException $e) {
+            error_log("setFoodSectionStatus error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Bulk update food sections status
+    public function updateFoodSectionsStatusBulk($ids, $status)
+    {
+        try {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $sql = "UPDATE food_sections SET status = ?, updated_at = NOW() WHERE id IN ($placeholders)";
+            
+            $stmt = $this->conn->prepare($sql);
+            $params = array_merge([$status], $ids);
+            $stmt->execute($params);
+
+            return $stmt->rowCount() > 0;
+        } catch (PDOException $e) {
+            error_log("updateFoodSectionsStatusBulk error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Bulk delete food sections
+    public function deleteFoodSectionsBulk($ids)
+    {
+        try {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $sql = "DELETE FROM food_sections WHERE id IN ($placeholders)";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($ids);
+
+            return $stmt->rowCount() > 0;
+        } catch (PDOException $e) {
+            error_log("deleteFoodSectionsBulk error: " . $e->getMessage());
+            return false;
+        }
+    }
 }
-
-
