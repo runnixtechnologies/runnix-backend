@@ -533,6 +533,10 @@ public function getAllFoodItemsByStoreId($storeId, $user, $page = 1, $limit = 10
 // CREATE Food Side
 public function createFoodSide($data, $user)
 {
+    // Debug: Log the received data
+    error_log("createFoodSide: Received data: " . print_r($data, true));
+    error_log("createFoodSide: User data: " . print_r($user, true));
+    
     // Ensure store_id
     if (!isset($data['store_id']) || empty($data['store_id'])) {
         $data['store_id'] = $user['store_id'];
@@ -540,6 +544,7 @@ public function createFoodSide($data, $user)
 
     // Validate name
     if (!isset($data['name']) || empty(trim($data['name']))) {
+        error_log("createFoodSide: Name validation failed. Data keys: " . implode(', ', array_keys($data)));
         http_response_code(400);
         return ['status' => 'error', 'message' => 'Food side name is required'];
     }
@@ -1005,10 +1010,20 @@ public function createFoodSection($data, $user)
         $result = $this->foodItem->createFoodSection($data);
         if ($result && is_array($result)) {
             http_response_code(201);
+            
+            // Extract item IDs from the items array
+            $itemIds = [];
+            if (isset($result['items']) && is_array($result['items'])) {
+                $itemIds = array_column($result['items'], 'id');
+            }
+            
             return [
                 'status' => 'success', 
                 'message' => 'Section created successfully.',
-                'data' => $result['id']
+                'data' => [
+                    'section_id' => $result['id'],
+                    'item_ids' => $itemIds
+                ]
             ];
         } else {
             http_response_code(500);
