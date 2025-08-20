@@ -1191,6 +1191,26 @@ public function updateFoodSection($data)
         if (isset($data['items']) && is_array($data['items'])) {
             // Insert the new items (don't delete existing ones)
             if (!empty($data['items'])) {
+                // Check for existing items to prevent duplicates
+                $existingItemsQuery = "SELECT name FROM food_section_items WHERE section_id = :section_id AND status = 'active'";
+                $existingStmt = $this->conn->prepare($existingItemsQuery);
+                $existingStmt->execute(['section_id' => $data['section_id']]);
+                $existingItems = $existingStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Check for duplicates
+                $duplicateItems = [];
+                foreach ($data['items'] as $item) {
+                    if (in_array($item['name'], $existingItems)) {
+                        $duplicateItems[] = $item['name'];
+                    }
+                }
+                
+                if (!empty($duplicateItems)) {
+                    $duplicateNames = implode(', ', $duplicateItems);
+                    throw new \Exception("The following items already exist in this section: {$duplicateNames}. Please use different names.");
+                }
+                
+                // Insert the new items
                 $insertQuery = "INSERT INTO food_section_items (section_id, name, price) VALUES (:section_id, :name, :price)";
                 $insertStmt = $this->conn->prepare($insertQuery);
 
@@ -1238,6 +1258,18 @@ public function updateFoodSection($data)
         if ($this->conn->inTransaction()) {
             $this->conn->rollBack();
         }
+        
+        // Check for duplicate item name error
+        if ($e->getCode() == 23000 && strpos($e->getMessage(), 'unique_section_item_name') !== false) {
+            // Extract the duplicate item name from the error message
+            if (preg_match('/Duplicate entry \'[^-]+-([^\']+)\'/', $e->getMessage(), $matches)) {
+                $duplicateItemName = $matches[1];
+                throw new \Exception("Item with name '{$duplicateItemName}' already exists in this section. Please use a different name.");
+            } else {
+                throw new \Exception("An item with this name already exists in this section. Please use a different name.");
+            }
+        }
+        
         throw new \Exception("Error updating food section: " . $e->getMessage());
     }
 }
