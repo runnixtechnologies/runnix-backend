@@ -157,10 +157,7 @@ public function createWithOptions($data)
             }
         }
 
-        // Handle direct section items if provided
-        if (isset($data['section_items']) && is_array($data['section_items']) && !empty($data['section_items'])) {
-            $this->createFoodItemSectionItemsFromArray($foodItemId, $data['section_items']);
-        }
+
 
         // Commit transaction
         $this->conn->commit();

@@ -240,15 +240,7 @@ class FoodItemController
         }
     }
 
-    // Validate section_items data if provided (direct section item IDs)
-    if (isset($data['section_items']) && is_array($data['section_items'])) {
-        foreach ($data['section_items'] as $itemId) {
-            if (!is_numeric($itemId)) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Each section item ID must be a valid number'];
-            }
-        }
-    }
+
 
     $result = $this->foodItem->createWithOptions($data);
     if ($result && isset($result['status']) && $result['status'] === 'success') {
