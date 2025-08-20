@@ -24,6 +24,14 @@ if (stripos($contentType, 'application/json') !== false) {
 
 
 $user = authenticateRequest();
+
+// Validate ID
+if (!isset($data['id']) || !is_numeric($data['id']) || $data['id'] <= 0) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Valid food item ID is required']);
+    exit;
+}
+
 $controller = new FoodItemController();
 $response = $controller->update($data,$user);
 echo json_encode($response);
