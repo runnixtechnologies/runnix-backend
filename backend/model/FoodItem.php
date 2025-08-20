@@ -1169,15 +1169,9 @@ public function updateFoodSection($data)
         $stmt->bindParam(':section_id', $data['section_id']);
         $stmt->execute();
 
-        // Handle items if provided
+        // Handle items if provided - ADD new items to existing ones
         if (isset($data['items']) && is_array($data['items'])) {
-            // First, delete all existing items for this section
-            $deleteQuery = "DELETE FROM food_section_items WHERE section_id = :section_id";
-            $deleteStmt = $this->conn->prepare($deleteQuery);
-            $deleteStmt->bindParam(':section_id', $data['section_id']);
-            $deleteStmt->execute();
-
-            // Insert the new items
+            // Insert the new items (don't delete existing ones)
             if (!empty($data['items'])) {
                 $insertQuery = "INSERT INTO food_section_items (section_id, name, price) VALUES (:section_id, :name, :price)";
                 $insertStmt = $this->conn->prepare($insertQuery);
