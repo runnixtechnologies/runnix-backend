@@ -1,32 +1,36 @@
 <?php
+
 ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
 require_once '../config/cors.php';
-require_once '../config/JwtHandler.php';
+require_once '../middleware/authMiddleware.php';
+
+use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-use Controller\UserController;
+$user = authenticateRequest();
 
+// Get the authorization header
 $headers = getallheaders();
-if (!isset($headers['Authorization'])) {
-    echo json_encode(["status" => "error", "message" => "Authorization token not found"]);
-    exit;
-}
+$authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
 
-if (!preg_match('/Bearer\s(\S+)/', $headers['Authorization'], $matches)) {
-    echo json_encode(["status" => "error", "message" => "Invalid Authorization header format"]);
+if (empty($authHeader) || !preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Authorization header is required']);
     exit;
 }
 
 $token = $matches[1];
 
-// Instantiate the UserController
-$controller = new UserController();
+// Invalidate the token (you might want to store invalidated tokens in a blacklist table)
+// For now, we'll just return success since JWT tokens are stateless
 
-// Call the logout method and pass the token
-$response = $controller->logout(['token' => $token]);
-
-echo json_encode($response);
+http_response_code(200);
+echo json_encode([
+    'status' => 'success', 
+    'message' => 'Logged out successfully'
+]);

@@ -159,4 +159,108 @@ public function getActiveCategoriesByStoreType($user)
     return ["status" => "success", "data" => $categories];
 }
 
+    // Operating Hours Methods
+    public function getOperatingHours($user)
+    {
+        // Extract store_id from authenticated user
+        $storeId = $user['store_id'] ?? null;
+        
+        if (!$storeId) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store ID not found for user'];
+        }
+        
+        $operatingHours = $this->store->getOperatingHours($storeId);
+        
+        if ($operatingHours === false) {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to retrieve operating hours'];
+        }
+        
+        // If no operating hours set, return default structure
+        if (empty($operatingHours)) {
+            $operatingHours = [
+                'monday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
+                'tuesday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
+                'wednesday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
+                'thursday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
+                'friday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
+                'saturday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
+                'sunday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null]
+            ];
+        }
+        
+        http_response_code(200);
+        return [
+            'status' => 'success',
+            'data' => $operatingHours
+        ];
+    }
+    
+    public function updateOperatingHours($data, $user)
+    {
+        // Extract store_id from authenticated user
+        $storeId = $user['store_id'] ?? null;
+        
+        if (!$storeId) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store ID not found for user'];
+        }
+        
+        // Validate operating hours data
+        if (!isset($data['operating_hours']) || !is_array($data['operating_hours'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Operating hours data is required and must be an array'];
+        }
+        
+        $operatingHours = $data['operating_hours'];
+        $validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        
+        // Validate each day
+        foreach ($validDays as $day) {
+            if (!isset($operatingHours[$day])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => "Operating hours for $day is required"];
+            }
+            
+            $dayData = $operatingHours[$day];
+            
+            if (!isset($dayData['is_closed']) || !is_bool($dayData['is_closed'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => "is_closed field is required for $day and must be boolean"];
+            }
+            
+            if (!$dayData['is_closed']) {
+                // If not closed, validate time fields
+                if (!isset($dayData['open_time']) || !isset($dayData['close_time'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => "Open and close times are required for $day when not closed"];
+                }
+                
+                // Validate time format (HH:MM)
+                if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['open_time']) ||
+                    !preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['close_time'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => "Invalid time format for $day. Use HH:MM format"];
+                }
+                
+                // Validate that close time is after open time
+                if (strtotime($dayData['close_time']) <= strtotime($dayData['open_time'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => "Close time must be after open time for $day"];
+                }
+            }
+        }
+        
+        $result = $this->store->updateOperatingHours($storeId, $operatingHours);
+        
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Operating hours updated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to update operating hours'];
+        }
+    }
+
 }

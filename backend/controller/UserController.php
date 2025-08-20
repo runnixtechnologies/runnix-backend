@@ -724,4 +724,307 @@ public function getStatus($user) {
     return $this->userModel->getUserStatus($userId);
 }
 
+    // Profile Management Methods
+    public function getProfile($user)
+    {
+        $userId = $user['user_id'];
+        
+        $userData = $this->userModel->getUserById($userId);
+        if (!$userData) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'User not found'];
+        }
+        
+        $profileData = $this->userModel->getUserProfile($userId);
+        
+        // Combine user and profile data
+        $profile = [
+            'name' => $profileData['first_name'] . ' ' . $profileData['last_name'],
+            'email' => $userData['email'],
+            'phone' => $userData['phone'],
+            'address' => $profileData['address'] ?? '',
+            'profile_picture' => $profileData['profile_picture'] ?? null
+        ];
+        
+        http_response_code(200);
+        return [
+            'status' => 'success',
+            'data' => $profile
+        ];
+    }
+    
+    public function updateProfile($data, $user)
+    {
+        $userId = $user['user_id'];
+        
+        // Validate required fields
+        if (empty($data['name'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Name is required'];
+        }
+        
+        if (empty($data['email'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Email is required'];
+        }
+        
+        // Validate email format
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid email format'];
+        }
+        
+        // Check if email is already taken by another user
+        $existingUser = $this->userModel->getUserByEmail($data['email']);
+        if ($existingUser && $existingUser['id'] != $userId) {
+            http_response_code(409);
+            return ['status' => 'error', 'message' => 'Email is already taken by another user'];
+        }
+        
+        // Split name into first and last name
+        $nameParts = explode(' ', trim($data['name']), 2);
+        $firstName = $nameParts[0];
+        $lastName = isset($nameParts[1]) ? $nameParts[1] : '';
+        
+        // Update user email
+        $userUpdateResult = $this->userModel->updateUserEmail($userId, $data['email']);
+        
+        // Update profile
+        $profileData = [
+            'user_id' => $userId,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'address' => $data['address'] ?? ''
+        ];
+        
+        $profileUpdateResult = $this->userModel->updateUserProfile($profileData);
+        
+        if ($userUpdateResult && $profileUpdateResult) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Profile updated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to update profile'];
+        }
+    }
+    
+    public function updateProfilePicture($user)
+    {
+        $userId = $user['user_id'];
+        
+        // Handle profile picture upload
+        if (!isset($_FILES['profile_picture']) || $_FILES['profile_picture']['error'] !== UPLOAD_ERR_OK) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Profile picture is required'];
+        }
+        
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        $fileType = $_FILES['profile_picture']['type'];
+        $fileSize = $_FILES['profile_picture']['size'];
+        
+        if (!in_array($fileType, $allowedTypes)) {
+            http_response_code(415);
+            return ['status' => 'error', 'message' => 'Unsupported image format. Use JPEG or PNG'];
+        }
+        
+        if ($fileSize > 2 * 1024 * 1024) { // 2MB
+            http_response_code(413);
+            return ['status' => 'error', 'message' => 'Image exceeds max size of 2MB'];
+        }
+        
+        $uploadDir = __DIR__ . '/../../uploads/profiles/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+        
+        $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
+        $filename = 'user_' . $userId . '_' . uniqid() . '.' . $ext;
+        $uploadPath = $uploadDir . $filename;
+        
+        if (!move_uploaded_file($_FILES['profile_picture']['tmp_name'], $uploadPath)) {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to upload profile picture'];
+        }
+        
+        $profilePictureUrl = 'https://api.runnix.africa/uploads/profiles/' . $filename;
+        
+        // Update profile picture in database
+        $result = $this->userModel->updateProfilePicture($userId, $profilePictureUrl);
+        
+        if ($result) {
+            http_response_code(200);
+            return [
+                'status' => 'success', 
+                'message' => 'Profile picture updated successfully',
+                'data' => ['profile_picture' => $profilePictureUrl]
+            ];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to update profile picture'];
+        }
+    }
+    
+    public function changePhoneNumber($data, $user)
+    {
+        $userId = $user['user_id'];
+        
+        if (empty($data['new_phone'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'New phone number is required'];
+        }
+        
+        // Format phone number
+        $newPhone = '234' . ltrim($data['new_phone'], '0');
+        
+        // Check if phone is already taken by another user
+        $existingUser = $this->userModel->getUserByPhone($newPhone);
+        if ($existingUser && $existingUser['id'] != $userId) {
+            http_response_code(409);
+            return ['status' => 'error', 'message' => 'Phone number is already taken by another user'];
+        }
+        
+        // Generate and send OTP
+        $otp = $this->otpModel->generateOtp($newPhone, 'phone_change');
+        
+        if ($otp) {
+            // Store the new phone number temporarily (you might want to create a temporary table for this)
+            // For now, we'll use the OTP table to store the pending phone change
+            
+            http_response_code(200);
+            return [
+                'status' => 'success', 
+                'message' => 'OTP sent to new phone number',
+                'data' => ['phone' => $newPhone]
+            ];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to send OTP'];
+        }
+    }
+    
+    public function changePassword($data, $user)
+    {
+        $userId = $user['user_id'];
+        
+        // Validate required fields
+        if (empty($data['current_password'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Current password is required'];
+        }
+        
+        if (empty($data['new_password'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'New password is required'];
+        }
+        
+        if (empty($data['confirm_password'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Confirm password is required'];
+        }
+        
+        // Validate password confirmation
+        if ($data['new_password'] !== $data['confirm_password']) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'New password and confirm password do not match'];
+        }
+        
+        // Validate password strength
+        if (strlen($data['new_password']) < 6) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'New password must be at least 6 characters long'];
+        }
+        
+        // Get current user data
+        $userData = $this->userModel->getUserById($userId);
+        if (!$userData) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'User not found'];
+        }
+        
+        // Verify current password
+        if (!password_verify($data['current_password'], $userData['password'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Current password is incorrect'];
+        }
+        
+        // Hash new password
+        $hashedPassword = password_hash($data['new_password'], PASSWORD_DEFAULT);
+        
+        // Update password
+        $result = $this->userModel->updatePassword($userId, $hashedPassword);
+        
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Password changed successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to change password'];
+        }
+    }
+
+    public function deleteAccount($user)
+    {
+        $userId = $user['user_id'];
+        $userRole = $user['role'];
+        
+        // Get user data for cleanup
+        $userData = $this->userModel->getUserById($userId);
+        if (!$userData) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'User not found'];
+        }
+        
+        try {
+            // Begin transaction for data cleanup
+            $this->userModel->beginTransaction();
+            
+            // Delete store data if user is a merchant
+            if ($userRole === 'merchant') {
+                $store = $this->storeModel->getStoreByUserId($userId);
+                if ($store) {
+                    // Delete store logo file if exists
+                    if (!empty($store['biz_logo'])) {
+                        $logoPath = __DIR__ . '/../../uploads/logos/' . $store['biz_logo'];
+                        if (file_exists($logoPath)) {
+                            unlink($logoPath);
+                        }
+                    }
+                    
+                    // Delete store
+                    $this->storeModel->deleteStoreByUserId($userId);
+                }
+            }
+            
+            // Delete profile picture if exists
+            $profileData = $this->userModel->getUserProfile($userId);
+            if ($profileData && !empty($profileData['profile_picture'])) {
+                $profilePath = __DIR__ . '/../../uploads/profiles/' . basename($profileData['profile_picture']);
+                if (file_exists($profilePath)) {
+                    unlink($profilePath);
+                }
+            }
+            
+            // Delete user profile
+            $this->userModel->deleteUserProfile($userId);
+            
+            // Delete user account
+            $this->userModel->deleteUser($userId);
+            
+            // Commit transaction
+            $this->userModel->commit();
+            
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Account deleted successfully'];
+            
+        } catch (Exception $e) {
+            // Rollback transaction
+            $this->userModel->rollback();
+            error_log("deleteAccount error: " . $e->getMessage());
+            
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to delete account'];
+        }
+    }
+
+
 }

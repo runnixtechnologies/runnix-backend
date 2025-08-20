@@ -1182,7 +1182,33 @@ public function updateFoodSection($data)
 
         // Commit transaction
         $this->conn->commit();
-        return true;
+        
+        // Get the updated section data with items
+        $sectionId = $data['section_id'];
+        $sectionQuery = "SELECT * FROM food_sections WHERE id = :section_id";
+        $sectionStmt = $this->conn->prepare($sectionQuery);
+        $sectionStmt->execute(['section_id' => $sectionId]);
+        $sectionData = $sectionStmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Get the items for this section
+        $itemsQuery = "SELECT id, name, price, status 
+                      FROM food_section_items 
+                      WHERE section_id = :section_id AND status = 'active'";
+        $itemsStmt = $this->conn->prepare($itemsQuery);
+        $itemsStmt->execute(['section_id' => $sectionId]);
+        $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Return the updated section data with items
+        return [
+            'id' => $sectionData['id'],
+            'store_id' => $sectionData['store_id'],
+            'section_name' => $sectionData['section_name'],
+            'max_quantity' => $sectionData['max_quantity'],
+            'required' => $sectionData['required'],
+            'created_at' => $sectionData['created_at'],
+            'updated_at' => $sectionData['updated_at'],
+            'items' => $items
+        ];
 
     } catch (PDOException $e) {
         // Rollback on error
@@ -1547,11 +1573,11 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
                     $this->createFoodItemSectionItemsFromArray($foodItemId, $section['selected_items']);
                 } else {
                     // Simple format: Link entire section (backward compatible)
-                    $sql = "INSERT INTO food_item_sections (item_id, section_id, created_at) VALUES (:item_id, :section_id, NOW())";
-                    $stmt = $this->conn->prepare($sql);
-                    $stmt->execute([
-                        'item_id' => $foodItemId,
-                        'section_id' => $section['id']
+                $sql = "INSERT INTO food_item_sections (item_id, section_id, created_at) VALUES (:item_id, :section_id, NOW())";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    'item_id' => $foodItemId,
+                    'section_id' => $section['id']
                     ]);
                 }
             }

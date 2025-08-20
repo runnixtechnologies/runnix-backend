@@ -1026,7 +1026,11 @@ public function createFoodSection($data, $user)
                 'message' => 'Section created successfully.',
                 'data' => [
                     'section_id' => $result['id'],
-                    'item_ids' => $itemIds
+                    'section_name' => $result['section_name'],
+                    'required' => $result['required'],
+                    'max_quantity' => $result['max_quantity'],
+                    'item_ids' => $itemIds,
+                    'items' => $result['items']
                 ]
             ];
         } else {
@@ -1137,9 +1141,27 @@ public function updateFoodSection($id, $data, $user)
     $data['section_id'] = $id;
 
     $result = $this->foodItem->updateFoodSection($data);
-    if ($result) {
+    if ($result && is_array($result)) {
         http_response_code(200);
-        return ['status' => 'success', 'message' => 'Section updated successfully.'];
+        
+        // Extract item IDs from the items array
+        $itemIds = [];
+        if (isset($result['items']) && is_array($result['items'])) {
+            $itemIds = array_column($result['items'], 'id');
+        }
+        
+        return [
+            'status' => 'success', 
+            'message' => 'Section updated successfully.',
+            'data' => [
+                'section_id' => $result['id'],
+                'section_name' => $result['section_name'],
+                'required' => $result['required'],
+                'max_quantity' => $result['max_quantity'],
+                'item_ids' => $itemIds,
+                'items' => $result['items']
+            ]
+        ];
     } else {
         http_response_code(404);
         return ['status' => 'error', 'message' => 'Section not found or could not be updated.'];
@@ -1553,8 +1575,8 @@ public function getCategoriesByStoreType($storeId)
         } else {
             http_response_code(500);
             return ['status' => 'error', 'message' => 'Failed to delete food sections'];
-        }
     }
+}
 
 }
 ?>

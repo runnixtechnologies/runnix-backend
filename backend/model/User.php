@@ -320,4 +320,102 @@ public function getUserStatus($userId) {
     }
 }
 
+    // Profile Management Methods
+    public function updateUserEmail($userId, $email)
+    {
+        try {
+            $sql = "UPDATE users SET email = :email, updated_at = NOW() WHERE id = :user_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                'email' => $email,
+                'user_id' => $userId
+            ]);
+        } catch (PDOException $e) {
+            error_log("updateUserEmail error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function updateUserPhone($userId, $phone)
+    {
+        try {
+            $sql = "UPDATE users SET phone = :phone, updated_at = NOW() WHERE id = :user_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                'phone' => $phone,
+                'user_id' => $userId
+            ]);
+        } catch (PDOException $e) {
+            error_log("updateUserPhone error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function updateUserProfile($profileData)
+    {
+        try {
+            $sql = "UPDATE user_profiles SET 
+                    first_name = :first_name, 
+                    last_name = :last_name, 
+                    address = :address,
+                    updated_at = NOW() 
+                    WHERE user_id = :user_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                'first_name' => $profileData['first_name'],
+                'last_name' => $profileData['last_name'],
+                'address' => $profileData['address'],
+                'user_id' => $profileData['user_id']
+            ]);
+        } catch (PDOException $e) {
+            error_log("updateUserProfile error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function updateProfilePicture($userId, $profilePictureUrl)
+    {
+        try {
+            $sql = "UPDATE user_profiles SET profile_picture = :profile_picture, updated_at = NOW() WHERE user_id = :user_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                'profile_picture' => $profilePictureUrl,
+                'user_id' => $userId
+            ]);
+        } catch (PDOException $e) {
+            error_log("updateProfilePicture error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updatePassword($userId, $hashedPassword)
+    {
+        try {
+            $sql = "UPDATE users SET password = :password, updated_at = NOW() WHERE id = :user_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                'password' => $hashedPassword,
+                'user_id' => $userId
+            ]);
+        } catch (PDOException $e) {
+            error_log("updatePassword error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function beginTransaction()
+    {
+        return $this->conn->beginTransaction();
+    }
+    
+    public function commit()
+    {
+        return $this->conn->commit();
+    }
+    
+    public function rollback()
+    {
+        return $this->conn->rollBack();
+    }
+
 }
