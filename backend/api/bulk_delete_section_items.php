@@ -49,7 +49,7 @@ try {
     }
 
     // Authenticate user
-    $user = authenticateUser();
+    $user = authenticateRequest();
     if (!$user) {
         http_response_code(401);
         echo json_encode(['status' => 'error', 'message' => 'Authentication required']);

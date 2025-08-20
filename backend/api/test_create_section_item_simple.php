@@ -47,7 +47,7 @@ try {
     $itemCount = $stmt->fetch(PDO::FETCH_ASSOC);
     
     // Step 4: Test authentication
-    $user = authenticateUser();
+    $user = authenticateRequest();
     if (!$user) {
         echo json_encode([
             'status' => 'error',
