@@ -1158,7 +1158,34 @@ public function updateFoodSection($data)
         $maxQuantity = isset($data['max_qty']) ? $data['max_qty'] : null;
         $required = isset($data['is_required']) ? $data['is_required'] : 0;
 
-        // No need to update section details - only adding items
+        // Update the section details if provided
+        $query = "UPDATE food_sections SET ";
+        $params = [];
+        
+        // Only update section_name if provided
+        if (isset($data['section_name']) && !empty($data['section_name'])) {
+            $query .= "section_name = :section_name, ";
+            $params[':section_name'] = $data['section_name'];
+        }
+        
+        // Update max_quantity and required if provided
+        if (isset($data['max_qty'])) {
+            $query .= "max_quantity = :max_quantity, ";
+            $params[':max_quantity'] = $data['max_qty'];
+        }
+        
+        if (isset($data['is_required'])) {
+            $query .= "required = :required, ";
+            $params[':required'] = $data['is_required'];
+        }
+        
+        // Remove trailing comma and add WHERE clause
+        $query = rtrim($query, ', ');
+        $query .= " WHERE id = :section_id";
+        $params[':section_id'] = $data['section_id'];
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute($params);
 
         // Handle items if provided - ADD new items to existing ones
         if (isset($data['items']) && is_array($data['items'])) {
