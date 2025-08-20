@@ -148,10 +148,7 @@ class FoodItemController
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Sides required must be a boolean'];
             }
-            if (isset($data['sides']['max_quantity']) && (!is_numeric($data['sides']['max_quantity']) || $data['sides']['max_quantity'] < 0)) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Sides max quantity must be a non-negative number'];
-            }
+
         } else {
             // New format - array of objects or simple IDs
             foreach ($data['sides'] as $side) {
@@ -178,10 +175,7 @@ class FoodItemController
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Packs required must be a boolean'];
             }
-            if (isset($data['packs']['max_quantity']) && (!is_numeric($data['packs']['max_quantity']) || $data['packs']['max_quantity'] < 0)) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Packs max quantity must be a non-negative number'];
-            }
+
         } else {
             // New format - array of objects or simple IDs
             foreach ($data['packs'] as $pack) {
@@ -208,10 +202,7 @@ class FoodItemController
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Sections required must be a boolean'];
             }
-            if (isset($data['sections']['max_quantity']) && (!is_numeric($data['sections']['max_quantity']) || $data['sections']['max_quantity'] < 0)) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Sections max quantity must be a non-negative number'];
-            }
+
         } else {
             // New format - array of objects with enhanced section support
             foreach ($data['sections'] as $section) {
