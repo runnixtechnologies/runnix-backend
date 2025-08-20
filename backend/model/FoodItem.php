@@ -1158,16 +1158,7 @@ public function updateFoodSection($data)
         $maxQuantity = isset($data['max_qty']) ? $data['max_qty'] : null;
         $required = isset($data['is_required']) ? $data['is_required'] : 0;
 
-        // Update the section details
-        $query = "UPDATE food_sections 
-                  SET section_name = :section_name, max_quantity = :max_quantity, required = :required
-                  WHERE id = :section_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':section_name', $data['section_name']);
-        $stmt->bindParam(':max_quantity', $maxQuantity);
-        $stmt->bindParam(':required', $required);
-        $stmt->bindParam(':section_id', $data['section_id']);
-        $stmt->execute();
+        // No need to update section details - only adding items
 
         // Handle items if provided - ADD new items to existing ones
         if (isset($data['items']) && is_array($data['items'])) {

@@ -1076,9 +1076,9 @@ public function getAllFoodSectionsByStoreId($user, $page = 1, $limit = 10)
 // UPDATE Food Section
 public function updateFoodSection($id, $data, $user)
 {
-    if (empty($id) || empty($data['section_name'])) {
+    if (empty($id)) {
         http_response_code(400);
-        return ['status' => 'error', 'message' => 'Please provide the section ID and name.'];
+        return ['status' => 'error', 'message' => 'Please provide the section ID.'];
     }
 
     // Authorization check - verify the section belongs to the user's store
@@ -1093,38 +1093,22 @@ public function updateFoodSection($id, $data, $user)
         return ['status' => 'error', 'message' => 'Unauthorized to update this food section.'];
     }
 
-    // Validate items array if provided
-    if (isset($data['items'])) {
-        if (!is_array($data['items'])) {
+    // Validate items array is required
+    if (!isset($data['items']) || !is_array($data['items']) || empty($data['items'])) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Items array is required and must not be empty.'];
+    }
+    
+    // Validate each item in the array
+    foreach ($data['items'] as $index => $item) {
+        if (!isset($item['name']) || empty($item['name'])) {
             http_response_code(400);
-            return ['status' => 'error', 'message' => 'Items must be an array.'];
+            return ['status' => 'error', 'message' => "Item at index {$index} must have a name."];
         }
         
-        // Validate each item in the array
-        foreach ($data['items'] as $index => $item) {
-            if (!isset($item['name']) || empty($item['name'])) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => "Item at index {$index} must have a name."];
-            }
-            
-            if (!isset($item['price']) || !is_numeric($item['price']) || $item['price'] < 0) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => "Item '{$item['name']}' must have a valid price (non-negative number)."];
-            }
-        }
-    }
-
-    if (isset($data['is_required'])) {
-        if (!in_array($data['is_required'], [0, 1])) {
+        if (!isset($item['price']) || !is_numeric($item['price']) || $item['price'] < 0) {
             http_response_code(400);
-            return ['status' => 'error', 'message' => 'Invalid selection for the Required option.'];
-        }
-
-        if ($data['is_required'] == 1) {
-            if (!isset($data['max_qty']) || !is_numeric($data['max_qty']) || $data['max_qty'] <= 0) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Please set the maximum quantity since the section is required.'];
-            }
+            return ['status' => 'error', 'message' => "Item '{$item['name']}' must have a valid price (non-negative number)."];
         }
     }
 
@@ -1143,7 +1127,7 @@ public function updateFoodSection($id, $data, $user)
         
         return [
             'status' => 'success', 
-            'message' => 'Section updated successfully.',
+            'message' => 'Items added to section successfully.',
             'data' => [
                 'section_id' => $result['id'],
                 'section_name' => $result['section_name'],
