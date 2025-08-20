@@ -36,7 +36,8 @@ if (!isset($user['store_id'])) {
     exit;
 }
 
-if (!isset($data['id'])) {
+// Check for section ID in both 'id' and 'section_id' fields
+if (!isset($data['id']) && !isset($data['section_id'])) {
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'Section ID is required']);
     exit;
@@ -97,7 +98,8 @@ if (isset($data['is_required']) && $data['is_required'] == 1) {
     }
 }
 
-$id = $data['id'];
+// Use section_id if available, otherwise use id
+$id = isset($data['section_id']) ? $data['section_id'] : $data['id'];
 
 $controller = new FoodItemController();
 $response = $controller->updateFoodSection($id, $data, $user);
