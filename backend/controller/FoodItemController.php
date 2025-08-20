@@ -1575,5 +1575,287 @@ public function getCategoriesByStoreType($storeId)
     }
 }
 
+    // ========================================
+    // FOOD SECTION ITEMS CONTROLLER METHODS
+    // ========================================
+
+    // CREATE Section Item
+    public function createSectionItem($data, $user)
+    {
+        if ($user['role'] !== 'merchant') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Access denied. Only merchants can create section items.'];
+        }
+
+        // Validate required fields
+        if (empty($data['section_id'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Section ID is required.'];
+        }
+
+        if (empty($data['name'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item name is required.'];
+        }
+
+        if (!isset($data['price']) || !is_numeric($data['price']) || $data['price'] < 0) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Valid price is required (non-negative number).'];
+        }
+
+        // Check if section exists and belongs to user's store
+        $section = $this->foodItem->getFoodSectionById($data['section_id']);
+        if (!$section) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Food section not found.'];
+        }
+
+        if ($section['store_id'] != $user['store_id']) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Unauthorized to add items to this section.'];
+        }
+
+        try {
+            $result = $this->foodItem->createSectionItem($data);
+            http_response_code(201);
+            return [
+                'status' => 'success',
+                'message' => 'Section item created successfully',
+                'data' => $result
+            ];
+        } catch (\Exception $e) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => $e->getMessage()];
+        }
+    }
+
+    // UPDATE Section Item
+    public function updateSectionItem($itemId, $data, $user)
+    {
+        if ($user['role'] !== 'merchant') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Access denied. Only merchants can update section items.'];
+        }
+
+        if (empty($itemId)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item ID is required.'];
+        }
+
+        // Check if item exists and belongs to user's store
+        if (!$this->foodItem->checkSectionItemOwnership($itemId, $user['store_id'])) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Section item not found or unauthorized.'];
+        }
+
+        // Validate data if provided
+        if (isset($data['name']) && empty($data['name'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item name cannot be empty.'];
+        }
+
+        if (isset($data['price']) && (!is_numeric($data['price']) || $data['price'] < 0)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Price must be a non-negative number.'];
+        }
+
+        $data['item_id'] = $itemId;
+
+        try {
+            $result = $this->foodItem->updateSectionItem($data);
+            http_response_code(200);
+            return [
+                'status' => 'success',
+                'message' => 'Section item updated successfully',
+                'data' => $result
+            ];
+        } catch (\Exception $e) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => $e->getMessage()];
+        }
+    }
+
+    // DELETE Section Item
+    public function deleteSectionItem($itemId, $user)
+    {
+        if ($user['role'] !== 'merchant') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Access denied. Only merchants can delete section items.'];
+        }
+
+        if (empty($itemId)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item ID is required.'];
+        }
+
+        // Check if item exists and belongs to user's store
+        if (!$this->foodItem->checkSectionItemOwnership($itemId, $user['store_id'])) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Section item not found or unauthorized.'];
+        }
+
+        $result = $this->foodItem->deleteSectionItem($itemId);
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Section item deleted successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to delete section item'];
+        }
+    }
+
+    // ACTIVATE Section Item
+    public function activateSectionItem($itemId, $user)
+    {
+        if ($user['role'] !== 'merchant') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Access denied. Only merchants can activate section items.'];
+        }
+
+        if (empty($itemId)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item ID is required.'];
+        }
+
+        // Check if item exists and belongs to user's store
+        if (!$this->foodItem->checkSectionItemOwnership($itemId, $user['store_id'])) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Section item not found or unauthorized.'];
+        }
+
+        $result = $this->foodItem->activateSectionItem($itemId);
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Section item activated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to activate section item'];
+        }
+    }
+
+    // DEACTIVATE Section Item
+    public function deactivateSectionItem($itemId, $user)
+    {
+        if ($user['role'] !== 'merchant') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Access denied. Only merchants can deactivate section items.'];
+        }
+
+        if (empty($itemId)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item ID is required.'];
+        }
+
+        // Check if item exists and belongs to user's store
+        if (!$this->foodItem->checkSectionItemOwnership($itemId, $user['store_id'])) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Section item not found or unauthorized.'];
+        }
+
+        $result = $this->foodItem->deactivateSectionItem($itemId);
+        if ($result) {
+            http_response_code(200);
+            return ['status' => 'success', 'message' => 'Section item deactivated successfully'];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to deactivate section item'];
+        }
+    }
+
+    // BULK DELETE Section Items
+    public function bulkDeleteSectionItems($itemIds, $user)
+    {
+        if ($user['role'] !== 'merchant') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Access denied. Only merchants can delete section items.'];
+        }
+
+        if (empty($itemIds) || !is_array($itemIds)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item IDs array is required.'];
+        }
+
+        // Check if all items exist and belong to user's store
+        if (!$this->foodItem->checkSectionItemsOwnership($itemIds, $user['store_id'])) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'One or more section items not found or unauthorized.'];
+        }
+
+        $result = $this->foodItem->bulkDeleteSectionItems($itemIds);
+        if ($result) {
+            http_response_code(200);
+            return [
+                'status' => 'success', 
+                'message' => count($itemIds) . ' section item(s) deleted successfully'
+            ];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to delete section items'];
+        }
+    }
+
+    // BULK ACTIVATE Section Items
+    public function bulkActivateSectionItems($itemIds, $user)
+    {
+        if ($user['role'] !== 'merchant') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Access denied. Only merchants can activate section items.'];
+        }
+
+        if (empty($itemIds) || !is_array($itemIds)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item IDs array is required.'];
+        }
+
+        // Check if all items exist and belong to user's store
+        if (!$this->foodItem->checkSectionItemsOwnership($itemIds, $user['store_id'])) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'One or more section items not found or unauthorized.'];
+        }
+
+        $result = $this->foodItem->bulkActivateSectionItems($itemIds);
+        if ($result) {
+            http_response_code(200);
+            return [
+                'status' => 'success', 
+                'message' => count($itemIds) . ' section item(s) activated successfully'
+            ];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to activate section items'];
+        }
+    }
+
+    // BULK DEACTIVATE Section Items
+    public function bulkDeactivateSectionItems($itemIds, $user)
+    {
+        if ($user['role'] !== 'merchant') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Access denied. Only merchants can deactivate section items.'];
+        }
+
+        if (empty($itemIds) || !is_array($itemIds)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Item IDs array is required.'];
+        }
+
+        // Check if all items exist and belong to user's store
+        if (!$this->foodItem->checkSectionItemsOwnership($itemIds, $user['store_id'])) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'One or more section items not found or unauthorized.'];
+        }
+
+        $result = $this->foodItem->bulkDeactivateSectionItems($itemIds);
+        if ($result) {
+            http_response_code(200);
+            return [
+                'status' => 'success', 
+                'message' => count($itemIds) . ' section item(s) deactivated successfully'
+            ];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to deactivate section items'];
+        }
+    }
 }
 ?>

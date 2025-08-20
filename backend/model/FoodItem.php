@@ -1739,4 +1739,201 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
             return false;
         }
     }
+
+    // ========================================
+    // FOOD SECTION ITEMS MANAGEMENT METHODS
+    // ========================================
+
+    // CREATE Section Item
+    public function createSectionItem($data)
+    {
+        try {
+            // Check if item with same name already exists in this section
+            $checkQuery = "SELECT COUNT(*) FROM food_section_items WHERE section_id = :section_id AND name = :name AND status = 'active'";
+            $checkStmt = $this->conn->prepare($checkQuery);
+            $checkStmt->execute([
+                ':section_id' => $data['section_id'],
+                ':name' => $data['name']
+            ]);
+            
+            if ($checkStmt->fetchColumn() > 0) {
+                throw new \Exception("An item with name '{$data['name']}' already exists in this section. Please use a different name.");
+            }
+
+            $query = "INSERT INTO food_section_items (section_id, name, price, status) VALUES (:section_id, :name, :price, 'active')";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([
+                ':section_id' => $data['section_id'],
+                ':name' => $data['name'],
+                ':price' => $data['price']
+            ]);
+
+            $itemId = $this->conn->lastInsertId();
+            
+            // Return the created item
+            return $this->getSectionItemById($itemId);
+        } catch (PDOException $e) {
+            if ($e->getCode() == 23000 && strpos($e->getMessage(), 'unique_section_item_name') !== false) {
+                throw new \Exception("An item with this name already exists in this section. Please use a different name.");
+            }
+            throw new \Exception("Error creating section item: " . $e->getMessage());
+        }
+    }
+
+    // UPDATE Section Item
+    public function updateSectionItem($data)
+    {
+        try {
+            // Check if item exists
+            $existingItem = $this->getSectionItemById($data['item_id']);
+            if (!$existingItem) {
+                throw new \Exception("Section item not found.");
+            }
+
+            // Check if another item with same name exists in this section (excluding current item)
+            if (isset($data['name'])) {
+                $checkQuery = "SELECT COUNT(*) FROM food_section_items WHERE section_id = :section_id AND name = :name AND id != :item_id AND status = 'active'";
+                $checkStmt = $this->conn->prepare($checkQuery);
+                $checkStmt->execute([
+                    ':section_id' => $existingItem['section_id'],
+                    ':name' => $data['name'],
+                    ':item_id' => $data['item_id']
+                ]);
+                
+                if ($checkStmt->fetchColumn() > 0) {
+                    throw new \Exception("An item with name '{$data['name']}' already exists in this section. Please use a different name.");
+                }
+            }
+
+            $query = "UPDATE food_section_items SET ";
+            $params = [];
+            
+            if (isset($data['name'])) {
+                $query .= "name = :name, ";
+                $params[':name'] = $data['name'];
+            }
+            
+            if (isset($data['price'])) {
+                $query .= "price = :price, ";
+                $params[':price'] = $data['price'];
+            }
+            
+            $query .= "updated_at = NOW() WHERE id = :item_id";
+            $params[':item_id'] = $data['item_id'];
+            
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute($params);
+            
+            // Return the updated item
+            return $this->getSectionItemById($data['item_id']);
+        } catch (PDOException $e) {
+            if ($e->getCode() == 23000 && strpos($e->getMessage(), 'unique_section_item_name') !== false) {
+                throw new \Exception("An item with this name already exists in this section. Please use a different name.");
+            }
+            throw new \Exception("Error updating section item: " . $e->getMessage());
+        }
+    }
+
+    // DELETE Section Item
+    public function deleteSectionItem($itemId)
+    {
+        $query = "DELETE FROM food_section_items WHERE id = :item_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':item_id', $itemId);
+        return $stmt->execute();
+    }
+
+    // ACTIVATE Section Item
+    public function activateSectionItem($itemId)
+    {
+        $query = "UPDATE food_section_items SET status = 'active', updated_at = NOW() WHERE id = :item_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':item_id', $itemId);
+        return $stmt->execute();
+    }
+
+    // DEACTIVATE Section Item
+    public function deactivateSectionItem($itemId)
+    {
+        $query = "UPDATE food_section_items SET status = 'inactive', updated_at = NOW() WHERE id = :item_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':item_id', $itemId);
+        return $stmt->execute();
+    }
+
+    // BULK DELETE Section Items
+    public function bulkDeleteSectionItems($itemIds)
+    {
+        $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+        $query = "DELETE FROM food_section_items WHERE id IN ($placeholders)";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute($itemIds);
+    }
+
+    // BULK ACTIVATE Section Items
+    public function bulkActivateSectionItems($itemIds)
+    {
+        $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+        $query = "UPDATE food_section_items SET status = 'active', updated_at = NOW() WHERE id IN ($placeholders)";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute($itemIds);
+    }
+
+    // BULK DEACTIVATE Section Items
+    public function bulkDeactivateSectionItems($itemIds)
+    {
+        $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+        $query = "UPDATE food_section_items SET status = 'inactive', updated_at = NOW() WHERE id IN ($placeholders)";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute($itemIds);
+    }
+
+    // GET Section Item by ID
+    public function getSectionItemById($itemId)
+    {
+        $query = "SELECT * FROM food_section_items WHERE id = :item_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':item_id', $itemId);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // GET Section Items by Section ID
+    public function getSectionItemsBySectionId($sectionId)
+    {
+        $query = "SELECT * FROM food_section_items WHERE section_id = :section_id ORDER BY created_at ASC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':section_id', $sectionId);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // CHECK if Section Item belongs to User's Store
+    public function checkSectionItemOwnership($itemId, $storeId)
+    {
+        $query = "SELECT COUNT(*) FROM food_section_items fsi 
+                  JOIN food_sections fs ON fsi.section_id = fs.id 
+                  WHERE fsi.id = :item_id AND fs.store_id = :store_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([
+            ':item_id' => $itemId,
+            ':store_id' => $storeId
+        ]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    // CHECK if Section Items belong to User's Store (for bulk operations)
+    public function checkSectionItemsOwnership($itemIds, $storeId)
+    {
+        $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+        $query = "SELECT COUNT(*) FROM food_section_items fsi 
+                  JOIN food_sections fs ON fsi.section_id = fs.id 
+                  WHERE fsi.id IN ($placeholders) AND fs.store_id = ?";
+        $stmt = $this->conn->prepare($query);
+        
+        $params = array_merge($itemIds, [$storeId]);
+        $stmt->execute($params);
+        
+        return $stmt->fetchColumn() == count($itemIds);
+    }
 }
