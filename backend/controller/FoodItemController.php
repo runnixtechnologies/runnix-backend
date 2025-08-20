@@ -1132,31 +1132,36 @@ public function updateFoodSection($id, $data, $user)
     // Add section_id to data for the model
     $data['section_id'] = $id;
 
-    $result = $this->foodItem->updateFoodSection($data);
-    if ($result && is_array($result)) {
-        http_response_code(200);
-        
-        // Extract item IDs from the items array
-        $itemIds = [];
-        if (isset($result['items']) && is_array($result['items'])) {
-            $itemIds = array_column($result['items'], 'id');
+    try {
+        $result = $this->foodItem->updateFoodSection($data);
+        if ($result && is_array($result)) {
+            http_response_code(200);
+            
+            // Extract item IDs from the items array
+            $itemIds = [];
+            if (isset($result['items']) && is_array($result['items'])) {
+                $itemIds = array_column($result['items'], 'id');
+            }
+            
+            return [
+                'status' => 'success', 
+                'message' => 'Section updated successfully.',
+                'data' => [
+                    'section_id' => $result['id'],
+                    'section_name' => $result['section_name'],
+                    'required' => $result['required'],
+                    'max_quantity' => $result['max_quantity'],
+                    'item_ids' => $itemIds,
+                    'items' => $result['items']
+                ]
+            ];
+        } else {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'Section not found or could not be updated.'];
         }
-        
-        return [
-            'status' => 'success', 
-            'message' => 'Section updated successfully.',
-            'data' => [
-                'section_id' => $result['id'],
-                'section_name' => $result['section_name'],
-                'required' => $result['required'],
-                'max_quantity' => $result['max_quantity'],
-                'item_ids' => $itemIds,
-                'items' => $result['items']
-            ]
-        ];
-    } else {
-        http_response_code(404);
-        return ['status' => 'error', 'message' => 'Section not found or could not be updated.'];
+    } catch (\Exception $e) {
+        http_response_code(400);
+        return ['status' => 'error', 'message' => $e->getMessage()];
     }
 }
 
