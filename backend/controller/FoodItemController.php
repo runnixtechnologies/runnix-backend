@@ -153,11 +153,17 @@ class FoodItemController
                 return ['status' => 'error', 'message' => 'Sides max quantity must be a non-negative number'];
             }
         } else {
-            // New format - array of objects
+            // New format - array of objects or simple IDs
             foreach ($data['sides'] as $side) {
-                if (!is_array($side) || !isset($side['id']) || !is_numeric($side['id'])) {
+                if (is_numeric($side)) {
+                    // Simple ID format - convert to object format
+                    continue;
+                } elseif (is_array($side) && isset($side['id']) && is_numeric($side['id'])) {
+                    // Object format with id
+                    continue;
+                } else {
                     http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Each side must be an object with a valid id'];
+                    return ['status' => 'error', 'message' => 'Each side must be either a valid ID number or an object with a valid id'];
                 }
             }
         }
@@ -177,11 +183,17 @@ class FoodItemController
                 return ['status' => 'error', 'message' => 'Packs max quantity must be a non-negative number'];
             }
         } else {
-            // New format - array of objects
+            // New format - array of objects or simple IDs
             foreach ($data['packs'] as $pack) {
-                if (!is_array($pack) || !isset($pack['id']) || !is_numeric($pack['id'])) {
+                if (is_numeric($pack)) {
+                    // Simple ID format - convert to object format
+                    continue;
+                } elseif (is_array($pack) && isset($pack['id']) && is_numeric($pack['id'])) {
+                    // Object format with id
+                    continue;
+                } else {
                     http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Each pack must be an object with a valid id'];
+                    return ['status' => 'error', 'message' => 'Each pack must be either a valid ID number or an object with a valid id'];
                 }
             }
         }

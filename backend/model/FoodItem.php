@@ -1475,13 +1475,25 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
 
         // Add each side
         foreach ($sidesArray as $side) {
-            if (isset($side['id']) && is_numeric($side['id'])) {
+            $sideId = null;
+            $extraPrice = 0;
+            
+            if (is_numeric($side)) {
+                // Simple ID format
+                $sideId = $side;
+            } elseif (is_array($side) && isset($side['id']) && is_numeric($side['id'])) {
+                // Object format with id and optional extra_price
+                $sideId = $side['id'];
+                $extraPrice = $side['extra_price'] ?? 0;
+            }
+            
+            if ($sideId) {
                 $sql = "INSERT INTO food_item_sides (item_id, side_id, extra_price, created_at) VALUES (:item_id, :side_id, :extra_price, NOW())";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([
                     'item_id' => $foodItemId,
-                    'side_id' => $side['id'],
-                    'extra_price' => $side['extra_price'] ?? 0
+                    'side_id' => $sideId,
+                    'extra_price' => $extraPrice
                 ]);
             }
         }
@@ -1497,13 +1509,25 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
 
         // Add each pack
         foreach ($packsArray as $pack) {
-            if (isset($pack['id']) && is_numeric($pack['id'])) {
+            $packId = null;
+            $extraPrice = 0;
+            
+            if (is_numeric($pack)) {
+                // Simple ID format
+                $packId = $pack;
+            } elseif (is_array($pack) && isset($pack['id']) && is_numeric($pack['id'])) {
+                // Object format with id and optional extra_price
+                $packId = $pack['id'];
+                $extraPrice = $pack['extra_price'] ?? 0;
+            }
+            
+            if ($packId) {
                 $sql = "INSERT INTO food_item_packs (item_id, pack_id, extra_price, created_at) VALUES (:item_id, :pack_id, :extra_price, NOW())";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([
                     'item_id' => $foodItemId,
-                    'pack_id' => $pack['id'],
-                    'extra_price' => $pack['extra_price'] ?? 0
+                    'pack_id' => $packId,
+                    'extra_price' => $extraPrice
                 ]);
             }
         }
