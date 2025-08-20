@@ -13,20 +13,15 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-// Only allow PUT requests
-if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
-    http_response_code(405);
-    echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
-    exit;
-}
-
 try {
+    // Step 1: Test if we can load the controller
+    echo json_encode([
+        'step' => '1',
+        'status' => 'success',
+        'message' => 'Starting debug process'
+    ]);
+    exit;
+
     // Get JSON input
     $input = file_get_contents('php://input');
     $data = json_decode($input, true);
@@ -41,19 +36,6 @@ try {
     if (!isset($data['item_id']) || empty($data['item_id'])) {
         http_response_code(400);
         echo json_encode(['status' => 'error', 'message' => 'Item ID is required']);
-        exit;
-    }
-
-    // Validate optional fields if provided
-    if (isset($data['name']) && empty($data['name'])) {
-        http_response_code(400);
-        echo json_encode(['status' => 'error', 'message' => 'Item name cannot be empty']);
-        exit;
-    }
-
-    if (isset($data['price']) && (!is_numeric($data['price']) || $data['price'] < 0)) {
-        http_response_code(400);
-        echo json_encode(['status' => 'error', 'message' => 'Price must be a non-negative number']);
         exit;
     }
 
@@ -72,7 +54,8 @@ try {
         'status' => 'error', 
         'message' => 'Error: ' . $e->getMessage(),
         'file' => $e->getFile(),
-        'line' => $e->getLine()
+        'line' => $e->getLine(),
+        'trace' => $e->getTraceAsString()
     ]);
 }
 ?>
