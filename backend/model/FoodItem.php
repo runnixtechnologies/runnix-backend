@@ -296,39 +296,50 @@ private function getFoodItemWithOptions($foodItemId)
 
     // Update Food Item
     public function update($data)
-{
-    $query = "UPDATE food_items SET 
-                name = :name,
-                short_description = :short_description,
-                price = :price,
-                section_id = :section_id, -- added section_id here
-                status = :status,
-                updated_at = NOW()";
+    {
+        // Check if another item with the same name exists in the store (excluding current item)
+        $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND name = :name AND id != :id AND deleted = 0");
+        $nameCheck->execute([
+            'store_id' => $data['store_id'],
+            'name' => $data['name'],
+            'id' => $data['id']
+        ]);
+        if ($nameCheck->fetchColumn() > 0) {
+            throw new \Exception('Item with this name already exists in this store. Please choose a different name.');
+        }
 
-    if (!empty($data['photo'])) {
-        $query .= ", photo = :photo";
+        $query = "UPDATE food_items SET 
+                    name = :name,
+                    short_description = :short_description,
+                    price = :price,
+                    section_id = :section_id, -- added section_id here
+                    status = :status,
+                    updated_at = NOW()";
+
+        if (!empty($data['photo'])) {
+            $query .= ", photo = :photo";
+        }
+
+        $query .= " WHERE id = :id";
+        $sectionId = $data['section_id'] ?? null;
+
+        $stmt = $this->conn->prepare($query);
+
+        $stmt->bindParam(':id', $data['id']);
+        $stmt->bindParam(':name', $data['name']);
+        $stmt->bindParam(':short_description', $data['short_description']);
+        $stmt->bindParam(':price', $data['price']);
+
+        $stmt->bindParam(':section_id', $sectionId);
+
+        $stmt->bindParam(':status', $data['status']);
+
+        if (!empty($data['photo'])) {
+            $stmt->bindParam(':photo', $data['photo']);
+        }
+
+        return $stmt->execute();
     }
-
-    $query .= " WHERE id = :id";
-       $sectionId = $data['section_id'] ?? null;
-
-    $stmt = $this->conn->prepare($query);
-
-    $stmt->bindParam(':id', $data['id']);
-    $stmt->bindParam(':name', $data['name']);
-    $stmt->bindParam(':short_description', $data['short_description']);
-    $stmt->bindParam(':price', $data['price']);
-
-    $stmt->bindParam(':section_id', $sectionId);
-
-    $stmt->bindParam(':status', $data['status']);
-
-    if (!empty($data['photo'])) {
-        $stmt->bindParam(':photo', $data['photo']);
-    }
-
-    return $stmt->execute();
-}
 
 
     // Soft Delete Food Item
