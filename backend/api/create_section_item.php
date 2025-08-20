@@ -71,6 +71,12 @@ try {
 
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'Internal server error: ' . $e->getMessage()]);
+    echo json_encode([
+        'status' => 'error', 
+        'message' => 'Internal server error: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'trace' => $e->getTraceAsString()
+    ]);
 }
 ?>
