@@ -1952,7 +1952,7 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         $totalCount = $countStmt->fetchColumn();
         
         // Get paginated results
-        $query = "SELECT fsi.*, fs.name as section_name 
+        $query = "SELECT fsi.*, fs.section_name 
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
                   WHERE fs.store_id = :store_id 
@@ -1982,7 +1982,7 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
     // GET Section Item by ID with section details
     public function getSectionItemByIdWithDetails($itemId)
     {
-        $query = "SELECT fsi.*, fs.name as section_name, fs.store_id 
+        $query = "SELECT fsi.*, fs.section_name, fs.store_id 
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
                   WHERE fsi.id = :item_id";
