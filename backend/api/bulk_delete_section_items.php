@@ -1,12 +1,17 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-require_once '../config/Database.php';
-require_once '../controller/FoodItemController.php';
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+require_once '../../vendor/autoload.php';
+require_once '../config/cors.php';
 require_once '../middleware/authMiddleware.php';
+
+use Controller\FoodItemController;
+use function Middleware\authenticateRequest;
+
+header('Content-Type: application/json');
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -50,24 +55,20 @@ try {
 
     // Authenticate user
     $user = authenticateRequest();
-    if (!$user) {
-        http_response_code(401);
-        echo json_encode(['status' => 'error', 'message' => 'Authentication required']);
-        exit;
-    }
 
     // Create controller instance and call method
     $controller = new FoodItemController();
     $response = $controller->bulkDeleteSectionItems($data['item_ids'], $user);
 
-    // Set appropriate HTTP status code
-    $statusCode = isset($response['status']) && $response['status'] === 'success' ? 200 : 400;
-    http_response_code($statusCode);
-
     echo json_encode($response);
 
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'Internal server error: ' . $e->getMessage()]);
+    echo json_encode([
+        'status' => 'error', 
+        'message' => 'Error: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
 }
 ?>
