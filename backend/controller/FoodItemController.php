@@ -1871,6 +1871,12 @@ public function getCategoriesByStoreType($storeId)
             return ['status' => 'error', 'message' => 'Valid item ID is required.'];
         }
 
+        // Check if user has store_id (from JWT token)
+        if (!isset($user['store_id']) || empty($user['store_id'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store not found. Please ensure your store is properly set up.'];
+        }
+
         $item = $this->foodItem->getSectionItemByIdWithDetails($itemId);
         
         if (!$item) {
@@ -1897,6 +1903,12 @@ public function getCategoriesByStoreType($storeId)
         if ($user['role'] !== 'merchant') {
             http_response_code(403);
             return ['status' => 'error', 'message' => 'Access denied. Only merchants can view section items.'];
+        }
+
+        // Check if user has store_id (from JWT token)
+        if (!isset($user['store_id']) || empty($user['store_id'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store not found. Please ensure your store is properly set up.'];
         }
 
         // Validate pagination parameters
