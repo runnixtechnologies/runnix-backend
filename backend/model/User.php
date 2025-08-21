@@ -351,6 +351,19 @@ public function getUserStatus($userId) {
         }
     }
     
+    public function getUserProfile($userId)
+    {
+        try {
+            $sql = "SELECT * FROM user_profiles WHERE user_id = :user_id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute(['user_id' => $userId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("getUserProfile error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
     public function updateUserProfile($profileData)
     {
         try {
