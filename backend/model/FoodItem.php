@@ -1936,4 +1936,59 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         
         return $stmt->fetchColumn() == count($itemIds);
     }
+
+    // GET all Section Items in a Store with pagination
+    public function getAllSectionItemsInStore($storeId, $page = 1, $limit = 10)
+    {
+        $offset = ($page - 1) * $limit;
+        
+        // Get total count
+        $countQuery = "SELECT COUNT(*) FROM food_section_items fsi 
+                      JOIN food_sections fs ON fsi.section_id = fs.id 
+                      WHERE fs.store_id = :store_id";
+        $countStmt = $this->conn->prepare($countQuery);
+        $countStmt->bindParam(':store_id', $storeId);
+        $countStmt->execute();
+        $totalCount = $countStmt->fetchColumn();
+        
+        // Get paginated results
+        $query = "SELECT fsi.*, fs.name as section_name 
+                  FROM food_section_items fsi 
+                  JOIN food_sections fs ON fsi.section_id = fs.id 
+                  WHERE fs.store_id = :store_id 
+                  ORDER BY fsi.created_at DESC 
+                  LIMIT :limit OFFSET :offset";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':store_id', $storeId);
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        return [
+            'items' => $items,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $limit,
+                'total_items' => $totalCount,
+                'total_pages' => ceil($totalCount / $limit),
+                'has_next_page' => $page < ceil($totalCount / $limit),
+                'has_prev_page' => $page > 1
+            ]
+        ];
+    }
+
+    // GET Section Item by ID with section details
+    public function getSectionItemByIdWithDetails($itemId)
+    {
+        $query = "SELECT fsi.*, fs.name as section_name, fs.store_id 
+                  FROM food_section_items fsi 
+                  JOIN food_sections fs ON fsi.section_id = fs.id 
+                  WHERE fsi.id = :item_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':item_id', $itemId);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
