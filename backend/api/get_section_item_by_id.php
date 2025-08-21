@@ -1,5 +1,7 @@
 <?php
+
 ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
@@ -11,20 +13,18 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-// Get the logged-in user info
-$user = authenticateRequest(); // returns user details (user_id, role, store_id, etc.)
+$data = $_GET;
 
-// Get item ID from URL parameter
-$itemId = isset($_GET['id']) ? $_GET['id'] : null;
-
-if (!$itemId) {
+if (!isset($data['id'])) {
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'Item ID is required']);
     exit;
 }
 
+$itemId = $data['id'];
+
+$user = authenticateRequest();
 $controller = new FoodItemController();
 $response = $controller->getSectionItemById($itemId, $user);
-
 echo json_encode($response);
 ?>

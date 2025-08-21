@@ -1861,66 +1861,44 @@ public function getCategoriesByStoreType($storeId)
     // GET Section Item by ID
     public function getSectionItemById($itemId, $user)
     {
-        if ($user['role'] !== 'merchant') {
-            http_response_code(403);
-            return ['status' => 'error', 'message' => 'Access denied. Only merchants can view section items.'];
-        }
-
-        if (empty($itemId) || !is_numeric($itemId)) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Valid item ID is required.'];
-        }
-
-        // Check if user has store_id (from JWT token)
-        if (!isset($user['store_id']) || empty($user['store_id'])) {
-            http_response_code(403);
-            return ['status' => 'error', 'message' => 'Store not found. Please ensure your store is properly set up.'];
-        }
-
-        $item = $this->foodItem->getSectionItemByIdWithDetails($itemId);
+        $result = $this->foodItem->getSectionItemByIdWithDetails($itemId);
         
-        if (!$item) {
+        if ($result) {
+            // Check if item belongs to user's store
+            if ($result['store_id'] != $user['store_id']) {
+                http_response_code(403);
+                return ['status' => 'error', 'message' => 'Access denied. You can only view section items from your store.'];
+            }
+            
+            http_response_code(200);
+            return ['status' => 'success', 'data' => $result];
+        } else {
             http_response_code(404);
-            return ['status' => 'error', 'message' => 'Section item not found.'];
+            return ['status' => 'error', 'message' => 'Section item not found'];
         }
-
-        // Check if item belongs to user's store
-        if ($item['store_id'] != $user['store_id']) {
-            http_response_code(403);
-            return ['status' => 'error', 'message' => 'Access denied. You can only view section items from your store.'];
-        }
-
-        http_response_code(200);
-        return [
-            'status' => 'success',
-            'data' => $item
-        ];
     }
 
     // GET all Section Items in Store with pagination
     public function getAllSectionItemsInStore($user, $page = 1, $limit = 10)
     {
-        if ($user['role'] !== 'merchant') {
-            http_response_code(403);
-            return ['status' => 'error', 'message' => 'Access denied. Only merchants can view section items.'];
-        }
+        $offset = ($page - 1) * $limit;
 
-        // Check if user has store_id (from JWT token)
-        if (!isset($user['store_id']) || empty($user['store_id'])) {
-            http_response_code(403);
-            return ['status' => 'error', 'message' => 'Store not found. Please ensure your store is properly set up.'];
-        }
+        // Get section items using the store_id with pagination
+        $sectionItems = $this->foodItem->getAllSectionItemsInStore($user['store_id'], $page, $limit);
+        $totalCount = $this->foodItem->countSectionItemsByStoreId($user['store_id']);
 
-        // Validate pagination parameters
-        $page = max(1, intval($page));
-        $limit = max(1, min(50, intval($limit))); // Limit between 1 and 50
-
-        $result = $this->foodItem->getAllSectionItemsInStore($user['store_id'], $page, $limit);
-        
         http_response_code(200);
         return [
-            'status' => 'success',
-            'data' => $result
+            "status" => "success", 
+            "data" => $sectionItems,
+            "meta" => [
+                "page" => $page,
+                "limit" => $limit,
+                "total" => $totalCount,
+                "total_pages" => ceil($totalCount / $limit),
+                "has_next" => ($page * $limit) < $totalCount,
+                "has_prev" => $page > 1
+            ]
         ];
     }
 }

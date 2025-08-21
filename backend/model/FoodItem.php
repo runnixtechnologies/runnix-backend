@@ -1991,4 +1991,16 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+    // COUNT Section Items by Store ID
+    public function countSectionItemsByStoreId($storeId)
+    {
+        $query = "SELECT COUNT(*) FROM food_section_items fsi 
+                  JOIN food_sections fs ON fsi.section_id = fs.id 
+                  WHERE fs.store_id = :store_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':store_id', $storeId);
+        $stmt->execute();
+        return $stmt->fetchColumn();
+    }
 }
