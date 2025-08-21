@@ -115,42 +115,214 @@ GET /api/get_all_section_items_in_store.php?page=1&limit=20
 4. **Ordering**: Items are ordered by creation date (newest first)
 5. **Section Information**: Both endpoints include the section name for better context
 
-## Usage Examples
+## Sample Request Bodies & Examples
 
-### JavaScript/Fetch API
+### 1. Get Section Item by ID
 
-```javascript
-// Get section item by ID
-const getSectionItem = async (itemId) => {
-    const response = await fetch(`/api/get_section_item_by_id.php?id=${itemId}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    });
-    return await response.json();
-};
-
-// Get all section items with pagination
-const getAllSectionItems = async (page = 1, limit = 10) => {
-    const response = await fetch(`/api/get_all_section_items_in_store.php?page=${page}&limit=${limit}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    });
-    return await response.json();
-};
+#### Request Headers
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
 ```
 
-### cURL Examples
+#### Request URL Examples
+```
+GET /api/get_section_item_by_id.php?id=123
+GET /api/get_section_item_by_id.php?id=456
+GET /api/get_section_item_by_id.php?id=789
+```
 
+#### Sample cURL Request
 ```bash
-# Get section item by ID
 curl -X GET "https://api.runnix.africa/api/get_section_item_by_id.php?id=123" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+```
 
-# Get all section items with pagination
-curl -X GET "https://api.runnix.africa/api/get_all_section_items_in_store.php?page=1&limit=20" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+#### Sample JavaScript Request
+```javascript
+const getSectionItem = async (itemId) => {
+    const response = await fetch(`/api/get_section_item_by_id.php?id=${itemId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    return await response.json();
+};
+
+// Usage
+const item = await getSectionItem(123);
+console.log(item);
+```
+
+#### Sample PHP Request
+```php
+<?php
+$itemId = 123;
+$token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+$url = "https://api.runnix.africa/api/get_section_item_by_id.php?id=" . $itemId;
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $token,
+    'Content-Type: application/json'
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$data = json_decode($response, true);
+print_r($data);
+?>
+```
+
+### 2. Get All Section Items in Store
+
+#### Request Headers
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+#### Request URL Examples
+```
+GET /api/get_all_section_items_in_store.php
+GET /api/get_all_section_items_in_store.php?page=1
+GET /api/get_all_section_items_in_store.php?page=2&limit=20
+GET /api/get_all_section_items_in_store.php?page=1&limit=50
+```
+
+#### Sample cURL Requests
+```bash
+# Get first page with default limit (10 items)
+curl -X GET "https://api.runnix.africa/api/get_all_section_items_in_store.php" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+
+# Get second page with 20 items per page
+curl -X GET "https://api.runnix.africa/api/get_all_section_items_in_store.php?page=2&limit=20" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+
+# Get maximum items per page
+curl -X GET "https://api.runnix.africa/api/get_all_section_items_in_store.php?page=1&limit=50" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+```
+
+#### Sample JavaScript Request
+```javascript
+const getAllSectionItems = async (page = 1, limit = 10) => {
+    const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+    });
+    
+    const response = await fetch(`/api/get_all_section_items_in_store.php?${params}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    return await response.json();
+};
+
+// Usage examples
+const firstPage = await getAllSectionItems(1, 10);
+const secondPage = await getAllSectionItems(2, 20);
+const maxItems = await getAllSectionItems(1, 50);
+
+console.log('First page:', firstPage);
+console.log('Second page:', secondPage);
+console.log('Max items:', maxItems);
+```
+
+#### Sample PHP Request
+```php
+<?php
+$page = 1;
+$limit = 20;
+$token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+$url = "https://api.runnix.africa/api/get_all_section_items_in_store.php?page={$page}&limit={$limit}";
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $token,
+    'Content-Type: application/json'
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$data = json_decode($response, true);
+
+// Access pagination data
+if ($data['status'] === 'success') {
+    $items = $data['data']['items'];
+    $pagination = $data['data']['pagination'];
+    
+    echo "Total items: " . $pagination['total_items'] . "\n";
+    echo "Current page: " . $pagination['current_page'] . "\n";
+    echo "Total pages: " . $pagination['total_pages'] . "\n";
+    
+    foreach ($items as $item) {
+        echo "Item: " . $item['name'] . " - $" . $item['price'] . "\n";
+    }
+}
+?>
+```
+
+#### Sample Python Request
+```python
+import requests
+
+def get_section_items(page=1, limit=10, token="your_jwt_token"):
+    url = "https://api.runnix.africa/api/get_all_section_items_in_store.php"
+    params = {
+        'page': page,
+        'limit': limit
+    }
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+    
+    response = requests.get(url, params=params, headers=headers)
+    return response.json()
+
+# Usage
+items_data = get_section_items(page=1, limit=20)
+print(items_data)
+```
+
+## Complete Request Examples
+
+### Example 1: Get Section Item by ID
+```bash
+curl -X GET "https://api.runnix.africa/api/get_section_item_by_id.php?id=123" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJzdG9yZV9pZCI6NSwicm9sZSI6Im1lcmNoYW50IiwiaWF0IjoxNjM5NzI4MDAwfQ.example" \
+  -H "Content-Type: application/json"
+```
+
+### Example 2: Get All Section Items (First Page)
+```bash
+curl -X GET "https://api.runnix.africa/api/get_all_section_items_in_store.php?page=1&limit=10" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJzdG9yZV9pZCI6NSwicm9sZSI6Im1lcmNoYW50IiwiaWF0IjoxNjM5NzI4MDAwfQ.example" \
+  -H "Content-Type: application/json"
+```
+
+### Example 3: Get All Section Items (Custom Pagination)
+```bash
+curl -X GET "https://api.runnix.africa/api/get_all_section_items_in_store.php?page=2&limit=25" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJzdG9yZV9pZCI6NSwicm9sZSI6Im1lcmNoYW50IiwiaWF0IjoxNjM5NzI4MDAwfQ.example" \
+  -H "Content-Type: application/json"
 ```
