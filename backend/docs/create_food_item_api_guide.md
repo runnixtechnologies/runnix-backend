@@ -41,59 +41,40 @@ Content-Type: multipart/form-data
 - `photo` (file): Image file for the food item (max 3MB, JPG/PNG)
 - `short_description` (string): Brief description of the food item
 - `section_id` (integer): ID of the section this item belongs to (optional)
-- `sides` (array): Configuration for food sides
-- `packs` (array): Configuration for food packs
-- `sections` (array): Configuration for food sections
 
-### Sides Configuration
+### Required Configuration Fields
+
+#### Sides Configuration (Required Structure)
 ```json
 {
   "sides": {
     "required": true,
     "max_quantity": 3,
-    "items": [
-      {
-        "id": 1,
-        "extra_price": 2.50
-      },
-      {
-        "id": 2,
-        "extra_price": 1.75
-      }
-    ]
+    "items": [15, 17, 18]
   }
 }
 ```
 
-### Packs Configuration
+#### Packs Configuration (Required Structure)
 ```json
 {
   "packs": {
     "required": false,
     "max_quantity": 2,
-    "items": [
-      {
-        "id": 1,
-        "extra_price": 5.00
-      }
-    ]
+    "items": [15, 16]
   }
 }
 ```
 
-### Sections Configuration
+#### Sections Configuration (Required Structure)
 ```json
 {
-  "sections": [
-    {
-      "id": 1,
-      "selected_items": [1, 2, 3]
-    },
-    {
-      "id": 2,
-      "selected_items": [4, 5]
-    }
-  ]
+  "sections": {
+    "required": true,
+    "max_quantity": 5,
+    "items": [9, 10],
+    "item_ids": [16, 17, 18]
+  }
 }
 ```
 
@@ -128,16 +109,7 @@ photo: [file upload]
   "sides": {
     "required": true,
     "max_quantity": 2,
-    "items": [
-      {
-        "id": 1,
-        "extra_price": 2.50
-      },
-      {
-        "id": 2,
-        "extra_price": 1.75
-      }
-    ]
+    "items": [15, 17, 18]
   }
 }
 ```
@@ -152,12 +124,7 @@ photo: [file upload]
   "packs": {
     "required": false,
     "max_quantity": 1,
-    "items": [
-      {
-        "id": 1,
-        "extra_price": 3.00
-      }
-    ]
+    "items": [15, 16]
   }
 }
 ```
@@ -169,16 +136,12 @@ photo: [file upload]
   "price": 20.99,
   "category_id": 1,
   "short_description": "Build your own pizza",
-  "sections": [
-    {
-      "id": 1,
-      "selected_items": [1, 2, 3]
-    },
-    {
-      "id": 2,
-      "selected_items": [4, 5]
-    }
-  ]
+  "sections": {
+    "required": true,
+    "max_quantity": 5,
+    "items": [9, 10],
+    "item_ids": [16, 17, 18]
+  }
 }
 ```
 
@@ -192,33 +155,19 @@ photo: [file upload]
   "sides": {
     "required": true,
     "max_quantity": 2,
-    "items": [
-      {
-        "id": 1,
-        "extra_price": 2.50
-      },
-      {
-        "id": 2,
-        "extra_price": 1.75
-      }
-    ]
+    "items": [15, 17, 18]
   },
   "packs": {
     "required": false,
     "max_quantity": 1,
-    "items": [
-      {
-        "id": 1,
-        "extra_price": 3.00
-      }
-    ]
+    "items": [15, 16]
   },
-  "sections": [
-    {
-      "id": 1,
-      "selected_items": [1, 2, 3]
-    }
-  ]
+  "sections": {
+    "required": true,
+    "max_quantity": 5,
+    "items": [9],
+    "item_ids": [16, 17]
+  }
 }
 ```
 
@@ -424,3 +373,78 @@ const newItem = await createFoodItemWithPhoto({
 - **sides**: Optional side dish configurations with max quantity limits
 - **packs**: Optional package configurations with max quantity limits
 - **sections**: Optional section configurations with selected items
+
+## 📋 **Complete Sample Request Body (Form-Data)**
+
+### **Method:** POST
+### **URL:** `https://api.runnix.africa/api/create_food_item.php`
+### **Headers:**
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: multipart/form-data
+```
+
+### **Form-Data Key-Value Pairs:**
+
+| Key | Value | Description |
+|-----|-------|-------------|
+| `name` | `Ultimate Combo Deluxe` | Food item name |
+| `price` | `25.99` | Base price |
+| `category_id` | `1` | Category ID |
+| `short_description` | `Ultimate combo with customizations and premium sides` | Description |
+| `photo` | `[file upload]` | Image file (JPG/PNG, max 3MB) |
+| `sides` | `{"required":true,"max_quantity":3,"items":[15,17,18]}` | Sides configuration |
+| `packs` | `{"required":false,"max_quantity":2,"items":[15,16]}` | Packs configuration |
+| `sections` | `{"required":true,"max_quantity":5,"items":[9],"item_ids":[16,17]}` | Sections configuration |
+
+## 🔄 **Alternative Formats (All Valid):**
+
+### **Option 1: Minimal Required Fields**
+| Key | Value |
+|-----|-------|
+| `name` | `Ultimate Combo Deluxe` |
+| `price` | `25.99` |
+| `category_id` | `1` |
+| `photo` | `[file upload]` |
+
+### **Option 2: With Sides Only**
+| Key | Value |
+|-----|-------|
+| `name` | `Ultimate Combo Deluxe` |
+| `price` | `25.99` |
+| `category_id` | `1` |
+| `short_description` | `Ultimate combo with customizations` |
+| `photo` | `[file upload]` |
+| `sides` | `{"required":true,"max_quantity":3,"items":[15,17,18]}` |
+
+### **Option 3: With Packs Only**
+| Key | Value |
+|-----|-------|
+| `name` | `Ultimate Combo Deluxe` |
+| `price` | `25.99` |
+| `category_id` | `1` |
+| `short_description` | `Ultimate combo with customizations` |
+| `photo` | `[file upload]` |
+| `packs` | `{"required":false,"max_quantity":2,"items":[15,16]}` |
+
+### **Option 4: With Sections Only**
+| Key | Value |
+|-----|-------|
+| `name` | `Ultimate Combo Deluxe` |
+| `price` | `25.99` |
+| `category_id` | `1` |
+| `short_description` | `Ultimate combo with customizations` |
+| `photo` | `[file upload]` |
+| `sections` | `{"required":true,"max_quantity":5,"items":[9],"item_ids":[16,17]}` |
+
+### **Option 5: Complete Configuration**
+| Key | Value |
+|-----|-------|
+| `name` | `Ultimate Combo Deluxe` |
+| `price` | `25.99` |
+| `category_id` | `1` |
+| `short_description` | `Ultimate combo with customizations` |
+| `photo` | `[file upload]` |
+| `sides` | `{"required":true,"max_quantity":3,"items":[15,17,18]}` |
+| `packs` | `{"required":false,"max_quantity":2,"items":[15,16]}` |
+| `sections` | `{"required":true,"max_quantity":5,"items":[9],"item_ids":[16,17]}` |
