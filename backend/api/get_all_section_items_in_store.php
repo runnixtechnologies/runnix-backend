@@ -13,17 +13,6 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-// Handle both GET and POST methods for consistency
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $data = $_GET;
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents("php://input"), true) ?? $_POST;
-} else {
-    http_response_code(405);
-    echo json_encode(['status' => 'error', 'message' => 'Method not allowed. Use GET or POST method']);
-    exit;
-}
-
 $user = authenticateRequest();
 
 // Check if user is a merchant
@@ -41,11 +30,11 @@ if (!isset($user['store_id'])) {
 }
 
 // Get pagination parameters
-$page = isset($data['page']) ? (int)$data['page'] : 1;
-$limit = isset($data['limit']) ? (int)$data['limit'] : 10;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 
 // Get section_id parameter (optional)
-$sectionId = isset($data['section_id']) ? (int)$data['section_id'] : null;
+$sectionId = isset($_GET['section_id']) ? (int)$_GET['section_id'] : null;
 
 $controller = new FoodItemController();
 $response = $controller->getAllSectionItemsInStore($user, $page, $limit, $sectionId);
