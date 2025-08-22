@@ -19,6 +19,17 @@ if (stripos($contentType, 'application/json') !== false) {
     $data = json_decode(file_get_contents("php://input"), true) ?? [];
 } elseif (stripos($contentType, 'multipart/form-data') !== false) {
     $data = $_POST;
+    
+    // Parse JSON strings for sides, packs, and sections when using form-data
+    if (isset($data['sides']) && is_string($data['sides'])) {
+        $data['sides'] = json_decode($data['sides'], true);
+    }
+    if (isset($data['packs']) && is_string($data['packs'])) {
+        $data['packs'] = json_decode($data['packs'], true);
+    }
+    if (isset($data['sections']) && is_string($data['sections'])) {
+        $data['sections'] = json_decode($data['sections'], true);
+    }
 } else {
     $data = $_POST;
 }

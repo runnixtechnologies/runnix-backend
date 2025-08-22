@@ -1612,26 +1612,79 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
     // Enhanced method to handle sections from array format with selective item support
     private function createFoodItemSectionsFromArray($foodItemId, $sectionsArray)
     {
-        // Create default config
-        $configSql = "INSERT INTO food_item_sections_config (item_id, required, max_quantity, created_at) VALUES (:item_id, false, 0, NOW())";
-        $configStmt = $this->conn->prepare($configSql);
-        $configStmt->execute(['item_id' => $foodItemId]);
-
-        // Add each section
-        foreach ($sectionsArray as $section) {
-            if (isset($section['id']) && is_numeric($section['id'])) {
-                // Check if this section has selected items
-                if (isset($section['selected_items']) && is_array($section['selected_items']) && !empty($section['selected_items'])) {
-                    // Enhanced format: Link specific section items
-                    $this->createFoodItemSectionItemsFromArray($foodItemId, $section['selected_items']);
-                } else {
-                    // Simple format: Link entire section (backward compatible)
-                $sql = "INSERT INTO food_item_sections (item_id, section_id, created_at) VALUES (:item_id, :section_id, NOW())";
-                $stmt = $this->conn->prepare($sql);
-                $stmt->execute([
-                    'item_id' => $foodItemId,
-                    'section_id' => $section['id']
+        // Check if it's the new format (array of objects with section_id, required, max_quantity, item_ids)
+        if (isset($sectionsArray[0]) && is_array($sectionsArray[0]) && isset($sectionsArray[0]['section_id'])) {
+            // New format: Handle each section with its own configuration
+            foreach ($sectionsArray as $section) {
+                if (isset($section['section_id']) && is_numeric($section['section_id'])) {
+                    // Create section config for this specific section
+                    $configSql = "INSERT INTO food_item_sections_config (item_id, section_id, required, max_quantity, created_at) VALUES (:item_id, :section_id, :required, :max_quantity, NOW())";
+                    $configStmt = $this->conn->prepare($configSql);
+                    $configStmt->execute([
+                        'item_id' => $foodItemId,
+                        'section_id' => $section['section_id'],
+                        'required' => $section['required'] ? 1 : 0,
+                        'max_quantity' => $section['max_quantity']
                     ]);
+
+                    // Link the section to the food item
+                    $sql = "INSERT INTO food_item_sections (item_id, section_id, created_at) VALUES (:item_id, :section_id, NOW())";
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute([
+                        'item_id' => $foodItemId,
+                        'section_id' => $section['section_id']
+                    ]);
+
+                    // Handle section items if provided
+                    if (isset($section['item_ids']) && is_array($section['item_ids']) && !empty($section['item_ids'])) {
+                        // Create section items config for this specific section
+                        $sectionItemsConfigSql = "INSERT INTO food_item_section_items_config (item_id, section_id, required, max_quantity, created_at) VALUES (:item_id, :section_id, :required, :max_quantity, NOW())";
+                        $sectionItemsConfigStmt = $this->conn->prepare($sectionItemsConfigSql);
+                        $sectionItemsConfigStmt->execute([
+                            'item_id' => $foodItemId,
+                            'section_id' => $section['section_id'],
+                            'required' => $section['required'] ? 1 : 0,
+                            'max_quantity' => $section['max_quantity']
+                        ]);
+
+                        // Link specific section items
+                        foreach ($section['item_ids'] as $itemId) {
+                            if (is_numeric($itemId)) {
+                                $itemSql = "INSERT INTO food_item_section_items (item_id, section_id, section_item_id, created_at) VALUES (:item_id, :section_id, :section_item_id, NOW())";
+                                $itemStmt = $this->conn->prepare($itemSql);
+                                $itemStmt->execute([
+                                    'item_id' => $foodItemId,
+                                    'section_id' => $section['section_id'],
+                                    'section_item_id' => $itemId
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Old format: Handle backward compatibility
+            // Create default config
+            $configSql = "INSERT INTO food_item_sections_config (item_id, required, max_quantity, created_at) VALUES (:item_id, false, 0, NOW())";
+            $configStmt = $this->conn->prepare($configSql);
+            $configStmt->execute(['item_id' => $foodItemId]);
+
+            // Add each section
+            foreach ($sectionsArray as $section) {
+                if (isset($section['id']) && is_numeric($section['id'])) {
+                    // Check if this section has selected items
+                    if (isset($section['selected_items']) && is_array($section['selected_items']) && !empty($section['selected_items'])) {
+                        // Enhanced format: Link specific section items
+                        $this->createFoodItemSectionItemsFromArray($foodItemId, $section['selected_items']);
+                    } else {
+                        // Simple format: Link entire section (backward compatible)
+                        $sql = "INSERT INTO food_item_sections (item_id, section_id, created_at) VALUES (:item_id, :section_id, NOW())";
+                        $stmt = $this->conn->prepare($sql);
+                        $stmt->execute([
+                            'item_id' => $foodItemId,
+                            'section_id' => $section['id']
+                        ]);
+                    }
                 }
             }
         }

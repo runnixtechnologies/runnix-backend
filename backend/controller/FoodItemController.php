@@ -246,9 +246,47 @@ class FoodItemController
             return ['status' => 'error', 'message' => 'Sections must be an array'];
         }
         
-        // Check if it's the structured format (object with required, max_quantity, items, item_ids)
-        if (isset($data['sections']['required']) || isset($data['sections']['max_quantity']) || isset($data['sections']['items']) || isset($data['sections']['item_ids'])) {
-            // Structured format - validate required fields
+        // Check if it's the new structured format (array of objects with section_id, required, max_quantity, item_ids)
+        if (isset($data['sections'][0]) && is_array($data['sections'][0]) && isset($data['sections'][0]['section_id'])) {
+            // New structured format - validate each section object
+            foreach ($data['sections'] as $section) {
+                if (!is_array($section)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must be an object'];
+                }
+                
+                // Validate required fields for new format
+                if (!isset($section['section_id']) || !is_numeric($section['section_id'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must have a valid section_id'];
+                }
+                
+                if (!isset($section['required']) || !is_bool($section['required'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must have a required field (boolean)'];
+                }
+                
+                if (!isset($section['max_quantity']) || !is_numeric($section['max_quantity']) || $section['max_quantity'] < 0) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must have a valid max_quantity (non-negative number)'];
+                }
+                
+                if (!isset($section['item_ids']) || !is_array($section['item_ids'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must have item_ids as an array'];
+                }
+                
+                foreach ($section['item_ids'] as $itemId) {
+                    if (!is_numeric($itemId)) {
+                        http_response_code(400);
+                        return ['status' => 'error', 'message' => 'Each item ID must be a valid number'];
+                    }
+                }
+            }
+        }
+        // Check if it's the old structured format (object with required, max_quantity, items, item_ids)
+        elseif (isset($data['sections']['required']) || isset($data['sections']['max_quantity']) || isset($data['sections']['items']) || isset($data['sections']['item_ids'])) {
+            // Old structured format - validate required fields
             if (!isset($data['sections']['required']) || !isset($data['sections']['max_quantity']) || !isset($data['sections']['items']) || !isset($data['sections']['item_ids'])) {
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Sections structured format must include: required (boolean), max_quantity (number), items (array of section IDs), and item_ids (array of item IDs)'];
