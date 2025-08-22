@@ -41,9 +41,9 @@ class FoodItem
 
     // Insert new item
     $sql = "INSERT INTO {$this->table} 
-            (store_id, category_id, section_id, user_id, name, price, photo, short_description, max_qty, status, created_at, updated_at)
+            (store_id, category_id, section_id, user_id, name, price, photo, short_description, status, created_at, updated_at)
             VALUES 
-            (:store_id, :category_id, :section_id, :user_id, :name, :price, :photo, :short_description, :max_qty, :status, NOW(), NOW())";
+            (:store_id, :category_id, :section_id, :user_id, :name, :price, :photo, :short_description, :status, NOW(), NOW())";
 
     $stmt = $this->conn->prepare($sql);
     $stmt->execute([
@@ -55,7 +55,6 @@ class FoodItem
         'price' => $data['price'],
         'photo' => $data['photo'],
         'short_description' => $data['short_description'],
-        'max_qty' => $data['max_qty'],
         'status' => $data['status'] ?? 'active'
     ]);
 
@@ -89,9 +88,9 @@ public function createWithOptions($data)
 
         // Insert new food item
         $sql = "INSERT INTO {$this->table} 
-                (store_id, category_id, section_id, user_id, name, price, photo, short_description, max_qty, status, created_at, updated_at)
+                (store_id, category_id, section_id, user_id, name, price, photo, short_description, status, created_at, updated_at)
                 VALUES 
-                (:store_id, :category_id, :section_id, :user_id, :name, :price, :photo, :short_description, :max_qty, :status, NOW(), NOW())";
+                (:store_id, :category_id, :section_id, :user_id, :name, :price, :photo, :short_description, :status, NOW(), NOW())";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
@@ -103,7 +102,6 @@ public function createWithOptions($data)
             'price' => $data['price'],
             'photo' => $data['photo'] ?? null,
             'short_description' => $data['short_description'] ?? null,
-            'max_qty' => $data['max_qty'] ?? null,
             'status' => $data['status'] ?? 'active'
         ]);
 
