@@ -13,13 +13,6 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-// Only allow GET requests
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    http_response_code(405);
-    echo json_encode(['status' => 'error', 'message' => 'Method not allowed. Use GET method']);
-    exit;
-}
-
 $user = authenticateRequest();
 
 // Check if user is a merchant
@@ -46,4 +39,3 @@ $sectionId = isset($_GET['section_id']) ? (int)$_GET['section_id'] : null;
 $controller = new FoodItemController();
 $response = $controller->getAllSectionItemsInStore($user, $page, $limit, $sectionId);
 echo json_encode($response);
-?>
