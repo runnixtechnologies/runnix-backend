@@ -1879,13 +1879,13 @@ public function getCategoriesByStoreType($storeId)
     }
 
     // GET all Section Items in Store with pagination
-    public function getAllSectionItemsInStore($user, $page = 1, $limit = 10)
+    public function getAllSectionItemsInStore($user, $page = 1, $limit = 10, $sectionId = null)
     {
         $offset = ($page - 1) * $limit;
 
         // Get section items using the store_id with pagination
-        $sectionItems = $this->foodItem->getAllSectionItemsInStore($user['store_id'], $page, $limit);
-        $totalCount = $this->foodItem->countSectionItemsByStoreId($user['store_id']);
+        $sectionItems = $this->foodItem->getAllSectionItemsInStore($user['store_id'], $page, $limit, $sectionId);
+        $totalCount = $this->foodItem->countSectionItemsByStoreId($user['store_id'], $sectionId);
 
         http_response_code(200);
         return [

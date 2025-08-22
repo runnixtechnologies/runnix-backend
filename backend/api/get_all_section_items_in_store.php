@@ -33,7 +33,10 @@ if (!isset($user['store_id'])) {
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 
+// Get section_id parameter (optional)
+$sectionId = isset($_GET['section_id']) ? (int)$_GET['section_id'] : null;
+
 $controller = new FoodItemController();
-$response = $controller->getAllSectionItemsInStore($user, $page, $limit);
+$response = $controller->getAllSectionItemsInStore($user, $page, $limit, $sectionId);
 echo json_encode($response);
 ?>

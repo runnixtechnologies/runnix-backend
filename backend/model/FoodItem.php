@@ -1936,16 +1936,27 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
     }
 
     // GET all Section Items in a Store with pagination
-    public function getAllSectionItemsInStore($storeId, $page = 1, $limit = 10)
+    public function getAllSectionItemsInStore($storeId, $page = 1, $limit = 10, $sectionId = null)
     {
         $offset = ($page - 1) * $limit;
+        
+        // Build WHERE clause based on whether section_id is provided
+        $whereClause = "fs.store_id = :store_id";
+        $params = [':store_id' => $storeId];
+        
+        if ($sectionId !== null) {
+            $whereClause .= " AND fsi.section_id = :section_id";
+            $params[':section_id'] = $sectionId;
+        }
         
         // Get total count
         $countQuery = "SELECT COUNT(*) FROM food_section_items fsi 
                       JOIN food_sections fs ON fsi.section_id = fs.id 
-                      WHERE fs.store_id = :store_id";
+                      WHERE " . $whereClause;
         $countStmt = $this->conn->prepare($countQuery);
-        $countStmt->bindParam(':store_id', $storeId);
+        foreach ($params as $key => $value) {
+            $countStmt->bindValue($key, $value);
+        }
         $countStmt->execute();
         $totalCount = $countStmt->fetchColumn();
         
@@ -1953,11 +1964,13 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         $query = "SELECT fsi.*, fs.section_name 
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
-                  WHERE fs.store_id = :store_id 
+                  WHERE " . $whereClause . " 
                   ORDER BY fsi.created_at DESC 
                   LIMIT :limit OFFSET :offset";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':store_id', $storeId);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
@@ -1991,13 +2004,24 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
     }
 
     // COUNT Section Items by Store ID
-    public function countSectionItemsByStoreId($storeId)
+    public function countSectionItemsByStoreId($storeId, $sectionId = null)
     {
+        // Build WHERE clause based on whether section_id is provided
+        $whereClause = "fs.store_id = :store_id";
+        $params = [':store_id' => $storeId];
+        
+        if ($sectionId !== null) {
+            $whereClause .= " AND fsi.section_id = :section_id";
+            $params[':section_id'] = $sectionId;
+        }
+        
         $query = "SELECT COUNT(*) FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
-                  WHERE fs.store_id = :store_id";
+                  WHERE " . $whereClause;
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':store_id', $storeId);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
         $stmt->execute();
         return $stmt->fetchColumn();
     }

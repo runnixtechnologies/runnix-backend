@@ -53,15 +53,20 @@ GET /api/get_section_item_by_id.php?id=123
 
 **Endpoint:** `GET /api/get_all_section_items_in_store.php`
 
-**Description:** Retrieves all food section items in the authenticated merchant's store with pagination support.
+**Description:** Retrieves all food section items in the authenticated merchant's store with pagination support. Can optionally filter by section ID.
 
 **Parameters:**
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Number of items per page (default: 10, max: 50)
+- `section_id` (optional): Filter items by specific section ID
 
-**Example Request:**
+**Example Requests:**
 ```
+# Get all section items in store
 GET /api/get_all_section_items_in_store.php?page=1&limit=20
+
+# Get section items from a specific section
+GET /api/get_all_section_items_in_store.php?section_id=5&page=1&limit=20
 ```
 
 **Example Response:**
@@ -176,8 +181,17 @@ const getSectionItem = async (itemId) => {
 };
 
 // Get all section items with pagination
-const getAllSectionItems = async (page = 1, limit = 10) => {
-    const response = await fetch(`/api/get_all_section_items_in_store.php?page=${page}&limit=${limit}`, {
+const getAllSectionItems = async (page = 1, limit = 10, sectionId = null) => {
+    const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+    });
+    
+    if (sectionId) {
+        params.append('section_id', sectionId.toString());
+    }
+    
+    const response = await fetch(`/api/get_all_section_items_in_store.php?${params}`, {
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -209,6 +223,10 @@ curl -X GET "https://api.runnix.africa/api/get_section_item_by_id.php?id=123" \
 
 # Get all section items with pagination
 curl -X GET "https://api.runnix.africa/api/get_all_section_items_in_store.php?page=1&limit=20" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Get section items from a specific section
+curl -X GET "https://api.runnix.africa/api/get_all_section_items_in_store.php?section_id=5&page=1&limit=20" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # Bulk delete section items
