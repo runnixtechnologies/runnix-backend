@@ -17,6 +17,8 @@ Authorization: Bearer <your_jwt_token>
 
 **Description:** Retrieves a specific food section item by its ID.
 
+**Method:** GET
+
 **Parameters:**
 - `id` (required): The ID of the section item to retrieve
 
@@ -54,6 +56,8 @@ GET /api/get_section_item_by_id.php?id=123
 **Endpoint:** `GET /api/get_all_section_items_in_store.php`
 
 **Description:** Retrieves all food section items in the authenticated merchant's store with pagination support. Can optionally filter by section ID.
+
+**Method:** GET
 
 **Parameters:**
 - `page` (optional): Page number (default: 1)
