@@ -139,132 +139,184 @@ class FoodItemController
         $data['sections'] = json_decode($data['sections'], true);
     }
 
-    // Validate sides data - must have required structure
+    // Validate and normalize sides data if provided
     if (isset($data['sides'])) {
         if (!is_array($data['sides'])) {
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Sides must be an array'];
         }
         
-        // Check if it's the required format (object with required, max_quantity, items)
-        if (!isset($data['sides']['required']) || !isset($data['sides']['max_quantity']) || !isset($data['sides']['items'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sides must include: required (boolean), max_quantity (number), and items (array of side IDs)'];
-        }
-        
-        // Validate required field
-        if (!is_bool($data['sides']['required'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sides required must be a boolean (true/false)'];
-        }
-        
-        // Validate max_quantity field
-        if (!is_numeric($data['sides']['max_quantity']) || $data['sides']['max_quantity'] < 0) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sides max_quantity must be a non-negative number'];
-        }
-        
-        // Validate items array
-        if (!is_array($data['sides']['items'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sides items must be an array of side IDs'];
-        }
-        
-        foreach ($data['sides']['items'] as $sideId) {
-            if (!is_numeric($sideId)) {
+        // Check if it's the structured format (object with required, max_quantity, items)
+        if (isset($data['sides']['required']) || isset($data['sides']['max_quantity']) || isset($data['sides']['items'])) {
+            // Structured format - validate required fields
+            if (!isset($data['sides']['required']) || !isset($data['sides']['max_quantity']) || !isset($data['sides']['items'])) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => 'Each side ID must be a valid number'];
+                return ['status' => 'error', 'message' => 'Sides structured format must include: required (boolean), max_quantity (number), and items (array of side IDs)'];
+            }
+            
+            // Validate required field
+            if (!is_bool($data['sides']['required'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sides required must be a boolean (true/false)'];
+            }
+            
+            // Validate max_quantity field
+            if (!is_numeric($data['sides']['max_quantity']) || $data['sides']['max_quantity'] < 0) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sides max_quantity must be a non-negative number'];
+            }
+            
+            // Validate items array
+            if (!is_array($data['sides']['items'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sides items must be an array of side IDs'];
+            }
+            
+            foreach ($data['sides']['items'] as $sideId) {
+                if (!is_numeric($sideId)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each side ID must be a valid number'];
+                }
+            }
+        } else {
+            // Simple format - array of side IDs
+            foreach ($data['sides'] as $sideId) {
+                if (!is_numeric($sideId)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each side ID must be a valid number'];
+                }
             }
         }
     }
 
-    // Validate packs data - must have required structure
+    // Validate and normalize packs data if provided
     if (isset($data['packs'])) {
         if (!is_array($data['packs'])) {
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Packs must be an array'];
         }
         
-        // Check if it's the required format (object with required, max_quantity, items)
-        if (!isset($data['packs']['required']) || !isset($data['packs']['max_quantity']) || !isset($data['packs']['items'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Packs must include: required (boolean), max_quantity (number), and items (array of pack IDs)'];
-        }
-        
-        // Validate required field
-        if (!is_bool($data['packs']['required'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Packs required must be a boolean (true/false)'];
-        }
-        
-        // Validate max_quantity field
-        if (!is_numeric($data['packs']['max_quantity']) || $data['packs']['max_quantity'] < 0) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Packs max_quantity must be a non-negative number'];
-        }
-        
-        // Validate items array
-        if (!is_array($data['packs']['items'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Packs items must be an array of pack IDs'];
-        }
-        
-        foreach ($data['packs']['items'] as $packId) {
-            if (!is_numeric($packId)) {
+        // Check if it's the structured format (object with required, max_quantity, items)
+        if (isset($data['packs']['required']) || isset($data['packs']['max_quantity']) || isset($data['packs']['items'])) {
+            // Structured format - validate required fields
+            if (!isset($data['packs']['required']) || !isset($data['packs']['max_quantity']) || !isset($data['packs']['items'])) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => 'Each pack ID must be a valid number'];
+                return ['status' => 'error', 'message' => 'Packs structured format must include: required (boolean), max_quantity (number), and items (array of pack IDs)'];
+            }
+            
+            // Validate required field
+            if (!is_bool($data['packs']['required'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Packs required must be a boolean (true/false)'];
+            }
+            
+            // Validate max_quantity field
+            if (!is_numeric($data['packs']['max_quantity']) || $data['packs']['max_quantity'] < 0) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Packs max_quantity must be a non-negative number'];
+            }
+            
+            // Validate items array
+            if (!is_array($data['packs']['items'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Packs items must be an array of pack IDs'];
+            }
+            
+            foreach ($data['packs']['items'] as $packId) {
+                if (!is_numeric($packId)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each pack ID must be a valid number'];
+                }
+            }
+        } else {
+            // Simple format - array of pack IDs
+            foreach ($data['packs'] as $packId) {
+                if (!is_numeric($packId)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each pack ID must be a valid number'];
+                }
             }
         }
     }
 
-    // Validate sections data - must have required structure
+    // Validate and normalize sections data if provided
     if (isset($data['sections'])) {
         if (!is_array($data['sections'])) {
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Sections must be an array'];
         }
         
-        // Check if it's the required format (object with required, max_quantity, items, item_ids)
-        if (!isset($data['sections']['required']) || !isset($data['sections']['max_quantity']) || !isset($data['sections']['items']) || !isset($data['sections']['item_ids'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sections must include: required (boolean), max_quantity (number), items (array of section IDs), and item_ids (array of item IDs)'];
-        }
-        
-        // Validate required field
-        if (!is_bool($data['sections']['required'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sections required must be a boolean (true/false)'];
-        }
-        
-        // Validate max_quantity field
-        if (!is_numeric($data['sections']['max_quantity']) || $data['sections']['max_quantity'] < 0) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sections max_quantity must be a non-negative number'];
-        }
-        
-        // Validate items array (section IDs)
-        if (!is_array($data['sections']['items'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sections items must be an array of section IDs'];
-        }
-        
-        foreach ($data['sections']['items'] as $sectionId) {
-            if (!is_numeric($sectionId)) {
+        // Check if it's the structured format (object with required, max_quantity, items, item_ids)
+        if (isset($data['sections']['required']) || isset($data['sections']['max_quantity']) || isset($data['sections']['items']) || isset($data['sections']['item_ids'])) {
+            // Structured format - validate required fields
+            if (!isset($data['sections']['required']) || !isset($data['sections']['max_quantity']) || !isset($data['sections']['items']) || !isset($data['sections']['item_ids'])) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => 'Each section ID must be a valid number'];
+                return ['status' => 'error', 'message' => 'Sections structured format must include: required (boolean), max_quantity (number), items (array of section IDs), and item_ids (array of item IDs)'];
             }
-        }
-        
-        // Validate item_ids array (item IDs)
-        if (!is_array($data['sections']['item_ids'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Sections item_ids must be an array of item IDs'];
-        }
-        
-        foreach ($data['sections']['item_ids'] as $itemId) {
-            if (!is_numeric($itemId)) {
+            
+            // Validate required field
+            if (!is_bool($data['sections']['required'])) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => 'Each item ID must be a valid number'];
+                return ['status' => 'error', 'message' => 'Sections required must be a boolean (true/false)'];
+            }
+            
+            // Validate max_quantity field
+            if (!is_numeric($data['sections']['max_quantity']) || $data['sections']['max_quantity'] < 0) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sections max_quantity must be a non-negative number'];
+            }
+            
+            // Validate items array (section IDs)
+            if (!is_array($data['sections']['items'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sections items must be an array of section IDs'];
+            }
+            
+            foreach ($data['sections']['items'] as $sectionId) {
+                if (!is_numeric($sectionId)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section ID must be a valid number'];
+                }
+            }
+            
+            // Validate item_ids array (item IDs)
+            if (!is_array($data['sections']['item_ids'])) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Sections item_ids must be an array of item IDs'];
+            }
+            
+            foreach ($data['sections']['item_ids'] as $itemId) {
+                if (!is_numeric($itemId)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each item ID must be a valid number'];
+                }
+            }
+        } else {
+            // Simple format - array of objects with id and selected_items
+            foreach ($data['sections'] as $section) {
+                if (!is_array($section)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must be an object'];
+                }
+                
+                if (!isset($section['id']) || !is_numeric($section['id'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section must have a valid id'];
+                }
+                
+                if (isset($section['selected_items'])) {
+                    if (!is_array($section['selected_items'])) {
+                        http_response_code(400);
+                        return ['status' => 'error', 'message' => 'selected_items must be an array'];
+                    }
+                    
+                    foreach ($section['selected_items'] as $itemId) {
+                        if (!is_numeric($itemId)) {
+                            http_response_code(400);
+                            return ['status' => 'error', 'message' => 'Each selected item ID must be a valid number'];
+                        }
+                    }
+                }
             }
         }
     }

@@ -374,7 +374,7 @@ const newItem = await createFoodItemWithPhoto({
 - **packs**: Optional package configurations with max quantity limits
 - **sections**: Optional section configurations with selected items
 
-## 📋 **Complete Sample Request Body (Form-Data)**
+## 📋 **Your Preferred Request Body Format (Form-Data)**
 
 ### **Method:** POST
 ### **URL:** `https://api.runnix.africa/api/create_food_item.php`
@@ -393,9 +393,9 @@ Content-Type: multipart/form-data
 | `category_id` | `1` | Category ID |
 | `short_description` | `Ultimate combo with customizations and premium sides` | Description |
 | `photo` | `[file upload]` | Image file (JPG/PNG, max 3MB) |
-| `sides` | `{"required":true,"max_quantity":3,"items":[15,17,18]}` | Sides configuration |
-| `packs` | `{"required":false,"max_quantity":2,"items":[15,16]}` | Packs configuration |
-| `sections` | `{"required":true,"max_quantity":5,"items":[9],"item_ids":[16,17]}` | Sections configuration |
+| `sides` | `[15,17,18]` | Array of side IDs |
+| `packs` | `[15,16]` | Array of pack IDs |
+| `sections` | `[{"id":9,"selected_items":[16,17]}]` | Array of section objects |
 
 ## 🔄 **Alternative Formats (All Valid):**
 
@@ -407,7 +407,7 @@ Content-Type: multipart/form-data
 | `category_id` | `1` |
 | `photo` | `[file upload]` |
 
-### **Option 2: With Sides Only**
+### **Option 2: With Sides Only (Simple Format)**
 | Key | Value |
 |-----|-------|
 | `name` | `Ultimate Combo Deluxe` |
@@ -415,36 +415,53 @@ Content-Type: multipart/form-data
 | `category_id` | `1` |
 | `short_description` | `Ultimate combo with customizations` |
 | `photo` | `[file upload]` |
+| `sides` | `[15,17,18]` |
+
+### **Option 3: With Packs Only (Simple Format)**
+| Key | Value |
+|-----|-------|
+| `name` | `Ultimate Combo Deluxe` |
+| `price` | `25.99` |
+| `category_id` | `1` |
+| `short_description` | `Ultimate combo with customizations` |
+| `photo` | `[file upload]` |
+| `packs` | `[15,16]` |
+
+### **Option 4: With Sections Only (Simple Format)**
+| Key | Value |
+|-----|-------|
+| `name` | `Ultimate Combo Deluxe` |
+| `price` | `25.99` |
+| `category_id` | `1` |
+| `short_description` | `Ultimate combo with customizations` |
+| `photo` | `[file upload]` |
+| `sections` | `[{"id":9,"selected_items":[16,17]}]` |
+
+### **Option 5: Complete Configuration (Simple Format)**
+| Key | Value |
+|-----|-------|
+| `name` | `Ultimate Combo Deluxe` |
+| `price` | `25.99` |
+| `category_id` | `1` |
+| `short_description` | `Ultimate combo with customizations` |
+| `photo` | `[file upload]` |
+| `sides` | `[15,17,18]` |
+| `packs` | `[15,16]` |
+| `sections` | `[{"id":9,"selected_items":[16,17]}]` |
+
+## 📝 **Advanced Structured Format (Also Supported):**
+
+### **Sides (Structured Format):**
+| Key | Value |
+|-----|-------|
 | `sides` | `{"required":true,"max_quantity":3,"items":[15,17,18]}` |
 
-### **Option 3: With Packs Only**
+### **Packs (Structured Format):**
 | Key | Value |
 |-----|-------|
-| `name` | `Ultimate Combo Deluxe` |
-| `price` | `25.99` |
-| `category_id` | `1` |
-| `short_description` | `Ultimate combo with customizations` |
-| `photo` | `[file upload]` |
 | `packs` | `{"required":false,"max_quantity":2,"items":[15,16]}` |
 
-### **Option 4: With Sections Only**
+### **Sections (Structured Format):**
 | Key | Value |
 |-----|-------|
-| `name` | `Ultimate Combo Deluxe` |
-| `price` | `25.99` |
-| `category_id` | `1` |
-| `short_description` | `Ultimate combo with customizations` |
-| `photo` | `[file upload]` |
-| `sections` | `{"required":true,"max_quantity":5,"items":[9],"item_ids":[16,17]}` |
-
-### **Option 5: Complete Configuration**
-| Key | Value |
-|-----|-------|
-| `name` | `Ultimate Combo Deluxe` |
-| `price` | `25.99` |
-| `category_id` | `1` |
-| `short_description` | `Ultimate combo with customizations` |
-| `photo` | `[file upload]` |
-| `sides` | `{"required":true,"max_quantity":3,"items":[15,17,18]}` |
-| `packs` | `{"required":false,"max_quantity":2,"items":[15,16]}` |
 | `sections` | `{"required":true,"max_quantity":5,"items":[9],"item_ids":[16,17]}` |
