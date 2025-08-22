@@ -19,10 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// Only allow POST requests
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+// Only allow DELETE requests
+if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
     http_response_code(405);
-    echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
+    echo json_encode(['status' => 'error', 'message' => 'Method not allowed. Use DELETE method']);
     exit;
 }
 
