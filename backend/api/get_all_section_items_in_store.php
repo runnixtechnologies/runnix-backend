@@ -36,6 +36,16 @@ $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 // Get section_id parameter (optional)
 $sectionId = isset($_GET['section_id']) ? (int)$_GET['section_id'] : null;
 
-$controller = new FoodItemController();
-$response = $controller->getAllSectionItemsInStore($user, $page, $limit, $sectionId);
-echo json_encode($response);
+try {
+    $controller = new FoodItemController();
+    $response = $controller->getAllSectionItemsInStore($user, $page, $limit, $sectionId);
+    echo json_encode($response);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Error: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
+}
