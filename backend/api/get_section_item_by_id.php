@@ -13,7 +13,16 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$data = $_GET;
+// Handle both GET and POST methods
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $data = $_GET;
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = json_decode(file_get_contents("php://input"), true) ?? $_POST;
+} else {
+    http_response_code(405);
+    echo json_encode(['status' => 'error', 'message' => 'Method not allowed. Use GET or POST method']);
+    exit;
+}
 
 if (!isset($data['id'])) {
     http_response_code(400);
