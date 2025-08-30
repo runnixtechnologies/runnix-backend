@@ -30,6 +30,9 @@ if (stripos($contentType, 'application/json') !== false) {
     if (isset($data['sections']) && is_string($data['sections'])) {
         $data['sections'] = json_decode($data['sections'], true);
     }
+    
+    // Convert boolean strings to actual booleans for mobile app compatibility
+    $data = $this->convertBooleanStrings($data);
 } else {
     $data = $_POST;
 }
@@ -44,3 +47,32 @@ $user = authenticateRequest();
 $controller = new FoodItemController();
 $response = $controller->create($data,$user);
 echo json_encode($response);
+
+/**
+ * Convert boolean strings to actual booleans for mobile app compatibility
+ */
+function convertBooleanStrings($data) {
+    if (is_array($data)) {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = convertBooleanStrings($value);
+            } elseif (is_string($value)) {
+                // Convert common boolean string representations
+                $lowerValue = strtolower(trim($value));
+                if ($lowerValue === 'true' || $lowerValue === '1') {
+                    $data[$key] = true;
+                } elseif ($lowerValue === 'false' || $lowerValue === '0') {
+                    $data[$key] = false;
+                }
+            } elseif (is_numeric($value)) {
+                // Convert numeric boolean representations
+                if ($value === 1) {
+                    $data[$key] = true;
+                } elseif ($value === 0) {
+                    $data[$key] = false;
+                }
+            }
+        }
+    }
+    return $data;
+}
