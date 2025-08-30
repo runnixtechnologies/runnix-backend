@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operating Hours API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .response { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; }
+        .error { border-color: #dc3545; background: #f8d7da; }
+        .success { border-color: #28a745; background: #d4edda; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Operating Hours API Test</h1>
+        
+        <div class="form-group">
+            <label for="jwtToken">JWT Token:</label>
+            <input type="text" id="jwtToken" placeholder="Enter your JWT token here" style="font-family: monospace;">
+        </div>
+        
+        <div class="form-group">
+            <button onclick="testAuth()">Test Authentication</button>
+            <button onclick="getOperatingHours()">Get Operating Hours</button>
+            <button onclick="updateOperatingHours()">Update Operating Hours</button>
+        </div>
+        
+        <div id="response" class="response" style="display: none;">
+            <h3>Response:</h3>
+            <pre id="responseContent"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/backend/api';
+        
+        function showResponse(data, isError = false) {
+            const responseDiv = document.getElementById('response');
+            const contentDiv = document.getElementById('responseContent');
+            
+            responseDiv.className = 'response ' + (isError ? 'error' : 'success');
+            contentDiv.textContent = JSON.stringify(data, null, 2);
+            responseDiv.style.display = 'block';
+        }
+        
+        function getHeaders() {
+            const token = document.getElementById('jwtToken').value.trim();
+            if (!token) {
+                alert('Please enter a JWT token first!');
+                return null;
+            }
+            
+            return {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            };
+        }
+        
+        async function testAuth() {
+            const headers = getHeaders();
+            if (!headers) return;
+            
+            try {
+                const response = await fetch(API_BASE + '/test-auth.php', {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                const data = await response.json();
+                showResponse(data, !response.ok);
+            } catch (error) {
+                showResponse({ error: error.message }, true);
+            }
+        }
+        
+        async function getOperatingHours() {
+            const headers = getHeaders();
+            if (!headers) return;
+            
+            try {
+                const response = await fetch(API_BASE + '/get-operating-hours.php', {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                const data = await response.json();
+                showResponse(data, !response.ok);
+            } catch (error) {
+                showResponse({ error: error.message }, true);
+            }
+        }
+        
+        async function updateOperatingHours() {
+            const headers = getHeaders();
+            if (!headers) return;
+            
+            const testData = {
+                "business_24_7": false,
+                "operating_hours": {
+                    "monday": {
+                        "enabled": true,
+                        "is_24hrs": false,
+                        "is_closed": false,
+                        "open_time": "09:00",
+                        "close_time": "17:00"
+                    },
+                    "tuesday": {
+                        "enabled": true,
+                        "is_24hrs": false,
+                        "is_closed": false,
+                        "open_time": "09:00",
+                        "close_time": "17:00"
+                    },
+                    "wednesday": {
+                        "enabled": false,
+                        "is_24hrs": false,
+                        "is_closed": true,
+                        "open_time": null,
+                        "close_time": null
+                    }
+                }
+            };
+            
+            try {
+                const response = await fetch(API_BASE + '/update-operating-hours.php', {
+                    method: 'PUT',
+                    headers: headers,
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                showResponse(data, !response.ok);
+            } catch (error) {
+                showResponse({ error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -14,14 +14,24 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$user = authenticateRequest();
-
-// Check if user is a merchant
-if ($user['role'] !== 'merchant') {
-    http_response_code(403);
+try {
+    $user = authenticateRequest();
+    
+    // Check if user is a merchant
+    if ($user['role'] !== 'merchant') {
+        http_response_code(403);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Only merchants can access operating hours.'
+        ]);
+        exit;
+    }
+} catch (Exception $e) {
+    http_response_code(401);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Only merchants can access operating hours.'
+        'message' => 'Authentication failed: ' . $e->getMessage(),
+        'debug' => 'Make sure to include Authorization header: Bearer YOUR_JWT_TOKEN'
     ]);
     exit;
 }

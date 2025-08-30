@@ -6,10 +6,24 @@ use Config\JwtHandler;
 
 function authenticateRequest() {
     $headers = getallheaders();
+    
+    // Handle case where getallheaders() might not work
+    if (!$headers) {
+        $headers = [];
+        foreach ($_SERVER as $name => $value) {
+            if (substr($name, 0, 5) == 'HTTP_') {
+                $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+            }
+        }
+    }
 
     if (!isset($headers['Authorization'])) {
         http_response_code(401);
-        echo json_encode(["status" => "error", "message" => "Authorization header missing"]);
+        echo json_encode([
+            "status" => "error", 
+            "message" => "Authorization header missing",
+            "debug" => "Include header: Authorization: Bearer YOUR_JWT_TOKEN"
+        ]);
         exit;
     }
 
