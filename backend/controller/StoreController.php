@@ -165,6 +165,14 @@ public function getActiveCategoriesByStoreType($user)
         // Extract store_id from authenticated user
         $storeId = $user['store_id'] ?? null;
         
+        // If store_id is not directly available, try to get it from the user's store
+        if (!$storeId) {
+            $store = $this->store->getStoreByUserId($user['user_id']);
+            if ($store) {
+                $storeId = $store['id'];
+            }
+        }
+        
         if (!$storeId) {
             http_response_code(403);
             return ['status' => 'error', 'message' => 'Store ID not found for user'];
@@ -204,6 +212,14 @@ public function getActiveCategoriesByStoreType($user)
     {
         // Extract store_id from authenticated user
         $storeId = $user['store_id'] ?? null;
+        
+        // If store_id is not directly available, try to get it from the user's store
+        if (!$storeId) {
+            $store = $this->store->getStoreByUserId($user['user_id']);
+            if ($store) {
+                $storeId = $store['id'];
+            }
+        }
         
         if (!$storeId) {
             http_response_code(403);
