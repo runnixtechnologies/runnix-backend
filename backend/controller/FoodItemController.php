@@ -359,15 +359,46 @@ class FoodItemController
         }
     }
 
+    // Check for duplicate food item name in the store before proceeding
+    $existingItemCheck = $this->conn->prepare("SELECT COUNT(*) FROM food_items WHERE store_id = :store_id AND name = :name AND deleted = 0");
+    $existingItemCheck->execute([
+        'store_id' => $data['store_id'],
+        'name' => $data['name']
+    ]);
+    
+    if ($existingItemCheck->fetchColumn() > 0) {
+        http_response_code(409); // Conflict
+        return ['status' => 'error', 'message' => 'Food item with this name already exists in this store. Please choose a different name.'];
+    }
 
-
-    $result = $this->foodItem->createWithOptions($data);
-    if ($result && isset($result['status']) && $result['status'] === 'success') {
-        http_response_code(201); // Created
-        return $result;
-    } else {
-        http_response_code(500); // Internal Server Error
-        return ['status' => 'error', 'message' => 'Failed to create food item'];
+    try {
+        $result = $this->foodItem->createWithOptions($data);
+        if ($result && isset($result['status']) && $result['status'] === 'success') {
+            http_response_code(201); // Created
+            return $result;
+        } else {
+            http_response_code(500); // Internal Server Error
+            return ['status' => 'error', 'message' => 'Failed to create food item'];
+        }
+    } catch (\Exception $e) {
+        $errorMessage = $e->getMessage();
+        
+        // Handle specific error cases
+        if (strpos($errorMessage, 'already exists') !== false) {
+            http_response_code(409); // Conflict
+            return ['status' => 'error', 'message' => $errorMessage];
+        } elseif (strpos($errorMessage, 'Invalid store_id') !== false) {
+            http_response_code(400); // Bad Request
+            return ['status' => 'error', 'message' => $errorMessage];
+        } elseif (strpos($errorMessage, 'Category') !== false) {
+            http_response_code(400); // Bad Request
+            return ['status' => 'error', 'message' => $errorMessage];
+        } else {
+            // Log the error for debugging
+            error_log("createWithOptions error: " . $errorMessage);
+            http_response_code(500); // Internal Server Error
+            return ['status' => 'error', 'message' => 'Failed to create food item: ' . $errorMessage];
+        }
     }
 }
 

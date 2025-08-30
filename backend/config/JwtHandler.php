@@ -22,7 +22,7 @@ class JwtHandler {
 
         $this->secret = $_ENV['JWT_SECRET'] ?? 'fallback_secret_key';
         $this->issuedAt = time();
-        $this->expire = $this->issuedAt + 3600; // 1 hour
+        $this->expire = $this->issuedAt + 900; // 15 minutes (900 seconds)
 
         // Use Config\Database to get DB connection
         $db = new Database();
@@ -53,9 +53,19 @@ class JwtHandler {
 
     // Save token in blacklist
     public function blacklistToken($token) {
-        $sql = "INSERT INTO blacklisted_tokens (token) VALUES (:token)";
+        // Decode token to get expiry time
+        try {
+            $decoded = JWT::decode($token, new Key($this->secret, 'HS256'));
+            $expiresAt = date('Y-m-d H:i:s', $decoded->exp);
+        } catch (\Exception $e) {
+            // If we can't decode, set expiry to current time + 15 minutes
+            $expiresAt = date('Y-m-d H:i:s', time() + 900);
+        }
+        
+        $sql = "INSERT INTO blacklisted_tokens (token, expires_at) VALUES (:token, :expires_at)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam(':token', $token);
+        $stmt->bindParam(':expires_at', $expiresAt);
         return $stmt->execute();
     }
 

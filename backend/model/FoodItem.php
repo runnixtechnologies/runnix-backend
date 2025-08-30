@@ -175,7 +175,8 @@ public function createWithOptions($data)
             $this->conn->rollBack();
         }
         error_log("createWithOptions error: " . $e->getMessage());
-        return ['status' => 'error', 'message' => $e->getMessage()];
+        // Re-throw the exception so the controller can handle it properly
+        throw $e;
     }
 }
 

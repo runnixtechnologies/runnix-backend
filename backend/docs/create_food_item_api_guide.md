@@ -224,6 +224,14 @@ sections: [{"section_id":1,"required":true,"max_quantity":5,"item_ids":[16,17]},
 }
 ```
 
+#### 409 Conflict
+```json
+{
+    "status": "error",
+    "message": "Food item with this name already exists in this store. Please choose a different name."
+}
+```
+
 #### 500 Internal Server Error
 ```json
 {
