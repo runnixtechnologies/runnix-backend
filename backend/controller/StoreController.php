@@ -170,30 +170,33 @@ public function getActiveCategoriesByStoreType($user)
             return ['status' => 'error', 'message' => 'Store ID not found for user'];
         }
         
-        $operatingHours = $this->store->getOperatingHours($storeId);
+        $operatingHoursData = $this->store->getOperatingHours($storeId);
         
-        if ($operatingHours === false) {
+        if ($operatingHoursData === false) {
             http_response_code(500);
             return ['status' => 'error', 'message' => 'Failed to retrieve operating hours'];
         }
         
         // If no operating hours set, return default structure
-        if (empty($operatingHours)) {
-            $operatingHours = [
-                'monday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
-                'tuesday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
-                'wednesday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
-                'thursday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
-                'friday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
-                'saturday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null],
-                'sunday' => ['is_closed' => true, 'open_time' => null, 'close_time' => null]
+        if (empty($operatingHoursData['operating_hours'])) {
+            $operatingHoursData = [
+                'business_24_7' => false,
+                'operating_hours' => [
+                    'monday' => ['enabled' => false, 'is_24hrs' => false, 'is_closed' => true, 'open_time' => null, 'close_time' => null],
+                    'tuesday' => ['enabled' => false, 'is_24hrs' => false, 'is_closed' => true, 'open_time' => null, 'close_time' => null],
+                    'wednesday' => ['enabled' => false, 'is_24hrs' => false, 'is_closed' => true, 'open_time' => null, 'close_time' => null],
+                    'thursday' => ['enabled' => false, 'is_24hrs' => false, 'is_closed' => true, 'open_time' => null, 'close_time' => null],
+                    'friday' => ['enabled' => false, 'is_24hrs' => false, 'is_closed' => true, 'open_time' => null, 'close_time' => null],
+                    'saturday' => ['enabled' => false, 'is_24hrs' => false, 'is_closed' => true, 'open_time' => null, 'close_time' => null],
+                    'sunday' => ['enabled' => false, 'is_24hrs' => false, 'is_closed' => true, 'open_time' => null, 'close_time' => null]
+                ]
             ];
         }
         
         http_response_code(200);
         return [
             'status' => 'success',
-            'data' => $operatingHours
+            'data' => $operatingHoursData
         ];
     }
     
@@ -207,6 +210,9 @@ public function getActiveCategoriesByStoreType($user)
             return ['status' => 'error', 'message' => 'Store ID not found for user'];
         }
         
+        // Get business 24/7 setting
+        $business247 = $data['business_24_7'] ?? false;
+        
         // Validate operating hours data
         if (!isset($data['operating_hours']) || !is_array($data['operating_hours'])) {
             http_response_code(400);
@@ -216,43 +222,69 @@ public function getActiveCategoriesByStoreType($user)
         $operatingHours = $data['operating_hours'];
         $validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
         
-        // Validate each day
-        foreach ($validDays as $day) {
-            if (!isset($operatingHours[$day])) {
+        // Validate each day that is provided
+        foreach ($operatingHours as $day => $dayData) {
+            if (!in_array($day, $validDays)) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => "Operating hours for $day is required"];
+                return ['status' => 'error', 'message' => "Invalid day: $day"];
             }
             
-            $dayData = $operatingHours[$day];
-            
-            if (!isset($dayData['is_closed']) || !is_bool($dayData['is_closed'])) {
+            // Validate enabled field
+            if (!isset($dayData['enabled'])) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => "is_closed field is required for $day and must be boolean"];
+                return ['status' => 'error', 'message' => "enabled field is required for $day"];
             }
             
-            if (!$dayData['is_closed']) {
-                // If not closed, validate time fields
-                if (!isset($dayData['open_time']) || !isset($dayData['close_time'])) {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => "Open and close times are required for $day when not closed"];
+            // Convert string booleans to actual booleans
+            if (is_string($dayData['enabled'])) {
+                $dayData['enabled'] = strtolower(trim($dayData['enabled'])) === 'true' || $dayData['enabled'] === '1';
+            }
+            
+            // If day is enabled, validate additional fields
+            if ($dayData['enabled']) {
+                // Check if 24hrs mode is enabled
+                $is24hrs = $dayData['is_24hrs'] ?? false;
+                if (is_string($is24hrs)) {
+                    $is24hrs = strtolower(trim($is24hrs)) === 'true' || $is24hrs === '1';
                 }
                 
-                // Validate time format (HH:MM)
-                if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['open_time']) ||
-                    !preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['close_time'])) {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => "Invalid time format for $day. Use HH:MM format"];
-                }
-                
-                // Validate that close time is after open time
-                if (strtotime($dayData['close_time']) <= strtotime($dayData['open_time'])) {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => "Close time must be after open time for $day"];
+                if (!$is24hrs) {
+                    // Validate time fields for non-24hr days
+                    if (!isset($dayData['open_time']) || !isset($dayData['close_time'])) {
+                        http_response_code(400);
+                        return ['status' => 'error', 'message' => "Open and close times are required for $day when not in 24hr mode"];
+                    }
+                    
+                    // Validate time format (HH:MM)
+                    if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['open_time']) ||
+                        !preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['close_time'])) {
+                        http_response_code(400);
+                        return ['status' => 'error', 'message' => "Invalid time format for $day. Use HH:MM format"];
+                    }
+                    
+                    // Validate that close time is after open time
+                    if (strtotime($dayData['close_time']) <= strtotime($dayData['open_time'])) {
+                        http_response_code(400);
+                        return ['status' => 'error', 'message' => "Close time must be after open time for $day"];
+                    }
                 }
             }
         }
         
-        $result = $this->store->updateOperatingHours($storeId, $operatingHours);
+        // Ensure all days are present in the data (fill missing days as disabled)
+        foreach ($validDays as $day) {
+            if (!isset($operatingHours[$day])) {
+                $operatingHours[$day] = [
+                    'enabled' => false,
+                    'is_24hrs' => false,
+                    'is_closed' => true,
+                    'open_time' => null,
+                    'close_time' => null
+                ];
+            }
+        }
+        
+        $result = $this->store->updateOperatingHours($storeId, $operatingHours, $business247);
         
         if ($result) {
             http_response_code(200);

@@ -200,7 +200,13 @@ class Store
     public function getOperatingHours($storeId)
     {
         try {
-            $sql = "SELECT day_of_week, open_time, close_time, is_closed 
+            // Get business 24/7 setting from stores table
+            $business247Sql = "SELECT business_24_7 FROM stores WHERE id = :store_id";
+            $business247Stmt = $this->conn->prepare($business247Sql);
+            $business247Stmt->execute(['store_id' => $storeId]);
+            $business247 = $business247Stmt->fetchColumn();
+            
+            $sql = "SELECT day_of_week, open_time, close_time, is_closed, enabled, is_24hrs 
                     FROM store_operating_hours 
                     WHERE store_id = :store_id 
                     ORDER BY FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')";
@@ -213,23 +219,36 @@ class Store
             $operatingHours = [];
             foreach ($results as $row) {
                 $operatingHours[$row['day_of_week']] = [
+                    'enabled' => (bool)$row['enabled'],
+                    'is_24hrs' => (bool)$row['is_24hrs'],
                     'is_closed' => (bool)$row['is_closed'],
                     'open_time' => $row['open_time'],
                     'close_time' => $row['close_time']
                 ];
             }
             
-            return $operatingHours;
+            return [
+                'business_24_7' => (bool)$business247,
+                'operating_hours' => $operatingHours
+            ];
         } catch (PDOException $e) {
             error_log("getOperatingHours error: " . $e->getMessage());
             return false;
         }
     }
     
-    public function updateOperatingHours($storeId, $operatingHours)
+    public function updateOperatingHours($storeId, $operatingHours, $business247 = false)
     {
         try {
             $this->conn->beginTransaction();
+            
+            // Update business 24/7 setting in stores table
+            $updateBusiness247Sql = "UPDATE stores SET business_24_7 = :business_24_7 WHERE id = :store_id";
+            $updateBusiness247Stmt = $this->conn->prepare($updateBusiness247Sql);
+            $updateBusiness247Stmt->execute([
+                'business_24_7' => $business247,
+                'store_id' => $storeId
+            ]);
             
             // Delete existing operating hours for this store
             $deleteSql = "DELETE FROM store_operating_hours WHERE store_id = :store_id";
@@ -237,21 +256,37 @@ class Store
             $deleteStmt->execute(['store_id' => $storeId]);
             
             // Insert new operating hours
-            $insertSql = "INSERT INTO store_operating_hours (store_id, day_of_week, open_time, close_time, is_closed) 
-                         VALUES (:store_id, :day_of_week, :open_time, :close_time, :is_closed)";
+            $insertSql = "INSERT INTO store_operating_hours (store_id, day_of_week, open_time, close_time, is_closed, enabled, is_24hrs) 
+                         VALUES (:store_id, :day_of_week, :open_time, :close_time, :is_closed, :enabled, :is_24hrs)";
             $insertStmt = $this->conn->prepare($insertSql);
             
             $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
             
             foreach ($days as $day) {
-                $dayData = $operatingHours[$day] ?? ['is_closed' => true, 'open_time' => null, 'close_time' => null];
+                $dayData = $operatingHours[$day] ?? [
+                    'enabled' => false,
+                    'is_24hrs' => false,
+                    'is_closed' => true,
+                    'open_time' => null,
+                    'close_time' => null
+                ];
+                
+                // If business is 24/7, set all enabled days to 24hrs
+                if ($business247 && $dayData['enabled']) {
+                    $dayData['is_24hrs'] = true;
+                    $dayData['is_closed'] = false;
+                    $dayData['open_time'] = '00:00:00';
+                    $dayData['close_time'] = '23:59:59';
+                }
                 
                 $insertStmt->execute([
                     'store_id' => $storeId,
                     'day_of_week' => $day,
-                    'open_time' => $dayData['is_closed'] ? null : $dayData['open_time'],
-                    'close_time' => $dayData['is_closed'] ? null : $dayData['close_time'],
-                    'is_closed' => $dayData['is_closed']
+                    'open_time' => $dayData['enabled'] && !$dayData['is_closed'] ? $dayData['open_time'] : null,
+                    'close_time' => $dayData['enabled'] && !$dayData['is_closed'] ? $dayData['close_time'] : null,
+                    'is_closed' => !$dayData['enabled'] || $dayData['is_closed'],
+                    'enabled' => $dayData['enabled'],
+                    'is_24hrs' => $dayData['is_24hrs']
                 ]);
             }
             
