@@ -45,7 +45,19 @@ class JwtHandler {
             }
 
             $decoded = JWT::decode($token, new Key($this->secret, 'HS256'));
-            return (array)$decoded;
+            $payload = (array)$decoded;
+            
+            // Check for inactivity-based session expiry
+            if (isset($payload['user_id']) && isset($payload['role'])) {
+                $userActivity = new \Model\UserActivity();
+                if ($userActivity->isSessionExpired($payload['user_id'], $payload['role'])) {
+                    // Session expired due to inactivity, blacklist the token
+                    $this->blacklistToken($token);
+                    return false;
+                }
+            }
+            
+            return $payload;
         } catch (\Exception $e) {
             return false;
         }

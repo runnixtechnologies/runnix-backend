@@ -11,6 +11,8 @@ require_once '../config/JwtHandler.php';
 
 use function Middleware\authenticateRequest;
 use Config\JwtHandler;
+use Model\UserActivity;
+use Model\LogoutLog;
 
 header('Content-Type: application/json');
 
@@ -32,16 +34,60 @@ $token = $matches[1];
 $jwt = new JwtHandler();
 $blacklisted = $jwt->blacklistToken($token);
 
-if ($blacklisted) {
+// Deactivate user session
+$userActivity = new UserActivity();
+$sessionDeactivated = $userActivity->deactivateSession($user['user_id']);
+
+// Get session statistics for logging
+$sessionStats = $userActivity->getSessionStats($user['user_id']);
+$sessionDuration = $sessionStats ? $sessionStats['session_duration_minutes'] : 0;
+
+// Log the logout event
+$logoutLogModel = new LogoutLog();
+$logoutData = [
+    'user_id' => $user['user_id'],
+    'user_role' => $user['role'],
+    'logout_type' => 'manual',
+    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+    'device_info' => json_encode([
+        'platform' => 'web',
+        'timestamp' => date('Y-m-d H:i:s')
+    ]),
+    'session_duration_minutes' => $sessionDuration,
+    'token_blacklisted' => $blacklisted,
+    'session_deactivated' => $sessionDeactivated,
+    'logout_reason' => 'User initiated logout'
+];
+
+$logoutLogged = $logoutLogModel->logLogout($logoutData);
+
+// Prepare response data
+$responseData = [
+    'status' => 'success',
+    'message' => 'Logged out successfully',
+    'data' => [
+        'user_id' => $user['user_id'],
+        'role' => $user['role'],
+        'logout_time' => date('Y-m-d H:i:s'),
+        'token_blacklisted' => $blacklisted,
+        'session_deactivated' => $sessionDeactivated,
+        'session_duration_minutes' => $sessionDuration,
+        'logout_logged' => $logoutLogged
+    ]
+];
+
+if ($blacklisted && $sessionDeactivated) {
     http_response_code(200);
-    echo json_encode([
-        'status' => 'success', 
-        'message' => 'Logged out successfully'
-    ]);
+    echo json_encode($responseData);
 } else {
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error', 
-        'message' => 'Failed to logout. Please try again.'
-    ]);
+    // Even if one operation fails, still return success but log the issue
+    $responseData['message'] = 'Logged out with some cleanup issues';
+    $responseData['data']['partial_success'] = true;
+    
+    error_log("Partial logout success - Token blacklisted: " . ($blacklisted ? 'yes' : 'no') . 
+              ", Session deactivated: " . ($sessionDeactivated ? 'yes' : 'no'));
+    
+    http_response_code(200);
+    echo json_encode($responseData);
 }

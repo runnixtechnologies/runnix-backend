@@ -90,6 +90,15 @@ class UserController
 
     $token = $jwt->encode($payload);
 
+    // Record initial user activity
+    $userActivity = new \Model\UserActivity();
+    $deviceInfo = json_encode([
+        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+        'platform' => 'web'
+    ]);
+    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+    $userActivity->recordActivity($user['id'], $user['role'], $deviceInfo, $ipAddress);
+
     http_response_code(200);
     return [
         "status"  => "success",
