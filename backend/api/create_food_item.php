@@ -50,6 +50,7 @@ echo json_encode($response);
 
 /**
  * Convert boolean strings to actual booleans for mobile app compatibility
+ * Only converts fields that are meant to be booleans, not numeric fields
  */
 function convertBooleanStrings($data) {
     if (is_array($data)) {
@@ -57,19 +58,23 @@ function convertBooleanStrings($data) {
             if (is_array($value)) {
                 $data[$key] = convertBooleanStrings($value);
             } elseif (is_string($value)) {
-                // Convert common boolean string representations
-                $lowerValue = strtolower(trim($value));
-                if ($lowerValue === 'true' || $lowerValue === '1') {
-                    $data[$key] = true;
-                } elseif ($lowerValue === 'false' || $lowerValue === '0') {
-                    $data[$key] = false;
+                // Only convert fields that are meant to be booleans
+                if (in_array($key, ['required'])) {
+                    $lowerValue = strtolower(trim($value));
+                    if ($lowerValue === 'true' || $lowerValue === '1') {
+                        $data[$key] = true;
+                    } elseif ($lowerValue === 'false' || $lowerValue === '0') {
+                        $data[$key] = false;
+                    }
                 }
             } elseif (is_numeric($value)) {
-                // Convert numeric boolean representations
-                if ($value === 1) {
-                    $data[$key] = true;
-                } elseif ($value === 0) {
-                    $data[$key] = false;
+                // Only convert numeric values for boolean fields, not for max_quantity
+                if (in_array($key, ['required'])) {
+                    if ($value === 1) {
+                        $data[$key] = true;
+                    } elseif ($value === 0) {
+                        $data[$key] = false;
+                    }
                 }
             }
         }
