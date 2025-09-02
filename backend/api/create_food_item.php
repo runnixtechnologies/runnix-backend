@@ -32,7 +32,7 @@ if (stripos($contentType, 'application/json') !== false) {
     }
     
     // Convert boolean strings to actual booleans for mobile app compatibility
-    $data = $this->convertBooleanStrings($data);
+    $data = convertBooleanStrings($data);
 } else {
     $data = $_POST;
 }

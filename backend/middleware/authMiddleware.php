@@ -5,8 +5,8 @@ namespace Middleware;
 use Config\JwtHandler;
 
 function authenticateRequest() {
-	$headers = getallheaders();
-	
+    $headers = getallheaders();
+
 	// Handle case where getallheaders() might not work
 	if (!$headers) {
 		$headers = [];
@@ -32,32 +32,32 @@ function authenticateRequest() {
 	}
 
 	if (!$token) {
-		http_response_code(401);
+        http_response_code(401);
 		echo json_encode([
 			"status" => "error",
 			"message" => "Authorization token missing",
 			"debug" => "Provide header Authorization: Bearer <token> or ?token=<token> for GET"
 		]);
-		exit;
-	}
+        exit;
+    }
 
-	$jwt = new JwtHandler();
-	$decoded = $jwt->decode($token);
+    $jwt = new JwtHandler();
+    $decoded = $jwt->decode($token);
 
-	if (!$decoded) {
-		http_response_code(401);
-		echo json_encode(["status" => "error", "message" => "Invalid or expired token"]);
-		exit;
-	}
+    if (!$decoded) {
+        http_response_code(401);
+        echo json_encode(["status" => "error", "message" => "Invalid or expired token"]);
+        exit;
+    }
 
-	// Return decoded payload (e.g., ['user_id' => ..., 'role' => ...])
-	return $decoded;
+    // Return decoded payload (e.g., ['user_id' => ..., 'role' => ...])
+    return $decoded;
 }
 
 function authorizeRoles(array $allowedRoles, $userRole) {
-	if (!in_array($userRole, $allowedRoles)) {
-		http_response_code(403);
-		echo json_encode(["status" => "error", "message" => "Access denied for your role"]);
-		exit;
-	}
+    if (!in_array($userRole, $allowedRoles)) {
+        http_response_code(403);
+        echo json_encode(["status" => "error", "message" => "Access denied for your role"]);
+        exit;
+    }
 }
