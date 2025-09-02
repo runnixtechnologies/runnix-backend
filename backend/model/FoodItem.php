@@ -631,27 +631,27 @@ public function createFoodSide($data)
 
 public function getFoodSideById($id)
 {
-	try {
-		// Get the food side data with discount information
+    try {
+        // Get the food side data with discount information
 		$sql = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
 					 d.percentage,
 					 CASE WHEN d.id IS NULL THEN fs.price ELSE ROUND(fs.price - (fs.price * d.percentage / 100), 2) END as discount_price,
-					 d.id as discount_id,
+                         d.id as discount_id,
 					 d.start_date as discount_start_date,
 					 d.end_date as discount_end_date
-				  FROM food_sides fs
-				  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
-				  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-					  AND NOW() BETWEEN d.start_date AND d.end_date
-				  WHERE fs.id = :id";
+                  FROM food_sides fs
+                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                      AND NOW() BETWEEN d.start_date AND d.end_date
+                  WHERE fs.id = :id";
 		$stmt = $this->conn->prepare($sql);
-		$stmt->execute(['id' => $id]);
-		$result = $stmt->fetch(PDO::FETCH_ASSOC);
-		
-		if (!$result) {
-			return false;
-		}
-		
+        $stmt->execute(['id' => $id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$result) {
+            return false;
+        }
+        
 		// Get total orders count for this side
 		$orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders 
 					   FROM food_item_sides fis 
@@ -663,27 +663,27 @@ public function getFoodSideById($id)
 		
 		// Add total_orders and convert numeric fields
 		$result['total_orders'] = (int)$orderCount['total_orders'];
-		$result['price'] = (float)$result['price'];
-		$result['discount_price'] = (float)$result['discount_price'];
+        $result['price'] = (float)$result['price'];
+        $result['discount_price'] = (float)$result['discount_price'];
 		$result['percentage'] = $result['percentage'] ? (float)$result['percentage'] : 0.0;
-		$result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
+        $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
 		$result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
 		$result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
-		
-		error_log("getFoodSideById model: Final result: " . json_encode($result));
-		
-		return $result;
-	} catch (PDOException $e) {
-		error_log("getFoodSideById error: " . $e->getMessage());
-		error_log("getFoodSideById error trace: " . $e->getTraceAsString());
-		return false;
-	}
+        
+        error_log("getFoodSideById model: Final result: " . json_encode($result));
+        
+        return $result;
+    } catch (PDOException $e) {
+        error_log("getFoodSideById error: " . $e->getMessage());
+        error_log("getFoodSideById error trace: " . $e->getTraceAsString());
+        return false;
+    }
 }
 
 // READ All Sides by Store
-    public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
-    {
-        try {
+public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
+{
+    try {
             $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
                          d.percentage,
                          CASE WHEN d.id IS NULL THEN fs.price ELSE ROUND(fs.price - (fs.price * d.percentage / 100), 2) END as discount_price,
@@ -701,30 +701,30 @@ public function getFoodSideById($id)
                   GROUP BY fs.id
                   ORDER BY fs.created_at DESC 
                   LIMIT :limit OFFSET :offset";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
-            $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Convert numeric fields to appropriate types for each result
-            foreach ($results as &$result) {
-                $result['total_orders'] = (int)$result['total_orders'];
-                $result['price'] = (float)$result['price'];
-                $result['discount_price'] = (float)$result['discount_price'];
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':store_id', $store_id, PDO::PARAM_INT);
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Convert numeric fields to appropriate types for each result
+        foreach ($results as &$result) {
+            $result['total_orders'] = (int)$result['total_orders'];
+            $result['price'] = (float)$result['price'];
+            $result['discount_price'] = (float)$result['discount_price'];
                 $result['percentage'] = $result['percentage'] ? (float)$result['percentage'] : 0.0;
-                $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
-                $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
-                $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
-            }
-            
-            return $results;
-        } catch (PDOException $e) {
-            error_log("getAllFoodSidesByStoreId error: " . $e->getMessage());
-            return [];
+            $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
+            $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
+            $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
         }
+        
+        return $results;
+    } catch (PDOException $e) {
+        error_log("getAllFoodSidesByStoreId error: " . $e->getMessage());
+        return [];
     }
+}
 
 // Get total count of food sides by store ID
 public function getFoodSidesCountByStoreId($store_id)
@@ -1066,30 +1066,30 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
                   WHERE fs.store_id = :store_id 
                   GROUP BY fs.id
                   ORDER BY fs.created_at DESC";
-        
-        // Add pagination if limit is provided
-        if ($limit !== null) {
-            $query .= " LIMIT :limit";
-            if ($offset !== null) {
-                $query .= " OFFSET :offset";
-            }
+    
+    // Add pagination if limit is provided
+    if ($limit !== null) {
+        $query .= " LIMIT :limit";
+        if ($offset !== null) {
+            $query .= " OFFSET :offset";
         }
-        
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
-        
-        if ($limit !== null) {
-            $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-            if ($offset !== null) {
-                $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-            }
+    }
+    
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
+    
+    if ($limit !== null) {
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        if ($offset !== null) {
+            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
         }
-        
-        $stmt->execute();
-        $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    $stmt->execute();
+    $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Convert numeric fields to appropriate types for each result
-        foreach ($sections as &$section) {
+    foreach ($sections as &$section) {
             $section['total_orders'] = (int)$section['total_orders'];
             $section['price'] = (float)$section['price'];
             
@@ -1108,9 +1108,9 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
                 unset($section['discount_start_date']);
                 unset($section['discount_end_date']);
             }
-        }
+    }
 
-        return $sections;
+    return $sections;
     } catch (PDOException $e) {
         error_log("getAllFoodSectionsByStoreId error: " . $e->getMessage());
         return [];
@@ -1150,10 +1150,10 @@ public function getFoodSectionById($id)
                   LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
                       AND NOW() BETWEEN d.start_date AND d.end_date
                   WHERE fs.id = :id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
-        $section = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':id', $id);
+    $stmt->execute();
+    $section = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$section) {
             return null;

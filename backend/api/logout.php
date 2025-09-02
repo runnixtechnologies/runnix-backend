@@ -87,7 +87,7 @@ if ($blacklisted && $sessionDeactivated) {
     
     error_log("Partial logout success - Token blacklisted: " . ($blacklisted ? 'yes' : 'no') . 
               ", Session deactivated: " . ($sessionDeactivated ? 'yes' : 'no'));
-    
-    http_response_code(200);
+
+http_response_code(200);
     echo json_encode($responseData);
 }

@@ -38,10 +38,32 @@ if (stripos($contentType, 'application/json') !== false) {
 }
 
 // Debug: Log the received data
-error_log("Received data: " . json_encode($data));
+error_log("=== CREATE FOOD ITEM DEBUG ===");
 error_log("Content-Type: " . $contentType);
-error_log("POST data: " . json_encode($_POST));
 error_log("Raw input: " . file_get_contents("php://input"));
+error_log("POST data: " . json_encode($_POST));
+error_log("Parsed data: " . json_encode($data));
+
+// Additional debug for sides data
+if (isset($data['sides'])) {
+    error_log("=== SIDES DATA DEBUG ===");
+    error_log("Sides data: " . json_encode($data['sides']));
+    error_log("Sides type: " . gettype($data['sides']));
+    if (is_array($data['sides'])) {
+        error_log("Sides keys: " . implode(', ', array_keys($data['sides'])));
+        if (isset($data['sides']['items'])) {
+            error_log("Sides items: " . json_encode($data['sides']['items']));
+            error_log("Sides items type: " . gettype($data['sides']['items']));
+            error_log("Sides items is_array: " . (is_array($data['sides']['items']) ? 'true' : 'false'));
+            error_log("Sides items count: " . (is_array($data['sides']['items']) ? count($data['sides']['items']) : 'N/A'));
+        } else {
+            error_log("ERROR: Sides items key is missing!");
+        }
+    }
+    error_log("=== END SIDES DATA DEBUG ===");
+} else {
+    error_log("ERROR: Sides data is not set!");
+}
 
 $user = authenticateRequest();
 $controller = new FoodItemController();

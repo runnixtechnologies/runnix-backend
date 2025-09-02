@@ -141,21 +141,36 @@ class FoodItemController
 
     // Validate and normalize sides data if provided
     if (isset($data['sides'])) {
+        // Debug logging to see what the mobile app is sending
+        error_log("=== SIDES VALIDATION DEBUG ===");
+        error_log("Sides data: " . json_encode($data['sides']));
+        error_log("Sides type: " . gettype($data['sides']));
+        error_log("Sides keys: " . (is_array($data['sides']) ? implode(', ', array_keys($data['sides'])) : 'not an array'));
+        
         if (!is_array($data['sides'])) {
+            error_log("ERROR: Sides is not an array");
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Sides must be an array'];
         }
         
         // Check if it's the structured format (object with required, max_quantity, items)
         if (isset($data['sides']['required']) || isset($data['sides']['max_quantity']) || isset($data['sides']['items'])) {
+            error_log("Detected structured format for sides");
+            error_log("Has required: " . (isset($data['sides']['required']) ? 'yes' : 'no'));
+            error_log("Has max_quantity: " . (isset($data['sides']['max_quantity']) ? 'yes' : 'no'));
+            error_log("Has items: " . (isset($data['sides']['items']) ? 'yes' : 'no'));
+            
             // Structured format - validate required fields
             if (!isset($data['sides']['required']) || !isset($data['sides']['max_quantity']) || !isset($data['sides']['items'])) {
+                error_log("ERROR: Missing required fields in structured format");
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Sides structured format must include: required (boolean), max_quantity (number), and items (array of side IDs)'];
             }
             
             // Validate required field - handle various boolean representations
             $required = $data['sides']['required'];
+            error_log("Required value: " . json_encode($required) . " (type: " . gettype($required) . ")");
+            
             if (is_string($required)) {
                 $required = strtolower(trim($required));
                 if ($required === 'true' || $required === '1') {
@@ -163,43 +178,53 @@ class FoodItemController
                 } elseif ($required === 'false' || $required === '0') {
                     $data['sides']['required'] = false;
                 } else {
+                    error_log("ERROR: Invalid required string value: " . $required);
                     http_response_code(400);
                     return ['status' => 'error', 'message' => 'Sides required must be a boolean (true/false)'];
                 }
             } elseif (is_numeric($required)) {
                 $data['sides']['required'] = (bool)$required;
             } elseif (!is_bool($required)) {
+                error_log("ERROR: Required is not boolean, string, or numeric");
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Sides required must be a boolean (true/false)'];
             }
             
             // Validate max_quantity field
+            error_log("Max quantity value: " . json_encode($data['sides']['max_quantity']) . " (type: " . gettype($data['sides']['max_quantity']) . ")");
             if (!is_numeric($data['sides']['max_quantity']) || $data['sides']['max_quantity'] < 0) {
+                error_log("ERROR: Invalid max_quantity value");
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Sides max_quantity must be a non-negative number'];
             }
             
             // Validate items array
+            error_log("Items value: " . json_encode($data['sides']['items']) . " (type: " . gettype($data['sides']['items']) . ")");
             if (!is_array($data['sides']['items'])) {
+                error_log("ERROR: Items is not an array");
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Sides items must be an array of side IDs'];
             }
             
             foreach ($data['sides']['items'] as $sideId) {
                 if (!is_numeric($sideId)) {
+                    error_log("ERROR: Side ID is not numeric: " . json_encode($sideId));
                     http_response_code(400);
                     return ['status' => 'error', 'message' => 'Each side ID must be a valid number'];
                 }
             }
         } else {
+            error_log("Detected simple format for sides (array of side IDs)");
             // Simple format - array of side IDs
             foreach ($data['sides'] as $sideId) {
                 if (!is_numeric($sideId)) {
+                    error_log("ERROR: Side ID is not numeric: " . json_encode($sideId));
                     http_response_code(400);
                     return ['status' => 'error', 'message' => 'Each side ID must be a valid number'];
                 }
             }
         }
+        error_log("=== SIDES VALIDATION COMPLETE ===");
     }
 
     // Validate and normalize packs data if provided
@@ -535,8 +560,8 @@ class FoodItemController
                 } elseif ($required === 'false' || $required === '0') {
                     $data['sides']['required'] = false;
                 } else {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Sides required must be a boolean'];
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sides required must be a boolean'];
                 }
             } elseif (is_numeric($required)) {
                 $data['sides']['required'] = (bool)$required;
@@ -562,8 +587,8 @@ class FoodItemController
                 } elseif ($required === 'false' || $required === '0') {
                     $data['packs']['required'] = false;
                 } else {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Packs required must be a boolean'];
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Packs required must be a boolean'];
                 }
             } elseif (is_numeric($required)) {
                 $data['packs']['required'] = (bool)$required;
@@ -589,8 +614,8 @@ class FoodItemController
                 } elseif ($required === 'false' || $required === '0') {
                     $data['sections']['required'] = false;
                 } else {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Sections required must be a boolean'];
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Sections required must be a boolean'];
                 }
             } elseif (is_numeric($required)) {
                 $data['sections']['required'] = (bool)$required;

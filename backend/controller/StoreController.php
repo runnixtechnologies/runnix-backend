@@ -269,20 +269,20 @@ public function getActiveCategoriesByStoreType($user)
                     if (!isset($dayData['open_time']) || !isset($dayData['close_time'])) {
                         http_response_code(400);
                         return ['status' => 'error', 'message' => "Open and close times are required for $day when not in 24hr mode"];
-                    }
-                    
-                    // Validate time format (HH:MM)
-                    if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['open_time']) ||
-                        !preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['close_time'])) {
-                        http_response_code(400);
-                        return ['status' => 'error', 'message' => "Invalid time format for $day. Use HH:MM format"];
-                    }
-                    
-                    // Validate that close time is after open time
-                    if (strtotime($dayData['close_time']) <= strtotime($dayData['open_time'])) {
-                        http_response_code(400);
-                        return ['status' => 'error', 'message' => "Close time must be after open time for $day"];
-                    }
+                }
+                
+                // Validate time format (HH:MM)
+                if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['open_time']) ||
+                    !preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $dayData['close_time'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => "Invalid time format for $day. Use HH:MM format"];
+                }
+                
+                // Validate that close time is after open time
+                if (strtotime($dayData['close_time']) <= strtotime($dayData['open_time'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => "Close time must be after open time for $day"];
+                }
                 }
             }
         }
