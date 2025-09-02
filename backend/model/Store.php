@@ -228,10 +228,10 @@ class Store
                         WHERE store_id = :store_id 
                         ORDER BY FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')";
             } else {
-                $sql = "SELECT day_of_week, open_time, close_time, is_closed 
-                        FROM store_operating_hours 
-                        WHERE store_id = :store_id 
-                        ORDER BY FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')";
+            $sql = "SELECT day_of_week, open_time, close_time, is_closed 
+                    FROM store_operating_hours 
+                    WHERE store_id = :store_id 
+                    ORDER BY FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')";
             }
             
             $stmt = $this->conn->prepare($sql);
@@ -302,8 +302,8 @@ class Store
                              VALUES (:store_id, :day_of_week, :open_time, :close_time, :is_closed, :enabled, :is_24hrs)";
             } else {
                 // Insert new operating hours with old columns only
-                $insertSql = "INSERT INTO store_operating_hours (store_id, day_of_week, open_time, close_time, is_closed) 
-                             VALUES (:store_id, :day_of_week, :open_time, :close_time, :is_closed)";
+            $insertSql = "INSERT INTO store_operating_hours (store_id, day_of_week, open_time, close_time, is_closed) 
+                         VALUES (:store_id, :day_of_week, :open_time, :close_time, :is_closed)";
             }
             $insertStmt = $this->conn->prepare($insertSql);
             
@@ -337,9 +337,9 @@ class Store
                         'is_24hrs' => $dayData['is_24hrs']
                     ]);
                 } else {
-                    $insertStmt->execute([
-                        'store_id' => $storeId,
-                        'day_of_week' => $day,
+                $insertStmt->execute([
+                    'store_id' => $storeId,
+                    'day_of_week' => $day,
                         'open_time' => $dayData['enabled'] && !$dayData['is_closed'] ? $dayData['open_time'] : null,
                         'close_time' => $dayData['enabled'] && !$dayData['is_closed'] ? $dayData['close_time'] : null,
                         'is_closed' => !$dayData['enabled'] || $dayData['is_closed']

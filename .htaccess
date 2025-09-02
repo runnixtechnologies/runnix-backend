@@ -1,2 +1,18 @@
 RewriteEngine On
 RewriteRule ^api/(.*)$ backend/api/$1 [L]
+
+# Forward Authorization header to PHP (fixes 403 on GET with Bearer tokens on some hosts)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Ensure PHP files are allowed
+<IfModule mod_authz_core.c>
+	<FilesMatch "\.php$">
+		Require all granted
+	</FilesMatch>
+</IfModule>
+
+# Avoid MultiViews causing 403s
+<IfModule mod_negotiation.c>
+	Options -MultiViews
+</IfModule>
