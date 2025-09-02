@@ -22,7 +22,7 @@ class JwtHandler {
 
         $this->secret = $_ENV['JWT_SECRET'] ?? 'fallback_secret_key';
         $this->issuedAt = time();
-        $this->expire = $this->issuedAt + 900; // 15 minutes (900 seconds)
+        $this->expire = $this->issuedAt + (30 * 24 * 60 * 60); // 30 days (no timeout)
 
         // Use Config\Database to get DB connection
         $db = new Database();
@@ -47,15 +47,8 @@ class JwtHandler {
             $decoded = JWT::decode($token, new Key($this->secret, 'HS256'));
             $payload = (array)$decoded;
             
-            // Check for inactivity-based session expiry
-            if (isset($payload['user_id']) && isset($payload['role'])) {
-                $userActivity = new \Model\UserActivity();
-                if ($userActivity->isSessionExpired($payload['user_id'], $payload['role'])) {
-                    // Session expired due to inactivity, blacklist the token
-                    $this->blacklistToken($token);
-                    return false;
-                }
-            }
+            // Session timeout disabled - no inactivity-based session expiry
+            // Users will stay logged in until they manually logout or token expires (30 days)
             
             return $payload;
         } catch (\Exception $e) {
@@ -70,8 +63,8 @@ class JwtHandler {
             $decoded = JWT::decode($token, new Key($this->secret, 'HS256'));
             $expiresAt = date('Y-m-d H:i:s', $decoded->exp);
         } catch (\Exception $e) {
-            // If we can't decode, set expiry to current time + 15 minutes
-            $expiresAt = date('Y-m-d H:i:s', time() + 900);
+            // If we can't decode, set expiry to current time + 30 days
+            $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60));
         }
         
         $sql = "INSERT INTO blacklisted_tokens (token, expires_at) VALUES (:token, :expires_at)";

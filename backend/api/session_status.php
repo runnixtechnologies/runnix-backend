@@ -32,31 +32,25 @@ if (!$sessionStats) {
     exit;
 }
 
-// Check if session is about to expire (warning threshold: 5 minutes)
-$warningThreshold = 5; // minutes
-$isWarning = $sessionStats['remaining_minutes'] <= $warningThreshold;
-
-// Determine session status
+// Session timeout is disabled - users stay logged in for 30 days
+// No more inactivity-based auto-logout
 $status = 'active';
-if ($sessionStats['is_expired']) {
-    $status = 'expired';
-} elseif ($isWarning) {
-    $status = 'warning';
-}
+$isWarning = false; // No warnings since no timeout
 
 http_response_code(200);
 echo json_encode([
     'status' => 'success',
-    'message' => 'Session status retrieved successfully',
+    'message' => 'Session status retrieved successfully - No automatic timeout',
     'data' => [
         'session_status' => $status,
         'session_stats' => $sessionStats,
         'warning' => $isWarning,
-        'timeout_minutes' => $sessionStats['timeout_minutes'],
-        'remaining_minutes' => round($sessionStats['remaining_minutes'], 1),
-        'is_expired' => $sessionStats['is_expired'],
+        'timeout_minutes' => 'No timeout - 30 days',
+        'remaining_minutes' => 'Unlimited',
+        'is_expired' => false,
         'user_role' => $user['role'],
         'session_start' => $sessionStats['session_start'],
-        'last_activity' => $sessionStats['last_activity']
+        'last_activity' => $sessionStats['last_activity'],
+        'note' => 'Sessions no longer timeout automatically. Users stay logged in until manual logout or 30-day expiry.'
     ]
 ]);

@@ -1,7 +1,19 @@
 <?php
 /**
+ * DISABLED: Session Cleanup Script
+ * 
+ * This script has been disabled to remove automatic session timeout.
+ * Users will now stay logged in for 30 days instead of being logged out due to inactivity.
+ * 
+ * To re-enable: Remove this comment block and the exit statement below.
+ */
+
+// Exit early - script is disabled
+exit("Session cleanup script is disabled. Users will not be automatically logged out.");
+
+/**
  * Cleanup Script: Remove Expired Sessions
- * This script should be run periodically (e.g., every hour) to clean up expired sessions
+ * 
  * Can be run manually or via cron job
  */
 

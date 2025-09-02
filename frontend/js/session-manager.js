@@ -1,4 +1,17 @@
 /**
+ * DISABLED: Session Manager for Runnix App
+ * 
+ * This session manager has been disabled to remove automatic session timeout.
+ * Users will now stay logged in for 30 days instead of being logged out due to inactivity.
+ * 
+ * To re-enable: Remove this comment block and the return statement below.
+ */
+
+// Exit early - session manager is disabled
+console.log("Session manager is disabled. Users will not be automatically logged out.");
+return;
+
+/**
  * Session Manager for Runnix App
  * Handles inactivity tracking and auto-logout functionality
  */
