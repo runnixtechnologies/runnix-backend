@@ -1092,11 +1092,22 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
         foreach ($sections as &$section) {
             $section['total_orders'] = (int)$section['total_orders'];
             $section['price'] = (float)$section['price'];
-            $section['discount_price'] = (float)$section['discount_price'];
-            $section['percentage'] = $section['percentage'] ? (float)$section['percentage'] : 0.0;
-            $section['discount_id'] = $section['discount_id'] ? (int)$section['discount_id'] : null;
-            $section['discount_start_date'] = $section['discount_start_date'] ? $section['discount_start_date'] : null;
-            $section['discount_end_date'] = $section['discount_end_date'] ? $section['discount_end_date'] : null;
+            
+            // Only include discount fields if there's an actual discount
+            if ($section['discount_id']) {
+                $section['discount_price'] = (float)$section['discount_price'];
+                $section['percentage'] = (float)$section['percentage'];
+                $section['discount_id'] = (int)$section['discount_id'];
+                $section['discount_start_date'] = $section['discount_start_date'];
+                $section['discount_end_date'] = $section['discount_end_date'];
+            } else {
+                // Remove discount fields if no discount
+                unset($section['discount_price']);
+                unset($section['percentage']);
+                unset($section['discount_id']);
+                unset($section['discount_start_date']);
+                unset($section['discount_end_date']);
+            }
         }
 
         return $sections;
@@ -1160,11 +1171,22 @@ public function getFoodSectionById($id)
         // Add total_orders and convert numeric fields
         $section['total_orders'] = (int)$orderCount['total_orders'];
         $section['price'] = (float)$section['price'];
-        $section['discount_price'] = (float)$section['discount_price'];
-        $section['percentage'] = $section['percentage'] ? (float)$section['percentage'] : 0.0;
-        $section['discount_id'] = $section['discount_id'] ? (int)$section['discount_id'] : null;
-        $section['discount_start_date'] = $section['discount_start_date'] ? $section['discount_start_date'] : null;
-        $section['discount_end_date'] = $section['discount_end_date'] ? $section['discount_end_date'] : null;
+        
+        // Only include discount fields if there's an actual discount
+        if ($section['discount_id']) {
+            $section['discount_price'] = (float)$section['discount_price'];
+            $section['percentage'] = (float)$section['percentage'];
+            $section['discount_id'] = (int)$section['discount_id'];
+            $section['discount_start_date'] = $section['discount_start_date'];
+            $section['discount_end_date'] = $section['discount_end_date'];
+        } else {
+            // Remove discount fields if no discount
+            unset($section['discount_price']);
+            unset($section['percentage']);
+            unset($section['discount_id']);
+            unset($section['discount_start_date']);
+            unset($section['discount_end_date']);
+        }
 
         return $section;
     } catch (PDOException $e) {
