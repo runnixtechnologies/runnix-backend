@@ -13,18 +13,31 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$user = authenticateRequest();
-
-// Check if user is a merchant
-if ($user['role'] !== 'merchant') {
-    http_response_code(403);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Only merchants can access operating hours.'
-    ]);
-    exit;
+// Enforce GET only
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] !== 'GET') {
+	http_response_code(405);
+	header('Allow: GET');
+	echo json_encode([
+		'status' => 'error',
+		'message' => 'Method Not Allowed. Use GET.'
+	]);
+	exit;
 }
 
+// Authenticate user
+$user = authenticateRequest();
+
+// Only merchants can access
+if (!isset($user['role']) || $user['role'] !== 'merchant') {
+	http_response_code(403);
+	echo json_encode([
+		'status' => 'error',
+		'message' => 'Only merchants can access operating hours.'
+	]);
+	exit;
+}
+
+// Delegate to controller (controller handles extracting store_id from JWT or DB fallback)
 $controller = new StoreController();
 $response = $controller->getOperatingHours($user);
 
