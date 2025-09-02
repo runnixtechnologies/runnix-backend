@@ -13,13 +13,13 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-// Enforce GET only
-if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] !== 'GET') {
+// Enforce POST only
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
 	http_response_code(405);
-	header('Allow: GET');
+	header('Allow: POST');
 	echo json_encode([
 		'status' => 'error',
-		'message' => 'Method Not Allowed. Use GET.'
+		'message' => 'Method Not Allowed. Use POST.'
 	]);
 	exit;
 }
