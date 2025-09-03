@@ -30,24 +30,31 @@ if ($user['role'] !== 'merchant') {
     exit;
 }
 
-// Get store for this merchant user
-$storeController = new StoreController();
-$store = $storeController->getStoreByUserId($user['user_id']);
+// Get store_id - try from JWT first, then from database
+$storeId = $user['store_id'] ?? null;
 
-if (!$store) {
-    error_log("get_foodsectionby_id.php: Store not found for user_id: " . $user['user_id']);
-    http_response_code(404);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Store not found for this user.'
-    ]);
-    exit;
+if (!$storeId) {
+    error_log("get_foodsectionby_id.php: No store_id in JWT, getting from database");
+    $storeController = new StoreController();
+    $storeResponse = $storeController->getStoreByUserId($user['user_id']);
+    
+    if ($storeResponse['status'] !== 'success') {
+        error_log("get_foodsectionby_id.php: Store not found for user_id: " . $user['user_id']);
+        http_response_code(404);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Store not found for this user.'
+        ]);
+        exit;
+    }
+    
+    $storeId = $storeResponse['store']['id'];
 }
 
 $id = $_GET['id'] ?? null;
 
 error_log("get_foodsectionby_id.php: Requested section ID: " . $id);
-error_log("get_foodsectionby_id.php: User store_id: " . $store['id']);
+error_log("get_foodsectionby_id.php: User store_id: " . $storeId);
 
 if (!$id) {
     error_log("get_foodsectionby_id.php: No section ID provided");
@@ -66,7 +73,7 @@ if (!is_numeric($id)) {
 
 $controller = new FoodItemController();
 error_log("get_foodsectionby_id.php: Calling controller method with id: " . $id . ", user: " . json_encode($user));
-$response = $controller->getFoodSectionById($id, $user, $store['id']);
+$response = $controller->getFoodSectionById($id, $user, $storeId);
 
 error_log("get_foodsectionby_id.php: Controller response: " . json_encode($response));
 
