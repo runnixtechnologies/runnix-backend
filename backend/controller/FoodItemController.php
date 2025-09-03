@@ -1287,22 +1287,20 @@ public function createFoodSection($data, $user)
 
 
 // READ All Sections by Store
-public function getAllFoodSectionsByStoreId($user, $page = 1, $limit = 10)
+public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit = 10)
 {
     // Debug logging
     error_log("FoodItemController::getAllFoodSectionsByStoreId called with user: " . json_encode($user));
     error_log("FoodItemController::getAllFoodSectionsByStoreId called with page: " . $page . ", limit: " . $limit);
     
-    // Extract store_id from authenticated user
-    $storeId = $user['store_id'];
-    
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Extracted storeId: " . $storeId);
-    
+    // Validate store_id parameter
     if (!$storeId) {
-        error_log("FoodItemController::getAllFoodSectionsByStoreId: No store ID found");
-        http_response_code(403);
-        return ['status' => 'error', 'message' => 'Store ID not found for user'];
+        error_log("FoodItemController::getAllFoodSectionsByStoreId: No store ID provided");
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Store ID is required'];
     }
+    
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Using storeId: " . $storeId);
 
     $offset = ($page - 1) * $limit;
     error_log("FoodItemController::getAllFoodSectionsByStoreId: Calculated offset: " . $offset);
@@ -1426,7 +1424,7 @@ public function updateFoodSection($id, $data, $user)
 
 // get foodsectionbyID
 
-public function getFoodSectionById($id, $user)
+public function getFoodSectionById($id, $user, $storeId = null)
 {
     // Debug logging
     error_log("FoodItemController::getFoodSectionById called with id: " . $id . ", user: " . json_encode($user));
@@ -1449,8 +1447,8 @@ public function getFoodSectionById($id, $user)
     }
 
     // Authorization check - verify the section belongs to the user's store
-    error_log("FoodItemController::getFoodSectionById: Checking authorization - section store_id: " . $section['store_id'] . ", user store_id: " . $user['store_id']);
-    if ($section['store_id'] != $user['store_id']) {
+    error_log("FoodItemController::getFoodSectionById: Checking authorization - section store_id: " . $section['store_id'] . ", user store_id: " . $storeId);
+    if ($section['store_id'] != $storeId) {
         error_log("FoodItemController::getFoodSectionById: Authorization failed - store_id mismatch");
         http_response_code(403);
         return ['status' => 'error', 'message' => 'Unauthorized to access this food section.'];

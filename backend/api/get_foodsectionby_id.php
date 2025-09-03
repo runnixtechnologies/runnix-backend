@@ -9,6 +9,7 @@ require_once '../config/cors.php';
 require_once '../middleware/authMiddleware.php';
 
 use Controller\FoodItemController;
+use Controller\StoreController;
 use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
@@ -29,13 +30,16 @@ if ($user['role'] !== 'merchant') {
     exit;
 }
 
-// Check if user has store_id in JWT token
-if (!isset($user['store_id'])) {
-    error_log("get_foodsectionby_id.php: No store_id found in user JWT token");
-    http_response_code(403);
+// Get store for this merchant user
+$storeController = new StoreController();
+$store = $storeController->getStoreByUserId($user['user_id']);
+
+if (!$store) {
+    error_log("get_foodsectionby_id.php: Store not found for user_id: " . $user['user_id']);
+    http_response_code(404);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'
+        'message' => 'Store not found for this user.'
     ]);
     exit;
 }
@@ -43,7 +47,7 @@ if (!isset($user['store_id'])) {
 $id = $_GET['id'] ?? null;
 
 error_log("get_foodsectionby_id.php: Requested section ID: " . $id);
-error_log("get_foodsectionby_id.php: User store_id: " . $user['store_id']);
+error_log("get_foodsectionby_id.php: User store_id: " . $store['id']);
 
 if (!$id) {
     error_log("get_foodsectionby_id.php: No section ID provided");
@@ -62,7 +66,7 @@ if (!is_numeric($id)) {
 
 $controller = new FoodItemController();
 error_log("get_foodsectionby_id.php: Calling controller method with id: " . $id . ", user: " . json_encode($user));
-$response = $controller->getFoodSectionById($id, $user);
+$response = $controller->getFoodSectionById($id, $user, $store['id']);
 
 error_log("get_foodsectionby_id.php: Controller response: " . json_encode($response));
 
