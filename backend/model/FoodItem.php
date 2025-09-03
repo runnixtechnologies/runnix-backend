@@ -1049,6 +1049,9 @@ public function createFoodSection($data)
 public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = null)
 {
     try {
+        // Debug logging
+        error_log("getAllFoodSectionsByStoreId called with storeId: " . $storeId . ", limit: " . $limit . ", offset: " . $offset);
+        
         // First, get all sections for this store with basic information
         $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at
                   FROM food_sections fs
@@ -1075,6 +1078,11 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
         
         $stmt->execute();
         $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        error_log("Raw sections from database: " . count($sections) . " found");
+        if (!empty($sections)) {
+            error_log("First section data: " . json_encode($sections[0]));
+        }
 
         // Now enhance each section with additional data
         foreach ($sections as &$section) {
@@ -1115,6 +1123,11 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
                 $section['discount_end_date'] = $discount['discount_end_date'];
             }
         }
+        
+        error_log("Final sections to return: " . count($sections) . " processed");
+        if (!empty($sections)) {
+            error_log("Final first section: " . json_encode($sections[0]));
+        }
 
         return $sections;
     } catch (PDOException $e) {
@@ -1144,6 +1157,9 @@ public function countFoodSectionsByStoreId($storeId)
 public function getFoodSectionById($id)
 {
     try {
+        // Debug logging
+        error_log("getFoodSectionById called with id: " . $id);
+        
         // Get the section with discount information
         $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at,
                          d.percentage,
@@ -1155,12 +1171,22 @@ public function getFoodSectionById($id)
                   LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
                       AND NOW() BETWEEN d.start_date AND d.end_date
                   WHERE fs.id = :id";
+        
+        error_log("SQL Query: " . $query);
+        error_log("Parameter: id = " . $id);
+        
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':id', $id);
     $stmt->execute();
     $section = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    error_log("Raw section from database: " . ($section ? "found" : "not found"));
+    if ($section) {
+        error_log("Section data: " . json_encode($section));
+    }
 
         if (!$section) {
+            error_log("Section not found for id: " . $id);
             return null;
         }
 
@@ -1192,10 +1218,13 @@ public function getFoodSectionById($id)
             unset($section['discount_start_date']);
             unset($section['discount_end_date']);
         }
+        
+        error_log("Final section to return: " . json_encode($section));
 
         return $section;
     } catch (PDOException $e) {
         error_log("getFoodSectionById error: " . $e->getMessage());
+        error_log("getFoodSectionById error trace: " . $e->getTraceAsString());
         return null;
     }
 }

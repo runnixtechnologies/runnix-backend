@@ -1289,18 +1289,32 @@ public function createFoodSection($data, $user)
 // READ All Sections by Store
 public function getAllFoodSectionsByStoreId($user, $page = 1, $limit = 10)
 {
+    // Debug logging
+    error_log("FoodItemController::getAllFoodSectionsByStoreId called with user: " . json_encode($user));
+    error_log("FoodItemController::getAllFoodSectionsByStoreId called with page: " . $page . ", limit: " . $limit);
+    
     // Extract store_id from authenticated user
     $storeId = $user['store_id'];
     
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Extracted storeId: " . $storeId);
+    
     if (!$storeId) {
+        error_log("FoodItemController::getAllFoodSectionsByStoreId: No store ID found");
         http_response_code(403);
         return ['status' => 'error', 'message' => 'Store ID not found for user'];
     }
 
     $offset = ($page - 1) * $limit;
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Calculated offset: " . $offset);
+    
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Calling model method with storeId: " . $storeId . ", limit: " . $limit . ", offset: " . $offset);
     
     $result = $this->foodItem->getAllFoodSectionsByStoreIdPaginated($storeId, $limit, $offset);
     $totalCount = $this->foodItem->countFoodSectionsByStoreId($storeId);
+    
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Model result count: " . count($result));
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Total count: " . $totalCount);
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Model result: " . json_encode($result));
     
     http_response_code(200);
     return [
