@@ -664,22 +664,11 @@ public function getFoodSideById($id)
 		// Add total_orders and convert numeric fields
 		$result['total_orders'] = (int)$orderCount['total_orders'];
         $result['price'] = (float)$result['price'];
-        
-        // Only include discount fields if there's an actual discount
-        if ($result['discount_id']) {
-            $result['percentage'] = (float)$result['percentage'];
-            $result['discount_price'] = (float)$result['discount_price'];
-            $result['discount_id'] = (int)$result['discount_id'];
-            $result['discount_start_date'] = $result['discount_start_date'];
-            $result['discount_end_date'] = $result['discount_end_date'];
-        } else {
-            // Remove discount fields if no discount
-            unset($result['percentage']);
-            unset($result['discount_price']);
-            unset($result['discount_id']);
-            unset($result['discount_start_date']);
-            unset($result['discount_end_date']);
-        }
+        $result['discount_price'] = (float)$result['discount_price'];
+		$result['percentage'] = $result['percentage'] ? (float)$result['percentage'] : 0.0;
+        $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
+		$result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
+		$result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
         
         error_log("getFoodSideById model: Final result: " . json_encode($result));
         
@@ -723,22 +712,11 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
         foreach ($results as &$result) {
             $result['total_orders'] = (int)$result['total_orders'];
             $result['price'] = (float)$result['price'];
-            
-            // Only include discount fields if there's an actual discount
-            if ($result['discount_id']) {
-                $result['percentage'] = (float)$result['percentage'];
-                $result['discount_price'] = (float)$result['discount_price'];
-                $result['discount_id'] = (int)$result['discount_id'];
-                $result['discount_start_date'] = $result['discount_start_date'];
-                $result['discount_end_date'] = $result['discount_end_date'];
-            } else {
-                // Remove discount fields if no discount
-                unset($result['percentage']);
-                unset($result['discount_price']);
-                unset($result['discount_id']);
-                unset($result['discount_start_date']);
-                unset($result['discount_end_date']);
-            }
+            $result['discount_price'] = (float)$result['discount_price'];
+                $result['percentage'] = $result['percentage'] ? (float)$result['percentage'] : 0.0;
+            $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
+            $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
+            $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
         }
         
         return $results;
@@ -1071,68 +1049,71 @@ public function createFoodSection($data)
 public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = null)
 {
     try {
-        // Get all sections for this store with pagination and discount information
-        $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
-                         d.percentage,
-                         CASE WHEN d.id IS NULL THEN fs.price ELSE ROUND(fs.price - (fs.price * d.percentage / 100), 2) END as discount_price,
-                         d.id as discount_id,
-                         d.start_date as discount_start_date,
-                         d.end_date as discount_end_date,
-                         COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
+        // First, get all sections for this store with basic information
+        $query = "SELECT fs.id, fs.store_id, fs.name, fs.status, fs.created_at, fs.updated_at
                   FROM food_sections fs
-                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'section'
-                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-                      AND NOW() BETWEEN d.start_date AND d.end_date
-                  LEFT JOIN food_section_items fsi ON fs.id = fsi.section_id
-                  LEFT JOIN order_items oi ON fsi.item_id = oi.item_id
                   WHERE fs.store_id = :store_id 
-                  GROUP BY fs.id
                   ORDER BY fs.created_at DESC";
     
-    // Add pagination if limit is provided
-    if ($limit !== null) {
-        $query .= " LIMIT :limit";
-        if ($offset !== null) {
-            $query .= " OFFSET :offset";
+        // Add pagination if limit is provided
+        if ($limit !== null) {
+            $query .= " LIMIT :limit";
+            if ($offset !== null) {
+                $query .= " OFFSET :offset";
+            }
         }
-    }
-    
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
-    
-    if ($limit !== null) {
-        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-        if ($offset !== null) {
-            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
+        
+        if ($limit !== null) {
+            $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+            if ($offset !== null) {
+                $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+            }
         }
-    }
-    
-    $stmt->execute();
-    $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $stmt->execute();
+        $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Convert numeric fields to appropriate types for each result
-    foreach ($sections as &$section) {
-            $section['total_orders'] = (int)$section['total_orders'];
-            $section['price'] = (float)$section['price'];
+        // Now enhance each section with additional data
+        foreach ($sections as &$section) {
+            // Get discount information for this section
+            $discountQuery = "SELECT d.percentage, d.id as discount_id, 
+                                    d.start_date as discount_start_date, d.end_date as discount_end_date
+                             FROM discount_items di 
+                             JOIN discounts d ON di.discount_id = d.id 
+                             WHERE di.item_id = :section_id AND di.item_type = 'section' 
+                               AND d.status = 'active' 
+                               AND NOW() BETWEEN d.start_date AND d.end_date
+                             LIMIT 1";
+            
+            $discountStmt = $this->conn->prepare($discountQuery);
+            $discountStmt->execute(['section_id' => $section['id']]);
+            $discount = $discountStmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Get total orders count for this section
+            $orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders 
+                           FROM food_section_items fsi 
+                           JOIN order_items oi ON fsi.item_id = oi.item_id 
+                           WHERE fsi.section_id = :section_id";
+            $orderStmt = $this->conn->prepare($orderQuery);
+            $orderStmt->execute(['section_id' => $section['id']]);
+            $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Add the additional data
+            $section['total_orders'] = (int)$orderCount['total_orders'];
             
             // Only include discount fields if there's an actual discount
-            if ($section['discount_id']) {
-                $section['discount_price'] = (float)$section['discount_price'];
-                $section['percentage'] = (float)$section['percentage'];
-                $section['discount_id'] = (int)$section['discount_id'];
-                $section['discount_start_date'] = $section['discount_start_date'];
-                $section['discount_end_date'] = $section['discount_end_date'];
-            } else {
-                // Remove discount fields if no discount
-                unset($section['discount_price']);
-                unset($section['percentage']);
-                unset($section['discount_id']);
-                unset($section['discount_start_date']);
-                unset($section['discount_end_date']);
+            if ($discount && $discount['discount_id']) {
+                $section['percentage'] = (float)$discount['percentage'];
+                $section['discount_id'] = (int)$discount['discount_id'];
+                $section['discount_start_date'] = $discount['discount_start_date'];
+                $section['discount_end_date'] = $discount['discount_end_date'];
             }
-    }
+        }
 
-    return $sections;
+        return $sections;
     } catch (PDOException $e) {
         error_log("getAllFoodSectionsByStoreId error: " . $e->getMessage());
         return [];
@@ -1161,9 +1142,8 @@ public function getFoodSectionById($id)
 {
     try {
         // Get the section with discount information
-        $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
+        $query = "SELECT fs.id, fs.store_id, fs.name, fs.status, fs.created_at, fs.updated_at,
                          d.percentage,
-                         CASE WHEN d.id IS NULL THEN fs.price ELSE ROUND(fs.price - (fs.price * d.percentage / 100), 2) END as discount_price,
                          d.id as discount_id,
                          d.start_date as discount_start_date,
                          d.end_date as discount_end_date
@@ -1192,18 +1172,15 @@ public function getFoodSectionById($id)
 
         // Add total_orders and convert numeric fields
         $section['total_orders'] = (int)$orderCount['total_orders'];
-        $section['price'] = (float)$section['price'];
         
         // Only include discount fields if there's an actual discount
         if ($section['discount_id']) {
-            $section['discount_price'] = (float)$section['discount_price'];
             $section['percentage'] = (float)$section['percentage'];
             $section['discount_id'] = (int)$section['discount_id'];
             $section['discount_start_date'] = $section['discount_start_date'];
             $section['discount_end_date'] = $section['discount_end_date'];
         } else {
             // Remove discount fields if no discount
-            unset($section['discount_price']);
             unset($section['percentage']);
             unset($section['discount_id']);
             unset($section['discount_start_date']);
