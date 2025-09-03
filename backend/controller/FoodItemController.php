@@ -1309,10 +1309,11 @@ public function getAllFoodSectionsByStoreId($user, $page = 1, $limit = 10)
     
     error_log("FoodItemController::getAllFoodSectionsByStoreId: Calling model method with storeId: " . $storeId . ", limit: " . $limit . ", offset: " . $offset);
     
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: About to call model method");
     $result = $this->foodItem->getAllFoodSectionsByStoreIdPaginated($storeId, $limit, $offset);
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Model method called, result type: " . gettype($result));
+    error_log("FoodItemController::getAllFoodSectionsByStoreId: Model result count: " . (is_array($result) ? count($result) : 'not array'));
     $totalCount = $this->foodItem->countFoodSectionsByStoreId($storeId);
-    
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Model result count: " . count($result));
     error_log("FoodItemController::getAllFoodSectionsByStoreId: Total count: " . $totalCount);
     error_log("FoodItemController::getAllFoodSectionsByStoreId: Model result: " . json_encode($result));
     
