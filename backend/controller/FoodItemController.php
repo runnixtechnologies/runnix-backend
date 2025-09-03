@@ -1427,24 +1427,35 @@ public function updateFoodSection($id, $data, $user)
 
 public function getFoodSectionById($id, $user)
 {
+    // Debug logging
+    error_log("FoodItemController::getFoodSectionById called with id: " . $id . ", user: " . json_encode($user));
+    
     if (empty($id)) {
+        error_log("FoodItemController::getFoodSectionById: Empty ID provided");
         http_response_code(400); // Bad Request
         return ['status' => 'error', 'message' => 'Section ID is required'];
     }
 
+    error_log("FoodItemController::getFoodSectionById: Calling model method with id: " . $id);
     $section = $this->foodItem->getFoodSectionById($id);
 
+    error_log("FoodItemController::getFoodSectionById: Model returned: " . ($section ? json_encode($section) : "null"));
+
     if (!$section) {
+        error_log("FoodItemController::getFoodSectionById: Section not found in model");
         http_response_code(404); // Not Found
         return ['status' => 'error', 'message' => 'Food section not found'];
     }
 
     // Authorization check - verify the section belongs to the user's store
+    error_log("FoodItemController::getFoodSectionById: Checking authorization - section store_id: " . $section['store_id'] . ", user store_id: " . $user['store_id']);
     if ($section['store_id'] != $user['store_id']) {
+        error_log("FoodItemController::getFoodSectionById: Authorization failed - store_id mismatch");
         http_response_code(403);
         return ['status' => 'error', 'message' => 'Unauthorized to access this food section.'];
     }
 
+    error_log("FoodItemController::getFoodSectionById: Authorization successful, returning section");
     http_response_code(200); // OK
     return ['status' => 'success', 'data' => $section];
 }

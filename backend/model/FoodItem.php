@@ -1145,11 +1145,26 @@ public function getAllFoodSectionsByStoreIdPaginated($storeId, $limit, $offset)
 // Count total food sections by store
 public function countFoodSectionsByStoreId($storeId)
 {
-    $query = "SELECT COUNT(*) FROM food_sections WHERE store_id = :store_id";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
-    $stmt->execute();
-    return (int)$stmt->fetchColumn();
+    try {
+        // Debug logging
+        error_log("countFoodSectionsByStoreId called with storeId: " . $storeId);
+        
+        $query = "SELECT COUNT(*) FROM food_sections WHERE store_id = :store_id";
+        error_log("Count SQL Query: " . $query);
+        error_log("Count Parameter: store_id = " . $storeId);
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
+        $stmt->execute();
+        $count = (int)$stmt->fetchColumn();
+        
+        error_log("Count result: " . $count);
+        return $count;
+    } catch (PDOException $e) {
+        error_log("countFoodSectionsByStoreId error: " . $e->getMessage());
+        error_log("countFoodSectionsByStoreId error trace: " . $e->getTraceAsString());
+        return 0;
+    }
 }
 
 
