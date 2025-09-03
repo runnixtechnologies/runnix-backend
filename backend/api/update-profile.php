@@ -13,7 +13,40 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-$data = json_decode(file_get_contents("php://input"), true) ?? [];
+// Check if it's a PUT request
+if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+    http_response_code(405);
+    echo json_encode([
+        "status" => "error", 
+        "message" => "Method not allowed. Use PUT method."
+    ]);
+    exit;
+}
+
+// Get JSON data from raw input
+$jsonData = file_get_contents("php://input");
+$data = json_decode($jsonData, true);
+
+// Check if JSON is valid
+if (json_last_error() !== JSON_ERROR_NONE) {
+    http_response_code(400);
+    echo json_encode([
+        "status" => "error", 
+        "message" => "Invalid JSON data: " . json_last_error_msg()
+    ]);
+    exit;
+}
+
+// Check if data is provided
+if (empty($data)) {
+    http_response_code(400);
+    echo json_encode([
+        "status" => "error", 
+        "message" => "No data provided in request body"
+    ]);
+    exit;
+}
+
 $user = authenticateRequest();
 
 $controller = new UserController();

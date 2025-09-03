@@ -738,82 +738,171 @@ public function getStatus($user) {
     {
         $userId = $user['user_id'];
         
-        $userData = $this->userModel->getUserById($userId);
-        if (!$userData) {
-            http_response_code(404);
-            return ['status' => 'error', 'message' => 'User not found'];
+        try {
+            // Get user basic info
+            $userData = $this->userModel->getUserById($userId);
+            if (!$userData) {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => 'User not found'];
+            }
+            
+            // Get user profile details
+            $profileData = $this->userModel->getUserProfile($userId);
+            if (!$profileData) {
+                // Create default profile if it doesn't exist
+                $profileData = [
+                    'first_name' => '',
+                    'last_name' => '',
+                    'address' => '',
+                    'profile_picture' => null
+                ];
+            }
+            
+            // Combine user and profile data to match UI design
+            $fullProfile = [
+                'user_id' => $userId,
+                'role' => $userData['role'],
+                'first_name' => $profileData['first_name'] ?? '',
+                'last_name' => $profileData['last_name'] ?? '',
+                'phone' => $userData['phone'],
+                'email' => $userData['email'],
+                'address' => $profileData['address'] ?? '',
+                'profile_picture' => $profileData['profile_picture'] ?? null,
+                'is_verified' => (bool)$userData['is_verified'],
+                'status' => $userData['status'],
+                'created_at' => $userData['created_at'],
+                'updated_at' => $userData['updated_at'] ?? null
+            ];
+            
+            http_response_code(200);
+            return [
+                'status' => 'success',
+                'message' => 'Profile retrieved successfully',
+                'data' => $fullProfile
+            ];
+            
+        } catch (Exception $e) {
+            error_log("getProfile error: " . $e->getMessage());
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to retrieve profile'];
         }
-        
-        $profileData = $this->userModel->getUserProfile($userId);
-        
-        // Combine user and profile data
-        $profile = [
-            'name' => $profileData['first_name'] . ' ' . $profileData['last_name'],
-            'email' => $userData['email'],
-            'phone' => $userData['phone'],
-            'address' => $profileData['address'] ?? '',
-            'profile_picture' => $profileData['profile_picture'] ?? null
-        ];
-        
-        http_response_code(200);
-        return [
-            'status' => 'success',
-            'data' => $profile
-        ];
     }
     
     public function updateProfile($data, $user)
     {
         $userId = $user['user_id'];
         
-        // Validate required fields
-        if (empty($data['name'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Name is required'];
-        }
-        
-        if (empty($data['email'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Email is required'];
-        }
-        
-        // Validate email format
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Invalid email format'];
-        }
-        
-        // Check if email is already taken by another user
-        $existingUser = $this->userModel->getUserByEmail($data['email']);
-        if ($existingUser && $existingUser['id'] != $userId) {
-            http_response_code(409);
-            return ['status' => 'error', 'message' => 'Email is already taken by another user'];
-        }
-        
-        // Split name into first and last name
-        $nameParts = explode(' ', trim($data['name']), 2);
-        $firstName = $nameParts[0];
-        $lastName = isset($nameParts[1]) ? $nameParts[1] : '';
-        
-        // Update user email
-        $userUpdateResult = $this->userModel->updateUserEmail($userId, $data['email']);
-        
-        // Update profile
-        $profileData = [
-            'user_id' => $userId,
-            'first_name' => $firstName,
-            'last_name' => $lastName,
-            'address' => $data['address'] ?? ''
-        ];
-        
-        $profileUpdateResult = $this->userModel->updateUserProfile($profileData);
-        
-        if ($userUpdateResult && $profileUpdateResult) {
-            http_response_code(200);
-            return ['status' => 'success', 'message' => 'Profile updated successfully'];
-        } else {
+        try {
+            // Validate required fields
+            $required = ['first_name', 'last_name'];
+            foreach ($required as $field) {
+                if (empty($data[$field])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => "$field is required"];
+                }
+            }
+            
+            // Validate email format if provided
+            if (!empty($data['email'])) {
+                if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Invalid email format'];
+                }
+                
+                // Check if email is already taken by another user
+                $existingUser = $this->userModel->getUserByEmail($data['email']);
+                if ($existingUser && $existingUser['id'] != $userId) {
+                    http_response_code(409);
+                    return ['status' => 'error', 'message' => 'Email is already taken by another user'];
+                }
+            }
+            
+            // Validate phone format if provided
+            if (!empty($data['phone'])) {
+                $phone = preg_replace('/\D/', '', $data['phone']);
+                if (strlen($phone) < 10 || strlen($phone) > 15) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Invalid phone number format'];
+                }
+                
+                // Format phone to international format
+                if (strlen($phone) === 11 && substr($phone, 0, 1) === '0') {
+                    $phone = '234' . substr($phone, 1);
+                } elseif (strlen($phone) === 10) {
+                    $phone = '234' . $phone;
+                }
+                
+                // Check if phone is already taken by another user
+                $existingUser = $this->userModel->getUserByPhone($phone);
+                if ($existingUser && $existingUser['id'] != $userId) {
+                    http_response_code(409);
+                    return ['status' => 'error', 'message' => 'Phone number is already taken by another user'];
+                }
+            }
+            
+            // Begin transaction
+            $this->userModel->beginTransaction();
+            
+            try {
+                // Update user table fields (email, phone)
+                if (!empty($data['email'])) {
+                    $emailUpdated = $this->userModel->updateUserEmail($userId, $data['email']);
+                    if (!$emailUpdated) {
+                        throw new Exception('Failed to update email');
+                    }
+                }
+                
+                if (!empty($data['phone'])) {
+                    $phoneUpdated = $this->userModel->updateUserPhone($userId, $phone);
+                    if (!$phoneUpdated) {
+                        throw new Exception('Failed to update phone');
+                    }
+                }
+                
+                // Update or create user profile
+                $profileData = [
+                    'user_id' => $userId,
+                    'first_name' => trim($data['first_name']),
+                    'last_name' => trim($data['last_name']),
+                    'address' => trim($data['address'] ?? '')
+                ];
+                
+                $profileUpdated = $this->userModel->updateUserProfile($profileData);
+                if (!$profileUpdated) {
+                    // If profile doesn't exist, create it
+                    $profileCreated = $this->userModel->createUserProfile(
+                        $userId,
+                        $profileData['first_name'],
+                        $profileData['last_name']
+                    );
+                    if (!$profileCreated) {
+                        throw new Exception('Failed to create user profile');
+                    }
+                }
+                
+                // Commit transaction
+                $this->userModel->commit();
+                
+                // Get updated profile
+                $updatedProfile = $this->getProfile($user);
+                
+                http_response_code(200);
+                return [
+                    'status' => 'success',
+                    'message' => 'Profile updated successfully',
+                    'data' => $updatedProfile['data']
+                ];
+                
+            } catch (Exception $e) {
+                // Rollback transaction
+                $this->userModel->rollback();
+                throw $e;
+            }
+            
+        } catch (Exception $e) {
+            error_log("updateProfile error: " . $e->getMessage());
             http_response_code(500);
-            return ['status' => 'error', 'message' => 'Failed to update profile'];
+            return ['status' => 'error', 'message' => 'Failed to update profile: ' . $e->getMessage()];
         }
     }
     
