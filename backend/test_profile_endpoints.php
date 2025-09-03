@@ -39,8 +39,7 @@ $updateData = [
     'first_name' => 'John',
     'last_name' => 'Doe',
     'email' => 'john.doe@example.com',
-    'phone' => '08012345678',
-    'address' => '123 Test Street, Lagos'
+    'phone' => '08012345678'
 ];
 
 try {
@@ -104,8 +103,7 @@ echo json_encode([
     'first_name' => 'James',
     'last_name' => 'Sat',
     'email' => 'james.sat@gmail.com',
-    'phone' => '+234808080808',
-    'address' => '123 Main Street, Lagos'
+    'phone' => '+234808080808'
 ], JSON_PRETTY_PRINT) . "\n\n";
 
 echo "=== Expected Response Format ===\n";

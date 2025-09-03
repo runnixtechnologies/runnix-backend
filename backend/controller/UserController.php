@@ -863,8 +863,7 @@ public function getStatus($user) {
                 $profileData = [
                     'user_id' => $userId,
                     'first_name' => trim($data['first_name']),
-                    'last_name' => trim($data['last_name']),
-                    'address' => trim($data['address'] ?? '')
+                    'last_name' => trim($data['last_name'])
                 ];
                 
                 $profileUpdated = $this->userModel->updateUserProfile($profileData);

@@ -369,15 +369,12 @@ public function getUserStatus($userId) {
         try {
             $sql = "UPDATE user_profiles SET 
                     first_name = :first_name, 
-                    last_name = :last_name, 
-                    address = :address,
-                    updated_at = NOW() 
+                    last_name = :last_name 
                     WHERE user_id = :user_id";
             $stmt = $this->conn->prepare($sql);
             return $stmt->execute([
                 'first_name' => $profileData['first_name'],
                 'last_name' => $profileData['last_name'],
-                'address' => $profileData['address'],
                 'user_id' => $profileData['user_id']
             ]);
         } catch (PDOException $e) {

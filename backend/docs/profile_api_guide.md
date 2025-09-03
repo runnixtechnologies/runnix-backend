@@ -50,7 +50,6 @@ Content-Type: application/json
         "last_name": "Sat",
         "phone": "+234808080808",
         "email": "james.sat@gmail.com",
-        "address": "123 Main Street, Lagos",
         "profile_picture": null,
         "is_verified": true,
         "status": "active",
@@ -94,8 +93,7 @@ Content-Type: application/json
     "first_name": "James",
     "last_name": "Sat",
     "email": "james.sat@gmail.com",
-    "phone": "+234808080808",
-    "address": "123 Main Street, Lagos"
+    "phone": "+234808080808"
 }
 ```
 
@@ -104,7 +102,6 @@ Content-Type: application/json
 - `last_name` (required): User's last name
 - `email` (optional): User's email address
 - `phone` (optional): User's phone number
-- `address` (optional): User's address
 
 **Response (Success - 200):**
 ```json
@@ -118,7 +115,6 @@ Content-Type: application/json
         "last_name": "Sat",
         "phone": "+234808080808",
         "email": "james.sat@gmail.com",
-        "address": "123 Main Street, Lagos",
         "profile_picture": null,
         "is_verified": true,
         "status": "active",
@@ -178,10 +174,6 @@ Content-Type: application/json
 - Cannot be already taken by another user
 - Optional field (only validated if provided)
 
-### Address
-- Optional field
-- Will be trimmed of leading/trailing whitespace
-
 ## Phone Number Formatting
 
 The system automatically handles phone number formatting:
@@ -240,10 +232,10 @@ All error responses follow this format:
 - `user_id`: Foreign key to users table
 - `first_name`: User's first name
 - `last_name`: User's last name
-- `address`: User's address
 - `profile_picture`: Profile picture URL
 - `created_at`: Profile creation timestamp
-- `updated_at`: Last update timestamp
+
+**Note:** The `address` field exists in the database but is not part of the profile update functionality. Only first_name, last_name, email, and phone can be updated through the profile endpoints.
 
 ## Testing
 
@@ -275,8 +267,7 @@ php backend/test_profile_endpoints.php
     "first_name": "John",
     "last_name": "Doe",
     "email": "john.doe@example.com",
-    "phone": "08012345678",
-    "address": "456 Test Avenue, Abuja"
+    "phone": "08012345678"
 }
 ```
 
