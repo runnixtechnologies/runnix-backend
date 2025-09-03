@@ -36,7 +36,15 @@ $blacklisted = $jwt->blacklistToken($token);
 
 // Deactivate user session
 $userActivity = new UserActivity();
-$sessionDeactivated = $userActivity->deactivateSession($user['user_id']);
+try {
+    $sessionDeactivated = $userActivity->deactivateSession($user['user_id']);
+    if (!$sessionDeactivated) {
+        error_log("Warning: Failed to deactivate session for user " . $user['user_id']);
+    }
+} catch (Exception $e) {
+    error_log("Error deactivating session: " . $e->getMessage());
+    $sessionDeactivated = false;
+}
 
 // Get session statistics for logging
 $sessionStats = $userActivity->getSessionStats($user['user_id']);

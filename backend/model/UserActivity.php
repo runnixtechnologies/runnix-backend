@@ -34,37 +34,21 @@ class UserActivity
     public function recordActivity($userId, $role, $deviceInfo = null, $ipAddress = null)
     {
         try {
-            // Check if user already has an active session
-            $existingSession = $this->getActiveSession($userId);
+            // First, deactivate any existing sessions for this user
+            $this->deactivateAllUserSessions($userId);
             
-            if ($existingSession) {
-                // Update existing session
-                $sql = "UPDATE {$this->table} 
-                        SET last_activity = CURRENT_TIMESTAMP, 
-                            device_info = :device_info,
-                            ip_address = :ip_address
-                        WHERE user_id = :user_id AND is_active = TRUE";
-                
-                $stmt = $this->conn->prepare($sql);
-                $stmt->bindParam(':user_id', $userId);
-                $stmt->bindParam(':device_info', $deviceInfo);
-                $stmt->bindParam(':ip_address', $ipAddress);
-                
-                return $stmt->execute();
-            } else {
-                // Create new session
-                $sql = "INSERT INTO {$this->table} 
-                        (user_id, user_role, device_info, ip_address) 
-                        VALUES (:user_id, :user_role, :device_info, :ip_address)";
-                
-                $stmt = $this->conn->prepare($sql);
-                $stmt->bindParam(':user_id', $userId);
-                $stmt->bindParam(':user_role', $role);
-                $stmt->bindParam(':device_info', $deviceInfo);
-                $stmt->bindParam(':ip_address', $ipAddress);
-                
-                return $stmt->execute();
-            }
+            // Create new session
+            $sql = "INSERT INTO {$this->table} 
+                    (user_id, user_role, device_info, ip_address, is_active, session_start, last_activity) 
+                    VALUES (:user_id, :user_role, :device_info, :ip_address, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->bindParam(':user_role', $role);
+            $stmt->bindParam(':device_info', $deviceInfo);
+            $stmt->bindParam(':ip_address', $ipAddress);
+            
+            return $stmt->execute();
         } catch (\Exception $e) {
             error_log("Error recording user activity: " . $e->getMessage());
             return false;
@@ -130,14 +114,51 @@ class UserActivity
      */
     public function deactivateSession($userId)
     {
-        $sql = "UPDATE {$this->table} 
-                SET is_active = FALSE 
-                WHERE user_id = :user_id AND is_active = TRUE";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':user_id', $userId);
-        
-        return $stmt->execute();
+        try {
+            $sql = "UPDATE {$this->table} 
+                    SET is_active = FALSE 
+                    WHERE user_id = :user_id AND is_active = TRUE";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam(':user_id', $userId);
+            
+            $result = $stmt->execute();
+            
+            // Log the operation for debugging
+            $rowCount = $stmt->rowCount();
+            error_log("Deactivated {$rowCount} active sessions for user {$userId}");
+            
+            return $result;
+        } catch (\Exception $e) {
+            error_log("Error deactivating session for user {$userId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Deactivate ALL sessions for a user (used before creating new session)
+     */
+    public function deactivateAllUserSessions($userId)
+    {
+        try {
+            $sql = "UPDATE {$this->table} 
+                    SET is_active = FALSE 
+                    WHERE user_id = :user_id";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam(':user_id', $userId);
+            
+            $result = $stmt->execute();
+            
+            // Log the operation for debugging
+            $rowCount = $stmt->rowCount();
+            error_log("Deactivated {$rowCount} total sessions for user {$userId} before creating new session");
+            
+            return $result;
+        } catch (\Exception $e) {
+            error_log("Error deactivating all sessions for user {$userId}: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
