@@ -1062,7 +1062,7 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
         // Add pagination if limit is provided
         if ($limit !== null) {
             if ($offset !== null) {
-                $query .= " LIMIT :offset, :limit";
+                $query .= " LIMIT :limit OFFSET :offset";
             } else {
                 $query .= " LIMIT :limit";
             }
@@ -1073,8 +1073,8 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
         
         if ($limit !== null) {
             if ($offset !== null) {
-                $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
                 $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+                $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
             } else {
                 $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
             }
@@ -1215,7 +1215,7 @@ public function getFoodSectionById($id)
                   LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'section'
                   LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
                       AND NOW() BETWEEN d.start_date AND d.end_date
-                  WHERE fs.id = :id";
+                  WHERE fs.id = :id AND fs.status = 'active'";
         
         error_log("SQL Query: " . $query);
         error_log("Parameter: id = " . $id);
