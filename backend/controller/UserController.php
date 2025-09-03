@@ -740,14 +740,14 @@ public function getStatus($user) {
         
         try {
             // Get user basic info
-            $userData = $this->userModel->getUserById($userId);
-            if (!$userData) {
-                http_response_code(404);
-                return ['status' => 'error', 'message' => 'User not found'];
-            }
-            
+        $userData = $this->userModel->getUserById($userId);
+        if (!$userData) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'User not found'];
+        }
+        
             // Get user profile details
-            $profileData = $this->userModel->getUserProfile($userId);
+        $profileData = $this->userModel->getUserProfile($userId);
             if (!$profileData) {
                 // Create default profile if it doesn't exist
                 $profileData = [
@@ -764,19 +764,19 @@ public function getStatus($user) {
                 'role' => $userData['role'],
                 'first_name' => $profileData['first_name'] ?? '',
                 'last_name' => $profileData['last_name'] ?? '',
-                'phone' => $userData['phone'],
+            'phone' => $userData['phone'],
                 'email' => $userData['email'],
-                'address' => $profileData['address'] ?? '',
+            'address' => $profileData['address'] ?? '',
                 'profile_picture' => $profileData['profile_picture'] ?? null,
                 'is_verified' => (bool)$userData['is_verified'],
                 'status' => $userData['status'],
                 'created_at' => $userData['created_at'],
                 'updated_at' => $userData['updated_at'] ?? null
-            ];
-            
-            http_response_code(200);
-            return [
-                'status' => 'success',
+        ];
+        
+        http_response_code(200);
+        return [
+            'status' => 'success',
                 'message' => 'Profile retrieved successfully',
                 'data' => $fullProfile
             ];
@@ -793,27 +793,27 @@ public function getStatus($user) {
         $userId = $user['user_id'];
         
         try {
-            // Validate required fields
+        // Validate required fields
             $required = ['first_name', 'last_name'];
             foreach ($required as $field) {
                 if (empty($data[$field])) {
-                    http_response_code(400);
+            http_response_code(400);
                     return ['status' => 'error', 'message' => "$field is required"];
-                }
-            }
-            
+        }
+        }
+        
             // Validate email format if provided
             if (!empty($data['email'])) {
-                if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Invalid email format'];
-                }
-                
-                // Check if email is already taken by another user
-                $existingUser = $this->userModel->getUserByEmail($data['email']);
-                if ($existingUser && $existingUser['id'] != $userId) {
-                    http_response_code(409);
-                    return ['status' => 'error', 'message' => 'Email is already taken by another user'];
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid email format'];
+        }
+        
+        // Check if email is already taken by another user
+        $existingUser = $this->userModel->getUserByEmail($data['email']);
+        if ($existingUser && $existingUser['id'] != $userId) {
+            http_response_code(409);
+            return ['status' => 'error', 'message' => 'Email is already taken by another user'];
                 }
             }
             
@@ -860,8 +860,8 @@ public function getStatus($user) {
                 }
                 
                 // Update or create user profile
-                $profileData = [
-                    'user_id' => $userId,
+        $profileData = [
+            'user_id' => $userId,
                     'first_name' => trim($data['first_name']),
                     'last_name' => trim($data['last_name'])
                 ];
@@ -885,7 +885,7 @@ public function getStatus($user) {
                 // Get updated profile
                 $updatedProfile = $this->getProfile($user);
                 
-                http_response_code(200);
+            http_response_code(200);
                 return [
                     'status' => 'success',
                     'message' => 'Profile updated successfully',

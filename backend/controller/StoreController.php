@@ -266,8 +266,8 @@ public function getActiveCategoriesByStoreType($user)
                 
                 if (!$is24hrs) {
                     // Validate time fields for non-24hr days
-                    if (!isset($dayData['open_time']) || !isset($dayData['close_time'])) {
-                        http_response_code(400);
+                if (!isset($dayData['open_time']) || !isset($dayData['close_time'])) {
+                    http_response_code(400);
                         return ['status' => 'error', 'message' => "Open and close times are required for $day when not in 24hr mode"];
                 }
                 

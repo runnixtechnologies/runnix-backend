@@ -29,9 +29,9 @@ if ($user['role'] !== 'merchant') {
     exit;
 }
 
-// Extract store_id from authenticated user
+// Check if user has store_id in JWT token
 if (!isset($user['store_id'])) {
-    error_log("get_foodsectionby_id.php: No store_id found in user data");
+    error_log("get_foodsectionby_id.php: No store_id found in user JWT token");
     http_response_code(403);
     echo json_encode([
         'status' => 'error',
@@ -49,6 +49,14 @@ if (!$id) {
     error_log("get_foodsectionby_id.php: No section ID provided");
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'Section ID is required']);
+    exit;
+}
+
+// Validate ID is numeric
+if (!is_numeric($id)) {
+    error_log("get_foodsectionby_id.php: Invalid section ID format: " . $id);
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Section ID must be a valid number']);
     exit;
 }
 

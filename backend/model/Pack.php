@@ -212,8 +212,8 @@ public function countByStore($storeId)
             
             // Only include discount fields if there's an actual discount
             if ($result['discount_id']) {
-                $result['discount_price'] = (float)$result['discount_price'];
-                $result['percentage'] = (float)$result['percentage'];
+            $result['discount_price'] = (float)$result['discount_price'];
+            $result['percentage'] = (float)$result['percentage'];
                 $result['discount_id'] = (int)$result['discount_id'];
                 $result['discount_start_date'] = $result['discount_start_date'];
                 $result['discount_end_date'] = $result['discount_end_date'];
