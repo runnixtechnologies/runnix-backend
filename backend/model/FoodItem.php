@@ -1050,7 +1050,7 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
 {
     try {
         // First, get all sections for this store with basic information
-        $query = "SELECT fs.id, fs.store_id, fs.name, fs.status, fs.created_at, fs.updated_at
+        $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at
                   FROM food_sections fs
                   WHERE fs.store_id = :store_id 
                   ORDER BY fs.created_at DESC";
@@ -1103,6 +1103,9 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
             
             // Add the additional data
             $section['total_orders'] = (int)$orderCount['total_orders'];
+            $section['price'] = (float)$section['price'];
+            $section['max_quantity'] = (int)$section['max_quantity'];
+            $section['required'] = (bool)$section['required'];
             
             // Only include discount fields if there's an actual discount
             if ($discount && $discount['discount_id']) {
@@ -1142,7 +1145,7 @@ public function getFoodSectionById($id)
 {
     try {
         // Get the section with discount information
-        $query = "SELECT fs.id, fs.store_id, fs.name, fs.status, fs.created_at, fs.updated_at,
+        $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at,
                          d.percentage,
                          d.id as discount_id,
                          d.start_date as discount_start_date,
@@ -1172,6 +1175,9 @@ public function getFoodSectionById($id)
 
         // Add total_orders and convert numeric fields
         $section['total_orders'] = (int)$orderCount['total_orders'];
+        $section['price'] = (float)$section['price'];
+        $section['max_quantity'] = (int)$section['max_quantity'];
+        $section['required'] = (bool)$section['required'];
         
         // Only include discount fields if there's an actual discount
         if ($section['discount_id']) {
