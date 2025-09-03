@@ -1056,6 +1056,7 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
         $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at
                   FROM food_sections fs
                   WHERE fs.store_id = :store_id 
+                  AND fs.status = 'active'
                   ORDER BY fs.id DESC";
     
         // Add pagination if limit is provided
@@ -1178,7 +1179,7 @@ public function countFoodSectionsByStoreId($storeId)
         // Debug logging
         error_log("countFoodSectionsByStoreId called with storeId: " . $storeId);
         
-        $query = "SELECT COUNT(*) FROM food_sections WHERE store_id = :store_id";
+        $query = "SELECT COUNT(*) FROM food_sections WHERE store_id = :store_id AND status = 'active'";
         error_log("Count SQL Query: " . $query);
         error_log("Count Parameter: store_id = " . $storeId);
         
