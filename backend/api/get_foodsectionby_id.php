@@ -9,73 +9,37 @@ require_once '../config/cors.php';
 require_once '../middleware/authMiddleware.php';
 
 use Controller\FoodItemController;
-use Controller\StoreController;
 use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
 $user = authenticateRequest();
 
-// Debug logging
-error_log("get_foodsectionby_id.php: User authenticated: " . json_encode($user));
-
 // Check if user is a merchant
 if ($user['role'] !== 'merchant') {
-    error_log("get_foodsectionby_id.php: User is not a merchant, role: " . $user['role']);
     http_response_code(403);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Only merchants can access food sections.'
-    ]);
+    echo json_encode(['status' => 'error', 'message' => 'Only merchants can access food sections']);
     exit;
 }
 
-// Get store_id - try from JWT first, then from database
-$storeId = $user['store_id'] ?? null;
-
-if (!$storeId) {
-    error_log("get_foodsectionby_id.php: No store_id in JWT, getting from database");
-    $storeController = new StoreController();
-    $storeResponse = $storeController->getStoreByUserId($user['user_id']);
-    
-    if ($storeResponse['status'] !== 'success') {
-        error_log("get_foodsectionby_id.php: Store not found for user_id: " . $user['user_id']);
-        http_response_code(404);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Store not found for this user.'
-        ]);
-        exit;
-    }
-    
-    $storeId = $storeResponse['store']['id'];
+// Extract store_id from authenticated user
+if (!isset($user['store_id'])) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.']);
+    exit;
 }
 
-$id = $_GET['id'] ?? null;
+$data = $_GET;
 
-error_log("get_foodsectionby_id.php: Requested section ID: " . $id);
-error_log("get_foodsectionby_id.php: User store_id: " . $storeId);
-
-if (!$id) {
-    error_log("get_foodsectionby_id.php: No section ID provided");
+if (!isset($data['id'])) {
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'Section ID is required']);
     exit;
 }
 
-// Validate ID is numeric
-if (!is_numeric($id)) {
-    error_log("get_foodsectionby_id.php: Invalid section ID format: " . $id);
-    http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'Section ID must be a valid number']);
-    exit;
-}
+$sectionId = $data['id'];
 
 $controller = new FoodItemController();
-error_log("get_foodsectionby_id.php: Calling controller method with id: " . $id . ", user: " . json_encode($user));
-$response = $controller->getFoodSectionById($id, $user, $storeId);
-
-error_log("get_foodsectionby_id.php: Controller response: " . json_encode($response));
-
+$response = $controller->getFoodSectionById($sectionId, $user, $user['store_id']);
 echo json_encode($response);
 ?>

@@ -6,50 +6,34 @@ error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
 require_once '../config/cors.php';
-require_once '../middleware/authMiddleware.php'; // ✅ Important!
+require_once '../middleware/authMiddleware.php';
 
 use Controller\FoodItemController;
-use Controller\StoreController;
-use function Middleware\authenticateRequest; // ✅ Import function
+use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
-// ✅ Authenticate user properly
 $user = authenticateRequest();
 
-// Debug logging
-error_log("get_all_foodsections.php: User authenticated: " . json_encode($user));
-
-// Get store_id - try from JWT first, then from database
-$storeId = $user['store_id'] ?? null;
-
-if (!$storeId) {
-    error_log("get_all_foodsections.php: No store_id in JWT, getting from database");
-    $storeController = new StoreController();
-    $storeResponse = $storeController->getStoreByUserId($user['user_id']);
-    
-    if ($storeResponse['status'] !== 'success') {
-        error_log("get_all_foodsections.php: Store not found for user_id: " . $user['user_id']);
-        http_response_code(404);
-        echo json_encode(['status' => 'error', 'message' => 'Store not found for this user.']);
-        exit;
-    }
-    
-    $storeId = $storeResponse['store']['id'];
+// Check if user is a merchant
+if ($user['role'] !== 'merchant') {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Only merchants can access food sections']);
+    exit;
 }
 
-error_log("get_all_foodsections.php: Store ID: " . $storeId);
+// Extract store_id from authenticated user
+if (!isset($user['store_id'])) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.']);
+    exit;
+}
 
 // Get pagination parameters
 $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
 
-error_log("get_all_foodsections.php: Page: " . $page . ", Limit: " . $limit);
-
 $controller = new FoodItemController();
-$response = $controller->getAllFoodSectionsByStoreId($storeId, $user, $page, $limit);
-
-error_log("get_all_foodsections.php: Controller response: " . json_encode($response));
-
+$response = $controller->getAllFoodSectionsByStoreId($user['store_id'], $user, $page, $limit);
 echo json_encode($response);
 ?>

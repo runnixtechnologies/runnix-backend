@@ -1293,11 +1293,17 @@ public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit =
     error_log("FoodItemController::getAllFoodSectionsByStoreId called with user: " . json_encode($user));
     error_log("FoodItemController::getAllFoodSectionsByStoreId called with page: " . $page . ", limit: " . $limit);
     
-    // Validate store_id parameter
-    if (!$storeId) {
-        error_log("FoodItemController::getAllFoodSectionsByStoreId: No store ID provided");
-        http_response_code(400);
-        return ['status' => 'error', 'message' => 'Store ID is required'];
+    // Check if store exists
+    $store = $this->storeModel->getStoreById($storeId);
+    if (!$store) {
+        http_response_code(404); // Not Found
+        return ["status" => "error", "message" => "Store not found."];
+    }
+
+    // If user is merchant, ensure they can only access their own store
+    if ($user['role'] === 'merchant' && $store['user_id'] != $user['user_id']) {
+        http_response_code(403); // Forbidden
+        return ["status" => "error", "message" => "Access denied. You can only view your own store's food sections."];
     }
     
     error_log("FoodItemController::getAllFoodSectionsByStoreId: Using storeId: " . $storeId);
@@ -1315,10 +1321,11 @@ public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit =
     error_log("FoodItemController::getAllFoodSectionsByStoreId: Total count: " . $totalCount);
     error_log("FoodItemController::getAllFoodSectionsByStoreId: Model result: " . json_encode($result));
     
+    // Always return success with data (empty array if no sections found)
     http_response_code(200);
     return [
         'status' => 'success', 
-        'data' => $result,
+        'data' => $result ?: [],
         'meta' => [
             'page' => $page,
             'limit' => $limit,
@@ -1444,6 +1451,19 @@ public function getFoodSectionById($id, $user, $storeId = null)
         error_log("FoodItemController::getFoodSectionById: Section not found in model");
         http_response_code(404); // Not Found
         return ['status' => 'error', 'message' => 'Food section not found'];
+    }
+
+    // Check if store exists and user owns it
+    $store = $this->storeModel->getStoreById($storeId);
+    if (!$store) {
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Store not found.'];
+    }
+
+    // If user is merchant, ensure they can only access their own store
+    if ($user['role'] === 'merchant' && $store['user_id'] != $user['user_id']) {
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Access denied. You can only view your own store\'s food sections.'];
     }
 
     // Authorization check - verify the section belongs to the user's store
