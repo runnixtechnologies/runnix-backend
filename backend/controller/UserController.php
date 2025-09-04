@@ -740,14 +740,14 @@ public function getStatus($user) {
         
         try {
             // Get user basic info
-        $userData = $this->userModel->getUserById($userId);
-        if (!$userData) {
-            http_response_code(404);
-            return ['status' => 'error', 'message' => 'User not found'];
-        }
-        
+            $userData = $this->userModel->getUserById($userId);
+            if (!$userData) {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => 'User not found'];
+            }
+            
             // Get user profile details
-        $profileData = $this->userModel->getUserProfile($userId);
+            $profileData = $this->userModel->getUserProfile($userId);
             if (!$profileData) {
                 // Create default profile if it doesn't exist
                 $profileData = [
@@ -764,19 +764,41 @@ public function getStatus($user) {
                 'role' => $userData['role'],
                 'first_name' => $profileData['first_name'] ?? '',
                 'last_name' => $profileData['last_name'] ?? '',
-            'phone' => $userData['phone'],
+                'phone' => $userData['phone'],
                 'email' => $userData['email'],
-            'address' => $profileData['address'] ?? '',
+                'address' => $profileData['address'] ?? '',
                 'profile_picture' => $profileData['profile_picture'] ?? null,
                 'is_verified' => (bool)$userData['is_verified'],
                 'status' => $userData['status'],
                 'created_at' => $userData['created_at'],
                 'updated_at' => $userData['updated_at'] ?? null
-        ];
-        
-        http_response_code(200);
-        return [
-            'status' => 'success',
+            ];
+            
+            // If user is a merchant, add business information
+            if ($userData['role'] === 'merchant') {
+                $storeData = $this->storeModel->getStoreByUserId($userId);
+                if ($storeData) {
+                    // Add business information
+                    $fullProfile['business'] = [
+                        'store_name' => $storeData['store_name'] ?? '',
+                        'business_address' => $storeData['biz_address'] ?? '',
+                        'business_email' => $storeData['biz_email'] ?? '',
+                        'business_phone' => $storeData['biz_phone'] ?? '',
+                        'business_registration_number' => $storeData['biz_reg_number'] ?? '',
+                        'business_logo' => $storeData['biz_logo'] ?? null,
+                        'business_url' => $storeData['biz_url'] ?? null, // Will be null if field doesn't exist
+                        'store_id' => $storeData['id'] ?? null,
+                        'store_type_id' => $storeData['store_type_id'] ?? null
+                    ];
+                } else {
+                    // Merchant but no store setup
+                    $fullProfile['business'] = null;
+                }
+            }
+            
+            http_response_code(200);
+            return [
+                'status' => 'success',
                 'message' => 'Profile retrieved successfully',
                 'data' => $fullProfile
             ];
