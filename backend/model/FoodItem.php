@@ -694,8 +694,10 @@ public function getFoodSideById($id)
                      d.id as discount_id, d.percentage, d.start_date as discount_start_date, d.end_date as discount_end_date, d.status as discount_status,
                      ROUND((fs.price - (fs.price * COALESCE(d.percentage, 0) / 100)), 2) as discount_price
                   FROM food_sides fs
-                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'food_side'
-                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
+                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active' 
+                      AND (d.start_date IS NULL OR d.start_date <= NOW()) 
+                      AND (d.end_date IS NULL OR d.end_date >= NOW())
                   WHERE fs.id = :id";
 		$stmt = $this->conn->prepare($sql);
         $stmt->execute(['id' => $id]);
@@ -722,7 +724,7 @@ public function getFoodSideById($id)
         if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
             $result['discount_id'] = (int)$result['discount_id'];
             $result['percentage'] = (float)$result['percentage'];
-            $result['discount_price'] = (float)$result['discount_price'];
+        $result['discount_price'] = (float)$result['discount_price'];
             $result['discount_start_date'] = $result['discount_start_date'];
             $result['discount_end_date'] = $result['discount_end_date'];
         } else {
@@ -757,8 +759,10 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
                   FROM food_sides fs
                   LEFT JOIN food_item_sides fis ON fs.id = fis.side_id
                   LEFT JOIN order_items oi ON fis.item_id = oi.item_id
-                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'food_side'
-                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
+                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active' 
+                      AND (d.start_date IS NULL OR d.start_date <= NOW()) 
+                      AND (d.end_date IS NULL OR d.end_date >= NOW())
                   WHERE fs.store_id = :store_id 
                   GROUP BY fs.id
                   ORDER BY fs.created_at DESC 
@@ -779,7 +783,7 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
             if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
                 $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['percentage'];
-                $result['discount_price'] = (float)$result['discount_price'];
+            $result['discount_price'] = (float)$result['discount_price'];
                 $result['discount_start_date'] = $result['discount_start_date'];
                 $result['discount_end_date'] = $result['discount_end_date'];
             } else {
@@ -2126,7 +2130,9 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
                   LEFT JOIN discount_items di ON fsi.id = di.item_id AND di.item_type = 'food_section_item'
-                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active' 
+                      AND (d.start_date IS NULL OR d.start_date <= NOW()) 
+                      AND (d.end_date IS NULL OR d.end_date >= NOW())
                   LEFT JOIN order_items oi ON fsi.id = oi.item_id
                   WHERE " . $whereClause . " 
                   GROUP BY fsi.id
@@ -2179,7 +2185,9 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
                   LEFT JOIN discount_items di ON fsi.id = di.item_id AND di.item_type = 'food_section_item'
-                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active' 
+                      AND (d.start_date IS NULL OR d.start_date <= NOW()) 
+                      AND (d.end_date IS NULL OR d.end_date >= NOW())
                   LEFT JOIN order_items oi ON fsi.id = oi.item_id
                   WHERE fsi.id = :item_id
                   GROUP BY fsi.id";
