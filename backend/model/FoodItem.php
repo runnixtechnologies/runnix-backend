@@ -1084,6 +1084,7 @@ public function createFoodSection($data)
 }
 
 // READ All Sections by Store (with pagination)
+// READ All Sections by Store (with pagination + debug logs)
 public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = null)
 {
     try {
@@ -1092,7 +1093,7 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
                          fs.created_at, fs.updated_at
                   FROM food_sections fs
                   WHERE fs.store_id = :store_id
-                  
+                    AND fs.status = 'active'
                   ORDER BY fs.id DESC";
 
         if ($limit !== null) {
@@ -1102,18 +1103,24 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
             }
         }
 
+        error_log("SQL (food_sections): " . $query);
+
         $stmt = $this->conn->prepare($query);
         $stmt->bindValue(':store_id', (int)$storeId, PDO::PARAM_INT);
 
         if ($limit !== null) {
             $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+            error_log("Param limit: " . $limit);
         }
         if ($offset !== null) {
             $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+            error_log("Param offset: " . $offset);
         }
 
         $stmt->execute();
         $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        error_log("Fetched sections count: " . count($sections));
 
         foreach ($sections as &$section) {
             $section['price'] = (float)$section['price'];
@@ -1161,7 +1168,7 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
     }
 }
 
-// Count total food sections by store
+// Count total food sections by store (with debug log)
 public function countFoodSectionsByStoreId($storeId)
 {
     try {
@@ -1169,15 +1176,22 @@ public function countFoodSectionsByStoreId($storeId)
                   FROM food_sections 
                   WHERE store_id = :store_id 
                     AND status = 'active'";
+        error_log("SQL (count): " . $query);
+        error_log("Param store_id: " . $storeId);
+
         $stmt = $this->conn->prepare($query);
         $stmt->bindValue(':store_id', (int)$storeId, PDO::PARAM_INT);
         $stmt->execute();
-        return (int)$stmt->fetchColumn();
+        $count = (int)$stmt->fetchColumn();
+
+        error_log("Count result: " . $count);
+        return $count;
     } catch (PDOException $e) {
         error_log("countFoodSectionsByStoreId error: " . $e->getMessage());
         return 0;
     }
 }
+
 
 
 // GET Single Section by ID
