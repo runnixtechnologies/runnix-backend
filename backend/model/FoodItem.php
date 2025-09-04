@@ -1088,120 +1088,70 @@ public function createFoodSection($data)
 public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = null)
 {
     try {
-        // Debug logging
-        error_log("getAllFoodSectionsByStoreId called with storeId: " . $storeId . ", limit: " . $limit . ", offset: " . $offset);
-        
-        // First, check if food_sections table exists, if not create it
-        $this->ensureFoodSectionsTableExists();
-        
-        // First, get all sections for this store with basic information
-        $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at
+        // Build base query
+        $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, 
+                         fs.price, fs.status, fs.created_at, fs.updated_at
                   FROM food_sections fs
                   WHERE fs.store_id = :store_id 
-                  AND fs.status = 'active'
+                    AND fs.status = 'active'
                   ORDER BY fs.id DESC";
-    
-        // Add pagination if limit is provided
+
+        // Add pagination safely by casting to int
         if ($limit !== null) {
+            $query .= " LIMIT " . (int)$limit;
             if ($offset !== null) {
-                $query .= " LIMIT :limit OFFSET :offset";
-            } else {
-                $query .= " LIMIT :limit";
+                $query .= " OFFSET " . (int)$offset;
             }
-        }
-        
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
-        
-        if ($limit !== null) {
-            if ($offset !== null) {
-                $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-                $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-            } else {
-                $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-            }
-        }
-        
-        $stmt->execute();
-        $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        error_log("Raw sections from database: " . count($sections) . " found");
-        error_log("SQL Query executed: " . $query);
-        error_log("Parameters: store_id=" . $storeId . ", limit=" . $limit . ", offset=" . $offset);
-        error_log("PDO error info: " . json_encode($stmt->errorInfo()));
-        if (!empty($sections)) {
-            error_log("First section data: " . json_encode($sections[0]));
-        } else {
-            error_log("No sections returned from database query");
         }
 
-        // Now enhance each section with additional data
-        error_log("Starting to enhance " . count($sections) . " sections");
+        // Prepare and execute
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindValue(':store_id', (int)$storeId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Enhance results
         foreach ($sections as &$section) {
-            try {
-                error_log("Processing section ID: " . $section['id']);
-                
-                // Add the basic data conversions first
-                $section['price'] = (float)$section['price'];
-                $section['max_quantity'] = (int)$section['max_quantity'];
-                $section['required'] = (bool)$section['required'];
-                
-                // Try to get discount information for this section (optional)
-                try {
-                    $discountQuery = "SELECT d.percentage, d.id as discount_id, 
-                                            d.start_date as discount_start_date, d.end_date as discount_end_date
-                                     FROM discount_items di 
-                                     JOIN discounts d ON di.discount_id = d.id 
-                                     WHERE di.item_id = :section_id AND di.item_type = 'section' 
-                                       AND d.status = 'active' 
-                                       AND NOW() BETWEEN d.start_date AND d.end_date
-                                     LIMIT 1";
-                    
-                    $discountStmt = $this->conn->prepare($discountQuery);
-                    $discountStmt->execute(['section_id' => $section['id']]);
-                    $discount = $discountStmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    // Only include discount fields if there's an actual discount
-                    if ($discount && $discount['discount_id']) {
-                        $section['percentage'] = (float)$discount['percentage'];
-                        $section['discount_id'] = (int)$discount['discount_id'];
-                        $section['discount_start_date'] = $discount['discount_start_date'];
-                        $section['discount_end_date'] = $discount['discount_end_date'];
-                    }
-                } catch (Exception $e) {
-                    error_log("Warning: Could not get discount info for section " . $section['id'] . ": " . $e->getMessage());
-                    // Continue without discount info
-                }
-                
-                // Try to get total orders count for this section (optional)
-                try {
-                    $orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders 
-                                   FROM food_section_items fsi 
-                                   JOIN order_items oi ON fsi.item_id = oi.item_id 
-                                   WHERE fsi.section_id = :section_id";
-                    $orderStmt = $this->conn->prepare($orderQuery);
-                    $orderStmt->execute(['section_id' => $section['id']]);
-                    $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    $section['total_orders'] = (int)$orderCount['total_orders'];
-                } catch (Exception $e) {
-                    error_log("Warning: Could not get order count for section " . $section['id'] . ": " . $e->getMessage());
-                    $section['total_orders'] = 0; // Default value
-                }
-                
-                error_log("Section " . $section['id'] . " processed successfully");
-            } catch (Exception $e) {
-                error_log("Error processing section " . $section['id'] . ": " . $e->getMessage());
-                // Continue with other sections
+            $section['price'] = (float)$section['price'];
+            $section['max_quantity'] = (int)$section['max_quantity'];
+            $section['required'] = (bool)$section['required'];
+
+            // Optional discount
+            $discountQuery = "SELECT d.percentage, d.id as discount_id, 
+                                     d.start_date as discount_start_date, d.end_date as discount_end_date
+                              FROM discount_items di 
+                              JOIN discounts d ON di.discount_id = d.id 
+                              WHERE di.item_id = :section_id 
+                                AND di.item_type = 'section' 
+                                AND d.status = 'active' 
+                                AND NOW() BETWEEN d.start_date AND d.end_date
+                              LIMIT 1";
+            $discountStmt = $this->conn->prepare($discountQuery);
+            $discountStmt->execute(['section_id' => $section['id']]);
+            $discount = $discountStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($discount) {
+                $section['percentage'] = (float)$discount['percentage'];
+                $section['discount_id'] = (int)$discount['discount_id'];
+                $section['discount_start_date'] = $discount['discount_start_date'];
+                $section['discount_end_date'] = $discount['discount_end_date'];
             }
-        }
-        
-        error_log("Final sections to return: " . count($sections) . " processed");
-        if (!empty($sections)) {
-            error_log("Final first section: " . json_encode($sections[0]));
+
+            // Optional order count
+            $orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders 
+                           FROM food_section_items fsi 
+                           JOIN order_items oi ON fsi.item_id = oi.item_id 
+                           WHERE fsi.section_id = :section_id";
+            $orderStmt = $this->conn->prepare($orderQuery);
+            $orderStmt->execute(['section_id' => $section['id']]);
+            $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
+
+            $section['total_orders'] = (int)($orderCount['total_orders'] ?? 0);
         }
 
         return $sections;
+
     } catch (PDOException $e) {
         error_log("getAllFoodSectionsByStoreId error: " . $e->getMessage());
         return [];
