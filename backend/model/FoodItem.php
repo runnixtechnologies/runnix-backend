@@ -1251,7 +1251,9 @@ public function getFoodSectionById($id)
 
         $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, 
                          fs.required, fs.price, fs.status, fs.created_at, fs.updated_at,
-                         d.percentage, d.id as discount_id, d.start_date as discount_start_date, 
+                         d.percentage,
+                         d.id as discount_id,
+                         d.start_date as discount_start_date,
                          d.end_date as discount_end_date
                   FROM food_sections fs
                   LEFT JOIN discount_items di 
@@ -1268,8 +1270,23 @@ public function getFoodSectionById($id)
         $section = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$section) {
-            error_log("No section found for ID $id after query");
             return null;
+        }
+
+        // Convert numeric/boolean values
+        $section['price'] = (float)$section['price'];
+        $section['max_quantity'] = (int)$section['max_quantity'];
+        $section['required'] = (bool)$section['required'];
+
+        // Attach discount ONLY if present
+        if ($section['discount_id']) {
+            $section['percentage'] = (float)$section['percentage'];
+            $section['discount_id'] = (int)$section['discount_id'];
+        } else {
+            unset($section['percentage']);
+            unset($section['discount_id']);
+            unset($section['discount_start_date']);
+            unset($section['discount_end_date']);
         }
 
         return $section;
@@ -1278,6 +1295,7 @@ public function getFoodSectionById($id)
         return null;
     }
 }
+
 
 
 
