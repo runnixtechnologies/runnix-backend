@@ -1292,39 +1292,33 @@ public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit =
     // Debug logging
     error_log("FoodItemController::getAllFoodSectionsByStoreId called with user: " . json_encode($user));
     error_log("FoodItemController::getAllFoodSectionsByStoreId called with page: " . $page . ", limit: " . $limit);
-    
+
     // Check if store exists
     $store = $this->storeModel->getStoreById($storeId);
     if (!$store) {
-        http_response_code(404); // Not Found
+        http_response_code(404);
         return ["status" => "error", "message" => "Store not found."];
     }
 
-    // If user is merchant, ensure they can only access their own store
+    // Merchant authorization check
     if ($user['role'] === 'merchant' && $store['user_id'] != $user['user_id']) {
-        http_response_code(403); // Forbidden
+        http_response_code(403);
         return ["status" => "error", "message" => "Access denied. You can only view your own store's food sections."];
     }
-    
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Using storeId: " . $storeId);
 
+    // Pagination math
     $offset = ($page - 1) * $limit;
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Calculated offset: " . $offset);
-    
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Calling model method with storeId: " . $storeId . ", limit: " . $limit . ", offset: " . $offset);
-    
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: About to call model method");
-    $result = $this->foodItem->getAllFoodSectionsByStoreIdPaginated($storeId, $limit, $offset);
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Model method called, result type: " . gettype($result));
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Model result count: " . (is_array($result) ? count($result) : 'not array'));
+
+    // ✅ Use the updated model method
+    $result = $this->foodItem->getAllFoodSectionsByStoreId($storeId, $limit, $offset);
+
+    // Count total
     $totalCount = $this->foodItem->countFoodSectionsByStoreId($storeId);
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Total count: " . $totalCount);
-    error_log("FoodItemController::getAllFoodSectionsByStoreId: Model result: " . json_encode($result));
-    
-    // Always return success with data (empty array if no sections found)
+
+    // Return response
     http_response_code(200);
     return [
-        'status' => 'success', 
+        'status' => 'success',
         'data' => $result ?: [],
         'meta' => [
             'page' => $page,
@@ -1336,6 +1330,7 @@ public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit =
         ]
     ];
 }
+
 
 // UPDATE Food Section
 public function updateFoodSection($id, $data, $user)
