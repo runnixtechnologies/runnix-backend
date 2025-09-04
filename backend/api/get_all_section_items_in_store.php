@@ -39,6 +39,10 @@ $sectionId = isset($_GET['section_id']) ? (int)$_GET['section_id'] : null;
 try {
     $controller = new FoodItemController();
     $response = $controller->getAllSectionItemsInStore($user, $page, $limit, $sectionId);
+    
+    // Debug: Log the response structure
+    error_log("Section Items Response: " . json_encode($response));
+    
     echo json_encode($response);
 } catch (Exception $e) {
     http_response_code(500);

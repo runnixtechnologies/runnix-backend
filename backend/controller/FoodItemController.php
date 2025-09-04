@@ -2136,7 +2136,8 @@ public function getCategoriesByStoreType($storeId)
         $totalCount = $this->foodItem->countSectionItemsByStoreId($user['store_id'], $sectionId);
 
         http_response_code(200);
-        return [
+        
+        $response = [
             "status" => "success", 
             "data" => $sectionItems,
             "meta" => [
@@ -2148,6 +2149,11 @@ public function getCategoriesByStoreType($storeId)
                 "has_prev" => $page > 1
             ]
         ];
+        
+        // Debug: Log the response structure
+        error_log("Controller Response: " . json_encode($response));
+        
+        return $response;
     }
 
 }
