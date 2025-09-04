@@ -1284,11 +1284,12 @@ public function createFoodSection($data, $user)
         return ['status' => 'error', 'message' => 'Something went wrong. Unable to create the section. Please try again.'];
     }
 }
-
+// READ All Sections by Store
 public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit = 10)
 {
     // Debug logging
-    error_log("FoodItemController::getAllFoodSectionsByStoreId called with user: " . json_encode($user));
+    error_log("FoodItemController::getAllFoodSectionsByStoreId called with user=" . json_encode($user));
+    error_log("FoodItemController::getAllFoodSectionsByStoreId called with page=$page, limit=$limit");
 
     // Check if store exists
     $store = $this->storeModel->getStoreById($storeId);
@@ -1306,17 +1307,17 @@ public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit =
     // Pagination math
     $offset = ($page - 1) * $limit;
 
-    // Call model
-    $result = $this->foodItem->getAllFoodSectionsByStoreId($storeId, $limit, $offset);
+    // ✅ Use the updated model method (with items)
+    $sections = $this->foodItem->getAllFoodSectionsByStoreId($storeId, $limit, $offset);
 
     // Count total
     $totalCount = $this->foodItem->countFoodSectionsByStoreId($storeId);
 
-    // Return response
+    // Return structured response
     http_response_code(200);
     return [
         'status' => 'success',
-        'data' => $result,
+        'data' => $sections ?: [],
         'meta' => [
             'page' => $page,
             'limit' => $limit,

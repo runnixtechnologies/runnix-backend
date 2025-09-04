@@ -1088,27 +1088,17 @@ public function createFoodSection($data)
 public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = null)
 {
     try {
-        // Always log into php-error.log inside backend folder
-        $logFile = __DIR__ . '/../php-error.log'; // adjust path if needed
+        // Debug log
+        error_log("[getAllFoodSectionsByStoreId] storeId=$storeId, limit=$limit, offset=$offset");
 
-        // Helper to log both to PHP error system and custom file
-        $log = function ($msg) use ($logFile) {
-            $timestamp = date('Y-m-d H:i:s');
-            error_log("[$timestamp] $msg"); // standard PHP error_log
-            file_put_contents($logFile, "[$timestamp] $msg\n", FILE_APPEND); // force into php-error.log
-        };
-
-        $log("getAllFoodSectionsByStoreId called with storeId={$storeId}, limit={$limit}, offset={$offset}");
-
-        // Build base query
-        $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, 
+        // Base query
+        $query = "SELECT fs.id, fs.store_id, fs.section_name, fs.max_quantity, fs.required, 
                          fs.price, fs.status, fs.created_at, fs.updated_at
                   FROM food_sections fs
                   WHERE fs.store_id = :store_id 
                     AND fs.status = 'active'
                   ORDER BY fs.id DESC";
 
-        // Add pagination
         if ($limit !== null) {
             $query .= " LIMIT " . (int)$limit;
             if ($offset !== null) {
@@ -1116,72 +1106,38 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
             }
         }
 
-        $log("SQL Query: " . $query);
-
-        // Prepare and execute
         $stmt = $this->conn->prepare($query);
         $stmt->bindValue(':store_id', (int)$storeId, PDO::PARAM_INT);
         $stmt->execute();
 
         $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $log("Fetched " . count($sections) . " sections from DB");
-
-        // Enhance results
+        // Attach items for each section
         foreach ($sections as &$section) {
-            $section['price'] = (float)$section['price'];
             $section['max_quantity'] = (int)$section['max_quantity'];
             $section['required'] = (bool)$section['required'];
+            $section['price'] = (float)$section['price'];
 
-            // Log each section id
-            $log("Processing section id=" . $section['id']);
+            $itemQuery = "SELECT id, name, price, status 
+                          FROM food_section_items 
+                          WHERE section_id = :section_id AND status = 'active'
+                          ORDER BY id ASC";
+            $itemStmt = $this->conn->prepare($itemQuery);
+            $itemStmt->execute(['section_id' => $section['id']]);
+            $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Discount query
-            $discountQuery = "SELECT d.percentage, d.id as discount_id, 
-                                     d.start_date as discount_start_date, d.end_date as discount_end_date
-                              FROM discount_items di 
-                              JOIN discounts d ON di.discount_id = d.id 
-                              WHERE di.item_id = :section_id 
-                                AND di.item_type = 'section' 
-                                AND d.status = 'active' 
-                                AND NOW() BETWEEN d.start_date AND d.end_date
-                              LIMIT 1";
-
-            $discountStmt = $this->conn->prepare($discountQuery);
-            $discountStmt->execute(['section_id' => $section['id']]);
-            $discount = $discountStmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($discount) {
-                $log("Section {$section['id']} has discount " . json_encode($discount));
-                $section['percentage'] = (float)$discount['percentage'];
-                $section['discount_id'] = (int)$discount['discount_id'];
-                $section['discount_start_date'] = $discount['discount_start_date'];
-                $section['discount_end_date'] = $discount['discount_end_date'];
-            } else {
-                $log("Section {$section['id']} has no active discount");
+            // Normalize item data
+            foreach ($items as &$item) {
+                $item['price'] = (float)$item['price'];
             }
 
-            // Orders count
-            $orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders 
-                           FROM food_section_items fsi 
-                           JOIN order_items oi ON fsi.item_id = oi.item_id 
-                           WHERE fsi.section_id = :section_id";
-            $orderStmt = $this->conn->prepare($orderQuery);
-            $orderStmt->execute(['section_id' => $section['id']]);
-            $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
-
-            $section['total_orders'] = (int)($orderCount['total_orders'] ?? 0);
-            $log("Section {$section['id']} total_orders=" . $section['total_orders']);
+            $section['items'] = $items;
         }
 
         return $sections;
 
     } catch (PDOException $e) {
-        $logFile = __DIR__ . '/../php-error.log';
-        $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logFile, "[$timestamp] getAllFoodSectionsByStoreId error: " . $e->getMessage() . "\n", FILE_APPEND);
-        file_put_contents($logFile, "[$timestamp] Trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
-
+        error_log("[getAllFoodSectionsByStoreId] ERROR: " . $e->getMessage());
         return [];
     }
 }
