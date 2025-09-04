@@ -116,7 +116,7 @@ public function deleteBulk($packIds, $storeId)
 {
     try {
         $sql = "SELECT p.id, p.store_id, p.name, p.price, p.status, p.created_at, p.updated_at,
-                       d.id as discount_id, d.percentage, d.start_date, d.end_date, d.status as discount_status,
+                       d.id as discount_id, d.percentage, d.start_date as discount_start_date, d.end_date as discount_end_date, d.status as discount_status,
                        ROUND((p.price - (p.price * COALESCE(d.percentage, 0) / 100)), 2) as discount_price,
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} p
@@ -147,15 +147,15 @@ public function deleteBulk($packIds, $storeId)
                 $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['percentage'];
             $result['discount_price'] = (float)$result['discount_price'];
-                $result['start_date'] = $result['start_date'];
-                $result['end_date'] = $result['end_date'];
+                $result['discount_start_date'] = $result['discount_start_date'];
+                $result['discount_end_date'] = $result['discount_end_date'];
             } else {
                 // Remove discount fields if no active discount
                 unset($result['discount_id']);
                 unset($result['percentage']);
                 unset($result['discount_price']);
-                unset($result['start_date']);
-                unset($result['end_date']);
+                unset($result['discount_start_date']);
+                unset($result['discount_end_date']);
             }
             // Always remove the discount_status field as it's internal
             unset($result['discount_status']);
@@ -184,7 +184,7 @@ public function countByStore($storeId)
             
             // Get the pack data with discount information
             $sql = "SELECT p.id, p.store_id, p.name, p.price, p.status, p.created_at, p.updated_at,
-                           d.id as discount_id, d.percentage, d.start_date, d.end_date, d.status as discount_status,
+                           d.id as discount_id, d.percentage, d.start_date as discount_start_date, d.end_date as discount_end_date, d.status as discount_status,
                            ROUND((p.price - (p.price * COALESCE(d.percentage, 0) / 100)), 2) as discount_price
                     FROM {$this->table} p
                     LEFT JOIN discount_items di ON p.id = di.item_id AND di.item_type = 'pack'
@@ -219,15 +219,15 @@ public function countByStore($storeId)
                 $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['percentage'];
             $result['discount_price'] = (float)$result['discount_price'];
-                $result['start_date'] = $result['start_date'];
-                $result['end_date'] = $result['end_date'];
+                $result['discount_start_date'] = $result['discount_start_date'];
+                $result['discount_end_date'] = $result['discount_end_date'];
             } else {
                 // Remove discount fields if no active discount
                 unset($result['discount_id']);
                 unset($result['percentage']);
                 unset($result['discount_price']);
-                unset($result['start_date']);
-                unset($result['end_date']);
+                unset($result['discount_start_date']);
+                unset($result['discount_end_date']);
             }
             // Always remove the discount_status field as it's internal
             unset($result['discount_status']);

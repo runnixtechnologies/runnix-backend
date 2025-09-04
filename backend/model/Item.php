@@ -296,18 +296,16 @@ public function getItemById($itemId)
         // Only include discount fields if there's an active discount with percentage > 0
         if ($item['percentage'] && $item['percentage'] > 0) {
             $item['percentage'] = (float)$item['percentage'];
-            $item['start_date'] = $item['discount_start_date'];
-            $item['end_date'] = $item['discount_end_date'];
+            $item['discount_start_date'] = $item['discount_start_date'];
+            $item['discount_end_date'] = $item['discount_end_date'];
         } else {
             // Remove discount fields if no active discount
             unset($item['percentage']);
-            unset($item['start_date']);
-            unset($item['end_date']);
+            unset($item['discount_start_date']);
+            unset($item['discount_end_date']);
         }
         // Always remove the internal discount fields
         unset($item['discount_id']);
-        unset($item['discount_start_date']);
-        unset($item['discount_end_date']);
         unset($item['discount_price']);
     }
     
