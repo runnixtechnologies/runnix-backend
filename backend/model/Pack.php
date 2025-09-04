@@ -17,9 +17,9 @@ class Pack
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-            (store_id, name, price, discount, percentage, status, created_at, updated_at) 
+            (store_id, name, price, discount, percentage, discount_start_date, discount_end_date, status, created_at, updated_at) 
             VALUES 
-            (:store_id, :name, :price, :discount, :percentage, :status, NOW(), NOW())";
+            (:store_id, :name, :price, :discount, :percentage, :discount_start_date, :discount_end_date, :status, NOW(), NOW())";
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
@@ -28,6 +28,8 @@ class Pack
             'price' => $data['price'],
             'discount' => $data['discount'] ?? 0,
             'percentage' => $data['percentage'] ?? 0,
+            'discount_start_date' => $data['discount_start_date'] ?? null,
+            'discount_end_date' => $data['discount_end_date'] ?? null,
             'status' => $data['status'] ?? 'active'
         ]);
     }
@@ -98,6 +100,8 @@ public function deleteBulk($packIds, $storeId)
                     price = :price, 
                     discount = :discount, 
                     percentage = :percentage, 
+                    discount_start_date = :discount_start_date,
+                    discount_end_date = :discount_end_date,
                     updated_at = NOW() 
                 WHERE id = :id";
 
@@ -107,7 +111,9 @@ public function deleteBulk($packIds, $storeId)
             'name' => $data['name'],
             'price' => $data['price'],
             'discount' => $data['discount'] ?? 0,
-            'percentage' => $data['percentage'] ?? 0
+            'percentage' => $data['percentage'] ?? 0,
+            'discount_start_date' => $data['discount_start_date'] ?? null,
+            'discount_end_date' => $data['discount_end_date'] ?? null
         ]);
     }
 
@@ -121,17 +127,10 @@ public function deleteBulk($packIds, $storeId)
     public function getAll($storeId, $limit = 10, $offset = 0)
 {
     try {
-        $sql = "SELECT p.id, p.store_id, p.name, p.price, p.status, p.created_at, p.updated_at,
-                       d.percentage,
-                       CASE WHEN d.id IS NULL THEN p.price ELSE ROUND(p.price - (p.price * d.percentage / 100), 2) END as discount_price,
-                       d.id as discount_id,
-                       d.start_date as discount_start_date,
-                       d.end_date as discount_end_date,
+        $sql = "SELECT p.id, p.store_id, p.name, p.price, p.discount, p.percentage, 
+                       p.discount_start_date, p.discount_end_date, p.status, p.created_at, p.updated_at,
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} p
-                LEFT JOIN discount_items di ON p.id = di.item_id AND di.item_type = 'pack'
-                LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-                    AND NOW() BETWEEN d.start_date AND d.end_date
                 LEFT JOIN item_packs ip ON p.id = ip.pack_id
                 LEFT JOIN order_items oi ON ip.item_id = oi.item_id
                 WHERE p.store_id = :store_id 
@@ -152,18 +151,16 @@ public function deleteBulk($packIds, $storeId)
             $result['total_orders'] = (int)$result['total_orders'];
             $result['price'] = (float)$result['price'];
             
-            // Only include discount fields if there's an actual discount
-            if ($result['discount_id']) {
-                $result['discount_price'] = (float)$result['discount_price'];
+            // Only include discount fields if there's an actual discount (discount > 0 or percentage > 0)
+            if (($result['discount'] && $result['discount'] > 0) || ($result['percentage'] && $result['percentage'] > 0)) {
+                $result['discount'] = (float)$result['discount'];
                 $result['percentage'] = (float)$result['percentage'];
-                $result['discount_id'] = (int)$result['discount_id'];
                 $result['discount_start_date'] = $result['discount_start_date'];
                 $result['discount_end_date'] = $result['discount_end_date'];
             } else {
                 // Remove discount fields if no discount
-                unset($result['discount_price']);
+                unset($result['discount']);
                 unset($result['percentage']);
-                unset($result['discount_id']);
                 unset($result['discount_start_date']);
                 unset($result['discount_end_date']);
             }
@@ -189,16 +186,9 @@ public function countByStore($storeId)
     {
         try {
             // Get the pack data with discount information
-            $sql = "SELECT p.id, p.store_id, p.name, p.price, p.status, p.created_at, p.updated_at,
-                           d.percentage,
-                           CASE WHEN d.id IS NULL THEN p.price ELSE ROUND(p.price - (p.price * d.percentage / 100), 2) END as discount_price,
-                           d.id as discount_id,
-                           d.start_date as discount_start_date,
-                           d.end_date as discount_end_date
+            $sql = "SELECT p.id, p.store_id, p.name, p.price, p.discount, p.percentage, 
+                           p.discount_start_date, p.discount_end_date, p.status, p.created_at, p.updated_at
                     FROM {$this->table} p
-                    LEFT JOIN discount_items di ON p.id = di.item_id AND di.item_type = 'pack'
-                    LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-                        AND NOW() BETWEEN d.start_date AND d.end_date
                     WHERE p.id = :id";
             $stmt = $this->conn->prepare($sql);
             $stmt->execute(['id' => $id]);
@@ -221,18 +211,16 @@ public function countByStore($storeId)
             $result['total_orders'] = (int)$orderCount['total_orders'];
             $result['price'] = (float)$result['price'];
             
-            // Only include discount fields if there's an actual discount
-            if ($result['discount_id']) {
-            $result['discount_price'] = (float)$result['discount_price'];
-            $result['percentage'] = (float)$result['percentage'];
-                $result['discount_id'] = (int)$result['discount_id'];
+            // Only include discount fields if there's an actual discount (discount > 0 or percentage > 0)
+            if (($result['discount'] && $result['discount'] > 0) || ($result['percentage'] && $result['percentage'] > 0)) {
+                $result['discount'] = (float)$result['discount'];
+                $result['percentage'] = (float)$result['percentage'];
                 $result['discount_start_date'] = $result['discount_start_date'];
                 $result['discount_end_date'] = $result['discount_end_date'];
             } else {
                 // Remove discount fields if no discount
-                unset($result['discount_price']);
+                unset($result['discount']);
                 unset($result['percentage']);
-                unset($result['discount_id']);
                 unset($result['discount_start_date']);
                 unset($result['discount_end_date']);
             }

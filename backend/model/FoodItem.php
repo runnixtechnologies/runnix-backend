@@ -651,16 +651,20 @@ public function createFoodSide($data)
     $discount = $data['discount'] ?? 0;
     $percentage = $data['percentage'] ?? 0;
     $status = $data['status'] ?? 'active';
+    $discount_start_date = $data['discount_start_date'] ?? null;
+    $discount_end_date = $data['discount_end_date'] ?? null;
 
     // Otherwise insert
-    $query = "INSERT INTO food_sides (store_id, name, price, discount, percentage, status, created_at, updated_at) 
-              VALUES (:store_id, :name, :price, :discount, :percentage, :status, NOW(), NOW())";
+    $query = "INSERT INTO food_sides (store_id, name, price, discount, percentage, discount_start_date, discount_end_date, status, created_at, updated_at) 
+              VALUES (:store_id, :name, :price, :discount, :percentage, :discount_start_date, :discount_end_date, :status, NOW(), NOW())";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':store_id', $data['store_id']);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
     $stmt->bindParam(':discount', $discount);
     $stmt->bindParam(':percentage', $percentage);
+    $stmt->bindParam(':discount_start_date', $discount_start_date);
+    $stmt->bindParam(':discount_end_date', $discount_end_date);
     $stmt->bindParam(':status', $status);
     $stmt->execute();
 
@@ -672,16 +676,9 @@ public function getFoodSideById($id)
 {
     try {
         // Get the food side data with discount information
-		$sql = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
-					 d.percentage,
-					 CASE WHEN d.id IS NULL THEN fs.price ELSE ROUND(fs.price - (fs.price * d.percentage / 100), 2) END as discount_price,
-                         d.id as discount_id,
-					 d.start_date as discount_start_date,
-					 d.end_date as discount_end_date
+		$sql = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.discount, fs.percentage, 
+                     fs.discount_start_date, fs.discount_end_date, fs.status, fs.created_at, fs.updated_at
                   FROM food_sides fs
-                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
-                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-                      AND NOW() BETWEEN d.start_date AND d.end_date
                   WHERE fs.id = :id";
 		$stmt = $this->conn->prepare($sql);
         $stmt->execute(['id' => $id]);
@@ -703,11 +700,20 @@ public function getFoodSideById($id)
 		// Add total_orders and convert numeric fields
 		$result['total_orders'] = (int)$orderCount['total_orders'];
         $result['price'] = (float)$result['price'];
-        $result['discount_price'] = (float)$result['discount_price'];
-		$result['percentage'] = $result['percentage'] ? (float)$result['percentage'] : 0.0;
-        $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
-		$result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
-		$result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
+        
+        // Only include discount fields if there's an actual discount (discount > 0 or percentage > 0)
+        if (($result['discount'] && $result['discount'] > 0) || ($result['percentage'] && $result['percentage'] > 0)) {
+            $result['discount'] = (float)$result['discount'];
+            $result['percentage'] = (float)$result['percentage'];
+            $result['discount_start_date'] = $result['discount_start_date'];
+            $result['discount_end_date'] = $result['discount_end_date'];
+        } else {
+            // Remove discount fields if no discount
+            unset($result['discount']);
+            unset($result['percentage']);
+            unset($result['discount_start_date']);
+            unset($result['discount_end_date']);
+        }
         
         error_log("getFoodSideById model: Final result: " . json_encode($result));
         
@@ -723,17 +729,10 @@ public function getFoodSideById($id)
 public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
 {
     try {
-            $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
-                         d.percentage,
-                         CASE WHEN d.id IS NULL THEN fs.price ELSE ROUND(fs.price - (fs.price * d.percentage / 100), 2) END as discount_price,
-                         d.id as discount_id,
-                         d.start_date as discount_start_date,
-                         d.end_date as discount_end_date,
+            $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.discount, fs.percentage, 
+                         fs.discount_start_date, fs.discount_end_date, fs.status, fs.created_at, fs.updated_at,
                          COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                   FROM food_sides fs
-                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'side'
-                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-                      AND NOW() BETWEEN d.start_date AND d.end_date
                   LEFT JOIN food_item_sides fis ON fs.id = fis.side_id
                   LEFT JOIN order_items oi ON fis.item_id = oi.item_id
                   WHERE fs.store_id = :store_id 
@@ -751,11 +750,20 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
         foreach ($results as &$result) {
             $result['total_orders'] = (int)$result['total_orders'];
             $result['price'] = (float)$result['price'];
-            $result['discount_price'] = (float)$result['discount_price'];
-                $result['percentage'] = $result['percentage'] ? (float)$result['percentage'] : 0.0;
-            $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
-            $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
-            $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
+            
+            // Only include discount fields if there's an actual discount (discount > 0 or percentage > 0)
+            if (($result['discount'] && $result['discount'] > 0) || ($result['percentage'] && $result['percentage'] > 0)) {
+                $result['discount'] = (float)$result['discount'];
+                $result['percentage'] = (float)$result['percentage'];
+                $result['discount_start_date'] = $result['discount_start_date'];
+                $result['discount_end_date'] = $result['discount_end_date'];
+            } else {
+                // Remove discount fields if no discount
+                unset($result['discount']);
+                unset($result['percentage']);
+                unset($result['discount_start_date']);
+                unset($result['discount_end_date']);
+            }
         }
         
         return $results;
@@ -787,12 +795,16 @@ public function updateFoodSide($data)
     $discount = $data['discount'] ?? 0;
     $percentage = $data['percentage'] ?? 0;
     $status = $data['status'] ?? 'active';
+    $discount_start_date = $data['discount_start_date'] ?? null;
+    $discount_end_date = $data['discount_end_date'] ?? null;
 
     $query = "UPDATE food_sides SET 
               name = :name, 
               price = :price, 
               discount = :discount, 
               percentage = :percentage, 
+              discount_start_date = :discount_start_date,
+              discount_end_date = :discount_end_date,
               status = :status,
               updated_at = NOW() 
               WHERE id = :id AND store_id = :store_id";
@@ -801,6 +813,8 @@ public function updateFoodSide($data)
     $stmt->bindParam(':price', $data['price']);
     $stmt->bindParam(':discount', $discount);
     $stmt->bindParam(':percentage', $percentage);
+    $stmt->bindParam(':discount_start_date', $discount_start_date);
+    $stmt->bindParam(':discount_end_date', $discount_end_date);
     $stmt->bindParam(':status', $status);
     $stmt->bindParam(':id', $data['id']);
     $stmt->bindParam(':store_id', $data['store_id']);

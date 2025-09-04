@@ -42,6 +42,48 @@ class PackController
             }
         }
 
+        // Validate discount start date (optional)
+        if (isset($data['discount_start_date'])) {
+            if (!empty($data['discount_start_date'])) {
+                $startDate = \DateTime::createFromFormat('Y-m-d H:i:s', $data['discount_start_date']);
+                if (!$startDate) {
+                    $startDate = \DateTime::createFromFormat('Y-m-d', $data['discount_start_date']);
+                }
+                if (!$startDate) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Invalid discount start date format. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS'];
+                }
+            }
+        }
+
+        // Validate discount end date (optional)
+        if (isset($data['discount_end_date'])) {
+            if (!empty($data['discount_end_date'])) {
+                $endDate = \DateTime::createFromFormat('Y-m-d H:i:s', $data['discount_end_date']);
+                if (!$endDate) {
+                    $endDate = \DateTime::createFromFormat('Y-m-d', $data['discount_end_date']);
+                }
+                if (!$endDate) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Invalid discount end date format. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS'];
+                }
+            }
+        }
+
+        // Validate that end date is after start date if both are provided
+        if (isset($data['discount_start_date']) && isset($data['discount_end_date']) && 
+            !empty($data['discount_start_date']) && !empty($data['discount_end_date'])) {
+            $startDate = \DateTime::createFromFormat('Y-m-d H:i:s', $data['discount_start_date']) ?: 
+                         \DateTime::createFromFormat('Y-m-d', $data['discount_start_date']);
+            $endDate = \DateTime::createFromFormat('Y-m-d H:i:s', $data['discount_end_date']) ?: 
+                       \DateTime::createFromFormat('Y-m-d', $data['discount_end_date']);
+            
+            if ($startDate && $endDate && $endDate <= $startDate) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Discount end date must be after start date'];
+            }
+        }
+
         $result = $this->packModel->create($data);
         if ($result) {
             http_response_code(201); // Created
@@ -181,6 +223,48 @@ public function deletePacksBulk($data, $user)
             if (!is_numeric($data['percentage']) || $data['percentage'] < 0 || $data['percentage'] > 100) {
                 http_response_code(400);
                 return ['status' => 'error', 'message' => 'Percentage must be between 0 and 100'];
+            }
+        }
+
+        // Validate discount start date (optional)
+        if (isset($data['discount_start_date'])) {
+            if (!empty($data['discount_start_date'])) {
+                $startDate = \DateTime::createFromFormat('Y-m-d H:i:s', $data['discount_start_date']);
+                if (!$startDate) {
+                    $startDate = \DateTime::createFromFormat('Y-m-d', $data['discount_start_date']);
+                }
+                if (!$startDate) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Invalid discount start date format. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS'];
+                }
+            }
+        }
+
+        // Validate discount end date (optional)
+        if (isset($data['discount_end_date'])) {
+            if (!empty($data['discount_end_date'])) {
+                $endDate = \DateTime::createFromFormat('Y-m-d H:i:s', $data['discount_end_date']);
+                if (!$endDate) {
+                    $endDate = \DateTime::createFromFormat('Y-m-d', $data['discount_end_date']);
+                }
+                if (!$endDate) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Invalid discount end date format. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS'];
+                }
+            }
+        }
+
+        // Validate that end date is after start date if both are provided
+        if (isset($data['discount_start_date']) && isset($data['discount_end_date']) && 
+            !empty($data['discount_start_date']) && !empty($data['discount_end_date'])) {
+            $startDate = \DateTime::createFromFormat('Y-m-d H:i:s', $data['discount_start_date']) ?: 
+                         \DateTime::createFromFormat('Y-m-d', $data['discount_start_date']);
+            $endDate = \DateTime::createFromFormat('Y-m-d H:i:s', $data['discount_end_date']) ?: 
+                       \DateTime::createFromFormat('Y-m-d', $data['discount_end_date']);
+            
+            if ($startDate && $endDate && $endDate <= $startDate) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Discount end date must be after start date'];
             }
         }
 
