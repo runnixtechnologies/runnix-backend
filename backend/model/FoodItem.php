@@ -772,8 +772,8 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
             // Only include discount fields if there's an active discount with percentage > 0
             if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
                 $result['percentage'] = (float)$result['percentage'];
-                $result['start_date'] = $result['start_date'];
-                $result['end_date'] = $result['end_date'];
+                $result['discount_start_date'] = $result['discount_start_date'];
+                $result['discount_end_date'] = $result['discount_end_date'];
             } else {
                 // Remove discount fields if no active discount
                 unset($result['percentage']);
@@ -2139,13 +2139,13 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
             // Only include discount fields if there's an active discount with percentage > 0
             if ($item['percentage'] && $item['percentage'] > 0 && $item['discount_status'] === 'active') {
                 $item['percentage'] = (float)$item['percentage'];
-                $item['start_date'] = $item['start_date'];
-                $item['end_date'] = $item['end_date'];
+                $item['discount_start_date'] = $item['discount_start_date'];
+                $item['discount_end_date'] = $item['discount_end_date'];
             } else {
                 // Remove discount fields if no active discount
                 unset($item['percentage']);
-                unset($item['start_date']);
-                unset($item['end_date']);
+                unset($item['discount_start_date']);
+                unset($item['discount_end_date']);
             }
             // Always remove the discount_status field as it's internal
             unset($item['discount_status']);
@@ -2179,8 +2179,8 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
             // Only include discount fields if there's an active discount with percentage > 0
             if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
                 $result['percentage'] = (float)$result['percentage'];
-                $result['start_date'] = $result['start_date'];
-                $result['end_date'] = $result['end_date'];
+                $result['discount_start_date'] = $result['discount_start_date'];
+                $result['discount_end_date'] = $result['discount_end_date'];
             } else {
                 // Remove discount fields if no active discount
                 unset($result['percentage']);
