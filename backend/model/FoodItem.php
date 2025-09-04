@@ -1247,80 +1247,38 @@ public function countFoodSectionsByStoreId($storeId)
 public function getFoodSectionById($id)
 {
     try {
-        // Debug logging
-        error_log("getFoodSectionById called with id: " . $id);
-        
-        // Ensure table exists
-        $this->ensureFoodSectionsTableExists();
-        
-        // Get the section with discount information
-        $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at,
-                         d.percentage,
-                         d.id as discount_id,
-                         d.start_date as discount_start_date,
+        $id = (int) $id; // sanitize
+
+        $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, 
+                         fs.required, fs.price, fs.status, fs.created_at, fs.updated_at,
+                         d.percentage, d.id as discount_id, d.start_date as discount_start_date, 
                          d.end_date as discount_end_date
                   FROM food_sections fs
-                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'section'
-                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-                      AND NOW() BETWEEN d.start_date AND d.end_date
+                  LEFT JOIN discount_items di 
+                         ON fs.id = di.item_id AND di.item_type = 'section'
+                  LEFT JOIN discounts d 
+                         ON di.discount_id = d.id 
+                        AND d.status = 'active' 
+                        AND NOW() BETWEEN d.start_date AND d.end_date
                   WHERE fs.id = :id AND fs.status = 'active'";
-        
-        error_log("SQL Query: " . $query);
-        error_log("Parameter: id = " . $id);
-        
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':id', $id);
-    $stmt->execute();
-    $section = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    error_log("Raw section from database: " . ($section ? "found" : "not found"));
-    if ($section) {
-        error_log("Section data: " . json_encode($section));
-    }
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        $section = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$section) {
-            error_log("Section not found for id: " . $id);
+            error_log("No section found for ID $id after query");
             return null;
         }
 
-        // Get total orders count for this section
-        $orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders 
-                       FROM food_section_items fsi 
-                       JOIN order_items oi ON fsi.item_id = oi.item_id 
-                       WHERE fsi.section_id = :section_id";
-        $orderStmt = $this->conn->prepare($orderQuery);
-        $orderStmt->execute(['section_id' => $id]);
-        $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
-
-        // Add total_orders and convert numeric fields
-        $section['total_orders'] = (int)$orderCount['total_orders'];
-        $section['price'] = (float)$section['price'];
-        $section['max_quantity'] = (int)$section['max_quantity'];
-        $section['required'] = (bool)$section['required'];
-        
-        // Only include discount fields if there's an actual discount
-        if ($section['discount_id']) {
-            $section['percentage'] = (float)$section['percentage'];
-            $section['discount_id'] = (int)$section['discount_id'];
-            $section['discount_start_date'] = $section['discount_start_date'];
-            $section['discount_end_date'] = $section['discount_end_date'];
-        } else {
-            // Remove discount fields if no discount
-            unset($section['percentage']);
-            unset($section['discount_id']);
-            unset($section['discount_start_date']);
-            unset($section['discount_end_date']);
-        }
-        
-        error_log("Final section to return: " . json_encode($section));
-
         return $section;
     } catch (PDOException $e) {
-        error_log("getFoodSectionById error: " . $e->getMessage());
-        error_log("getFoodSectionById error trace: " . $e->getTraceAsString());
+        error_log("DB error in getFoodSectionById: " . $e->getMessage());
         return null;
     }
 }
+
 
 
 // UPDATE Food Section
