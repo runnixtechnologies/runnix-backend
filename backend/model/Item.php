@@ -381,576 +381,115 @@ public function countItemsByStoreAndCategory($storeId, $categoryId)
     ]);
 
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int)$result['total'];
-}
-
-
-public function updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId)
-{
-    $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
-
-    $query = "UPDATE items 
-              SET category_id = ?, updated_at = NOW() 
-              WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
-
-    $stmt = $this->conn->prepare($query);
-
-    // Merge all bound values: new category, item IDs, then store ID
-    $params = array_merge([$newCategoryId], $itemIds, [$storeId]);
-
-    return $stmt->execute($params);
-}
-
-
-public function removeItemsFromCategory($itemIds, $storeId)
-{
-    $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
-
-    $query = "UPDATE items 
-              SET category_id = NULL, updated_at = NOW()
-              WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
-
-    $stmt = $this->conn->prepare($query);
-    $params = array_merge($itemIds, [$storeId]);
-
-    return $stmt->execute($params);
-}
-
-public function replaceItemsInCategory($itemIds, $categoryId, $storeId)
-{
-    // Step 1: Clear all existing items in that category for the store
-    $clearQuery = "UPDATE items SET category_id = NULL, updated_at = NOW()
-                   WHERE category_id = ? AND store_id = ? AND deleted = 0";
-    $clearStmt = $this->conn->prepare($clearQuery);
-    if (!$clearStmt->execute([$categoryId, $storeId])) {
-        return false;
-    }
-
-    // Step 2: Assign new items to that category
-    if (empty($itemIds)) {
-        // If no items to assign, just return true after clearing
-        return true;
-    }
-
-    $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
-    $assignQuery = "UPDATE items SET category_id = ?, updated_at = NOW()
-                    WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
-    $assignStmt = $this->conn->prepare($assignQuery);
-
-    $params = array_merge([$categoryId], $itemIds, [$storeId]);
-    return $assignStmt->execute($params);
-}
-
-/*
-public function deleteItemsBulk($ids)
-{
-    try {
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $sql = "DELETE FROM {$this->table} WHERE id IN ($placeholders)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($ids);
-
-        http_response_code(200);
-        return ["status" => "success", "message" => "Items deleted successfully."];
-    } catch (PDOException $e) {
-        http_response_code(500);
-        return ["status" => "error", "message" => "Bulk deletion failed."];
-    }
-}*/
-
-public function deleteItemsBulk($ids)
-{
-    try {
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $sql = "UPDATE {$this->table} SET deleted = 1, updated_at = NOW() WHERE id IN ($placeholders)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($ids);
-
-        http_response_code(200);
-        return ["status" => "success", "message" => "Items Deleted successfully."];
-    } catch (PDOException $e) {
-        http_response_code(500);
-        return ["status" => "error", "message" => "Bulk deletion failed."];
-    }
-}
-
-
-public function updateItemsStatusBulk($ids, $status)
-{
-    try {
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $sql = "UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id IN ($placeholders)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute(array_merge([$status], $ids));
-
-        http_response_code(200);
-        return ["status" => "success", "message" => "Items updated to '$status' status successfully."];
-    } catch (PDOException $e) {
-        http_response_code(500);
-        return ["status" => "error", "message" => "Bulk status update failed."];
-    }
-}
-
-
-}
-
-
-            COUNT(oi.id) AS total_orders
-
-        FROM items i
-
-        LEFT JOIN discount_items di ON i.id = di.item_id
-
-        LEFT JOIN discounts d ON di.discount_id = d.id
-
-        LEFT JOIN order_items oi ON i.id = oi.item_id
-
-        WHERE i.store_id = :store_id
-
-          AND i.deleted = 0
-
-          AND (
-
-              d.id IS NULL OR (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
-
-          )
-
-        GROUP BY i.id, d.percentage
-
-        ORDER BY i.created_at DESC
-
-        LIMIT :limit OFFSET :offset
-
-    ";
-
-
-
-    $stmt = $this->conn->prepare($sql);
-
-    $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
-
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
-    $stmt->execute();
-
-
-
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-}
-
-
-
-
-
-
-
-public function countItemsByStoreId($storeId)
-
-{
-
-    $sql = "SELECT COUNT(*) as total FROM items WHERE store_id = :store_id AND deleted = 0";
-
-    $stmt = $this->conn->prepare($sql);
-
-    $stmt->execute([':store_id' => $storeId]);
-
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
     return (int) $result['total'];
-
 }
-
-
-
-public function getItemById($itemId)
-
-{
-
-    $sql = "SELECT * FROM {$this->table} WHERE id = :id AND deleted = 0 LIMIT 1";
-
-    $stmt = $this->conn->prepare($sql);
-
-    $stmt->execute([':id' => $itemId]);
-
-    $item = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    
-
-    if ($item) {
-
-        // Convert numeric fields to appropriate types
-
-        $item['price'] = (float)$item['price'];
-
-    }
-
-    
-
-    return $item ?: null; // returns null if not found
-
-}
-
-
-
-public function getItemsByStoreAndCategory($storeId, $categoryId)
-
-{
-
-    $sql = "SELECT * FROM items 
-
-            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0";
-
-    $stmt = $this->conn->prepare($sql);
-
-    $stmt->execute([
-
-        ':store_id' => $storeId,
-
-        ':category_id' => $categoryId
-
-    ]);
-
-    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    
-
-    // Convert numeric fields to appropriate types for each result
-
-    foreach ($results as &$result) {
-
-        $result['price'] = (float)$result['price'];
-
-    }
-
-    
-
-    return $results;
-
-}
-
-public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limit, $offset)
-
-{
-
-    $sql = "
-
-        SELECT 
-
-            i.*, 
-
-            d.start_date AS discount_start_date, 
-
-            d.id AS discount_id, 
-
-            d.end_date AS discount_end_date, 
-
-            d.percentage, 
-
-            (i.price - (i.price * d.percentage / 100)) AS discount_price,
-
-            COUNT(oi.id) AS total_orders
-
-        FROM items i
-
-        LEFT JOIN discount_items di ON i.id = di.item_id
-
-        LEFT JOIN discounts d ON di.discount_id = d.id
-
-        LEFT JOIN order_items oi ON i.id = oi.item_id
-
-        WHERE i.store_id = :store_id 
-
-          AND i.category_id = :category_id
-
-          AND i.deleted = 0
-
-          AND (
-
-              d.id IS NULL OR (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
-
-          )
-
-        GROUP BY i.id, d.percentage
-
-        ORDER BY i.created_at DESC
-
-        LIMIT :limit OFFSET :offset
-
-    ";
-
-
-
-    $stmt = $this->conn->prepare($sql);
-
-    $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
-
-    $stmt->bindValue(':category_id', $categoryId, PDO::PARAM_INT);
-
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
-    $stmt->execute();
-
-
-
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-}
-
-
-
-
-
-public function countItemsByStoreAndCategory($storeId, $categoryId)
-
-{
-
-    $sql = "SELECT COUNT(*) as total FROM items 
-
-            WHERE store_id = :store_id AND category_id = :category_id AND deleted = 0";
-
-
-
-    $stmt = $this->conn->prepare($sql);
-
-    $stmt->execute([
-
-        ':store_id' => $storeId,
-
-        ':category_id' => $categoryId
-
-    ]);
-
-
-
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    return (int)$result['total'];
-
-}
-
-
-
 
 
 public function updateItemsCategoryBulk($itemIds, $newCategoryId, $storeId)
-
 {
-
     $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
 
-
-
     $query = "UPDATE items 
-
               SET category_id = ?, updated_at = NOW() 
-
               WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
-
-
 
     $stmt = $this->conn->prepare($query);
 
-
-
     // Merge all bound values: new category, item IDs, then store ID
-
     $params = array_merge([$newCategoryId], $itemIds, [$storeId]);
 
-
-
     return $stmt->execute($params);
-
 }
-
-
-
 
 
 public function removeItemsFromCategory($itemIds, $storeId)
-
 {
-
     $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
-
-
 
     $query = "UPDATE items 
-
               SET category_id = NULL, updated_at = NOW()
-
               WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
 
-
-
     $stmt = $this->conn->prepare($query);
-
     $params = array_merge($itemIds, [$storeId]);
 
-
-
     return $stmt->execute($params);
-
 }
-
-
 
 public function replaceItemsInCategory($itemIds, $categoryId, $storeId)
-
 {
-
     // Step 1: Clear all existing items in that category for the store
-
     $clearQuery = "UPDATE items SET category_id = NULL, updated_at = NOW()
-
                    WHERE category_id = ? AND store_id = ? AND deleted = 0";
-
     $clearStmt = $this->conn->prepare($clearQuery);
-
     if (!$clearStmt->execute([$categoryId, $storeId])) {
-
         return false;
-
     }
-
-
 
     // Step 2: Assign new items to that category
-
     if (empty($itemIds)) {
-
         // If no items to assign, just return true after clearing
-
         return true;
-
     }
-
-
 
     $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
-
     $assignQuery = "UPDATE items SET category_id = ?, updated_at = NOW()
-
                     WHERE id IN ($placeholders) AND store_id = ? AND deleted = 0";
-
     $assignStmt = $this->conn->prepare($assignQuery);
 
-
-
     $params = array_merge([$categoryId], $itemIds, [$storeId]);
-
     return $assignStmt->execute($params);
-
 }
-
-
 
 /*
-
 public function deleteItemsBulk($ids)
-
 {
-
     try {
-
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-
         $sql = "DELETE FROM {$this->table} WHERE id IN ($placeholders)";
-
         $stmt = $this->conn->prepare($sql);
-
         $stmt->execute($ids);
 
-
-
         http_response_code(200);
-
         return ["status" => "success", "message" => "Items deleted successfully."];
-
     } catch (PDOException $e) {
-
         http_response_code(500);
-
         return ["status" => "error", "message" => "Bulk deletion failed."];
-
     }
-
 }*/
 
-
-
 public function deleteItemsBulk($ids)
-
 {
-
     try {
-
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-
         $sql = "UPDATE {$this->table} SET deleted = 1, updated_at = NOW() WHERE id IN ($placeholders)";
-
         $stmt = $this->conn->prepare($sql);
-
         $stmt->execute($ids);
 
-
-
         http_response_code(200);
-
         return ["status" => "success", "message" => "Items Deleted successfully."];
-
     } catch (PDOException $e) {
-
         http_response_code(500);
-
         return ["status" => "error", "message" => "Bulk deletion failed."];
-
     }
-
 }
-
-
-
 
 
 public function updateItemsStatusBulk($ids, $status)
-
 {
-
     try {
-
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-
         $sql = "UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id IN ($placeholders)";
-
         $stmt = $this->conn->prepare($sql);
-
         $stmt->execute(array_merge([$status], $ids));
 
-
-
         http_response_code(200);
-
         return ["status" => "success", "message" => "Items updated to '$status' status successfully."];
-
     } catch (PDOException $e) {
-
         http_response_code(500);
-
         return ["status" => "error", "message" => "Bulk status update failed."];
-
     }
-
 }
 
 
-
-
-
 }
-
-

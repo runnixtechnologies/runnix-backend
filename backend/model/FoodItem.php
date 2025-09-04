@@ -2108,14 +2108,17 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         $countStmt->execute();
         $totalCount = $countStmt->fetchColumn();
         
-        // Get paginated results with discount information
+        // Get paginated results with discount information and total orders
         $query = "SELECT fsi.*, fs.section_name, 
-                         d.percentage, d.start_date, d.end_date, d.status as discount_status
+                         d.percentage, d.start_date, d.end_date, d.status as discount_status,
+                         COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
                   LEFT JOIN discount_items di ON fsi.id = di.item_id AND di.item_type = 'food_section_item'
                   LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
+                  LEFT JOIN order_items oi ON fsi.id = oi.item_id
                   WHERE " . $whereClause . " 
+                  GROUP BY fsi.id
                   ORDER BY fsi.created_at DESC 
                   LIMIT :limit OFFSET :offset";
         $stmt = $this->conn->prepare($query);
@@ -2128,9 +2131,10 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Process discount fields for each item
+        // Process discount fields and total orders for each item
         foreach ($items as &$item) {
             $item['price'] = (float)$item['price'];
+            $item['total_orders'] = (int)$item['total_orders'];
             
             // Only include discount fields if there's an active discount with percentage > 0
             if ($item['percentage'] && $item['percentage'] > 0 && $item['discount_status'] === 'active') {
@@ -2147,29 +2151,22 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
             unset($item['discount_status']);
         }
         
-        return [
-            'items' => $items,
-            'pagination' => [
-                'current_page' => $page,
-                'per_page' => $limit,
-                'total_items' => $totalCount,
-                'total_pages' => ceil($totalCount / $limit),
-                'has_next_page' => $page < ceil($totalCount / $limit),
-                'has_prev_page' => $page > 1
-            ]
-        ];
+        return $items;
     }
 
     // GET Section Item by ID with section details
     public function getSectionItemByIdWithDetails($itemId)
     {
         $query = "SELECT fsi.*, fs.section_name, fs.store_id,
-                         d.percentage, d.start_date, d.end_date, d.status as discount_status
+                         d.percentage, d.start_date, d.end_date, d.status as discount_status,
+                         COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
                   LEFT JOIN discount_items di ON fsi.id = di.item_id AND di.item_type = 'food_section_item'
                   LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
-                  WHERE fsi.id = :item_id";
+                  LEFT JOIN order_items oi ON fsi.id = oi.item_id
+                  WHERE fsi.id = :item_id
+                  GROUP BY fsi.id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':item_id', $itemId);
         $stmt->execute();
@@ -2177,6 +2174,7 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         
         if ($result) {
             $result['price'] = (float)$result['price'];
+            $result['total_orders'] = (int)$result['total_orders'];
             
             // Only include discount fields if there's an active discount with percentage > 0
             if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {

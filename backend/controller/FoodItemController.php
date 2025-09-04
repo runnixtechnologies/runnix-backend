@@ -2138,16 +2138,9 @@ public function getCategoriesByStoreType($storeId)
         http_response_code(200);
         return [
             "status" => "success", 
-            "data" => $sectionItems,
-            "meta" => [
-                "page" => $page,
-                "limit" => $limit,
-                "total" => $totalCount,
-                "total_pages" => ceil($totalCount / $limit),
-                "has_next" => ($page * $limit) < $totalCount,
-                "has_prev" => $page > 1
-            ]
+            "data" => $sectionItems
         ];
     }
+
 }
 ?>
