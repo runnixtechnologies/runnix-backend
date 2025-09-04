@@ -37,4 +37,3 @@ $controller = new FoodItemController();
 $response = $controller->getAllFoodSectionsByStoreId($user['store_id'], $user, $page, $limit);
 
 echo json_encode($response);
-?>
