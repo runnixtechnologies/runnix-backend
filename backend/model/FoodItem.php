@@ -650,7 +650,7 @@ public function createFoodSide($data)
     // Set default values for optional fields
     $discount = $data['discount'] ?? 0;
     $percentage = $data['percentage'] ?? 0;
-    $status = $data['status'] ?? 'active';
+    $status = 'active'; // Always set to active for new food sides
     $discount_start_date = $data['discount_start_date'] ?? null;
     $discount_end_date = $data['discount_end_date'] ?? null;
 
@@ -794,7 +794,6 @@ public function updateFoodSide($data)
     // Set default values for optional fields
     $discount = $data['discount'] ?? 0;
     $percentage = $data['percentage'] ?? 0;
-    $status = $data['status'] ?? 'active';
     $discount_start_date = $data['discount_start_date'] ?? null;
     $discount_end_date = $data['discount_end_date'] ?? null;
 
@@ -805,7 +804,6 @@ public function updateFoodSide($data)
               percentage = :percentage, 
               discount_start_date = :discount_start_date,
               discount_end_date = :discount_end_date,
-              status = :status,
               updated_at = NOW() 
               WHERE id = :id AND store_id = :store_id";
     $stmt = $this->conn->prepare($query);
@@ -815,7 +813,6 @@ public function updateFoodSide($data)
     $stmt->bindParam(':percentage', $percentage);
     $stmt->bindParam(':discount_start_date', $discount_start_date);
     $stmt->bindParam(':discount_end_date', $discount_end_date);
-    $stmt->bindParam(':status', $status);
     $stmt->bindParam(':id', $data['id']);
     $stmt->bindParam(':store_id', $data['store_id']);
     return $stmt->execute();

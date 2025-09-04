@@ -30,7 +30,7 @@ class Pack
             'percentage' => $data['percentage'] ?? 0,
             'discount_start_date' => $data['discount_start_date'] ?? null,
             'discount_end_date' => $data['discount_end_date'] ?? null,
-            'status' => $data['status'] ?? 'active'
+            'status' => 'active' // Always set to active for new packs
         ]);
     }
 
