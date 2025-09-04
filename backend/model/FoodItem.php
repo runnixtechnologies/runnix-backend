@@ -449,13 +449,24 @@ private function getFoodItemWithOptions($foodItemId)
             $result['price'] = (float)$result['price'];
             $result['max_qty'] = (int)$result['max_qty'];
             $result['total_orders'] = (int)$result['total_orders'];
-            $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
-            $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
-            $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
             
-            // Fix date formatting - use DATE() function to avoid timezone issues
-            $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
-            $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
+            // Only include discount fields if there's an active discount with percentage > 0
+            if ($result['discount_percentage'] && $result['discount_percentage'] > 0) {
+                $result['percentage'] = (float)$result['discount_percentage'];
+                $result['start_date'] = $result['discount_start_date'];
+                $result['end_date'] = $result['discount_end_date'];
+            } else {
+                // Remove discount fields if no active discount
+                unset($result['percentage']);
+                unset($result['start_date']);
+                unset($result['end_date']);
+            }
+            // Always remove the internal discount fields
+            unset($result['discount_id']);
+            unset($result['discount_percentage']);
+            unset($result['discount_start_date']);
+            unset($result['discount_end_date']);
+            unset($result['calculated_discount_price']);
         }
         
         return $results;
@@ -504,13 +515,24 @@ public function getByItemId($id)
         $result['price'] = (float)$result['price'];
         $result['max_qty'] = (int)$result['max_qty'];
         $result['total_orders'] = (int)$result['total_orders'];
-        $result['discount_id'] = $result['discount_id'] ? (int)$result['discount_id'] : null;
-        $result['discount_percentage'] = $result['discount_percentage'] ? (float)$result['discount_percentage'] : null;
-        $result['calculated_discount_price'] = $result['calculated_discount_price'] ? (float)$result['calculated_discount_price'] : null;
         
-        // Fix date formatting - use DATE() function to avoid timezone issues
-        $result['discount_start_date'] = $result['discount_start_date'] ? $result['discount_start_date'] : null;
-        $result['discount_end_date'] = $result['discount_end_date'] ? $result['discount_end_date'] : null;
+        // Only include discount fields if there's an active discount with percentage > 0
+        if ($result['discount_percentage'] && $result['discount_percentage'] > 0) {
+            $result['percentage'] = (float)$result['discount_percentage'];
+            $result['start_date'] = $result['discount_start_date'];
+            $result['end_date'] = $result['discount_end_date'];
+        } else {
+            // Remove discount fields if no active discount
+            unset($result['percentage']);
+            unset($result['start_date']);
+            unset($result['end_date']);
+        }
+        // Always remove the internal discount fields
+        unset($result['discount_id']);
+        unset($result['discount_percentage']);
+        unset($result['discount_start_date']);
+        unset($result['discount_end_date']);
+        unset($result['calculated_discount_price']);
     }
     
     return $result;
@@ -648,23 +670,15 @@ public function createFoodSide($data)
     }
 
     // Set default values for optional fields
-    $discount = $data['discount'] ?? 0;
-    $percentage = $data['percentage'] ?? 0;
     $status = 'active'; // Always set to active for new food sides
-    $discount_start_date = $data['discount_start_date'] ?? null;
-    $discount_end_date = $data['discount_end_date'] ?? null;
 
     // Otherwise insert
-    $query = "INSERT INTO food_sides (store_id, name, price, discount, percentage, discount_start_date, discount_end_date, status, created_at, updated_at) 
-              VALUES (:store_id, :name, :price, :discount, :percentage, :discount_start_date, :discount_end_date, :status, NOW(), NOW())";
+    $query = "INSERT INTO food_sides (store_id, name, price, status, created_at, updated_at) 
+              VALUES (:store_id, :name, :price, :status, NOW(), NOW())";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':store_id', $data['store_id']);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
-    $stmt->bindParam(':discount', $discount);
-    $stmt->bindParam(':percentage', $percentage);
-    $stmt->bindParam(':discount_start_date', $discount_start_date);
-    $stmt->bindParam(':discount_end_date', $discount_end_date);
     $stmt->bindParam(':status', $status);
     $stmt->execute();
 
@@ -676,9 +690,11 @@ public function getFoodSideById($id)
 {
     try {
         // Get the food side data with discount information
-		$sql = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.discount, fs.percentage, 
-                     fs.discount_start_date, fs.discount_end_date, fs.status, fs.created_at, fs.updated_at
+		$sql = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
+                     d.percentage, d.start_date, d.end_date, d.status as discount_status
                   FROM food_sides fs
+                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'food_side'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
                   WHERE fs.id = :id";
 		$stmt = $this->conn->prepare($sql);
         $stmt->execute(['id' => $id]);
@@ -701,19 +717,19 @@ public function getFoodSideById($id)
 		$result['total_orders'] = (int)$orderCount['total_orders'];
         $result['price'] = (float)$result['price'];
         
-        // Only include discount fields if there's an actual discount (discount > 0 or percentage > 0)
-        if (($result['discount'] && $result['discount'] > 0) || ($result['percentage'] && $result['percentage'] > 0)) {
-            $result['discount'] = (float)$result['discount'];
+        // Only include discount fields if there's an active discount with percentage > 0
+        if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
             $result['percentage'] = (float)$result['percentage'];
-            $result['discount_start_date'] = $result['discount_start_date'];
-            $result['discount_end_date'] = $result['discount_end_date'];
+            $result['start_date'] = $result['start_date'];
+            $result['end_date'] = $result['end_date'];
         } else {
-            // Remove discount fields if no discount
-            unset($result['discount']);
+            // Remove discount fields if no active discount
             unset($result['percentage']);
-            unset($result['discount_start_date']);
-            unset($result['discount_end_date']);
+            unset($result['start_date']);
+            unset($result['end_date']);
         }
+        // Always remove the discount_status field as it's internal
+        unset($result['discount_status']);
         
         error_log("getFoodSideById model: Final result: " . json_encode($result));
         
@@ -729,12 +745,14 @@ public function getFoodSideById($id)
 public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
 {
     try {
-            $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.discount, fs.percentage, 
-                         fs.discount_start_date, fs.discount_end_date, fs.status, fs.created_at, fs.updated_at,
+            $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
+                         d.percentage, d.start_date, d.end_date, d.status as discount_status,
                          COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                   FROM food_sides fs
                   LEFT JOIN food_item_sides fis ON fs.id = fis.side_id
                   LEFT JOIN order_items oi ON fis.item_id = oi.item_id
+                  LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'food_side'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
                   WHERE fs.store_id = :store_id 
                   GROUP BY fs.id
                   ORDER BY fs.created_at DESC 
@@ -751,19 +769,19 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
             $result['total_orders'] = (int)$result['total_orders'];
             $result['price'] = (float)$result['price'];
             
-            // Only include discount fields if there's an actual discount (discount > 0 or percentage > 0)
-            if (($result['discount'] && $result['discount'] > 0) || ($result['percentage'] && $result['percentage'] > 0)) {
-                $result['discount'] = (float)$result['discount'];
+            // Only include discount fields if there's an active discount with percentage > 0
+            if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
                 $result['percentage'] = (float)$result['percentage'];
-                $result['discount_start_date'] = $result['discount_start_date'];
-                $result['discount_end_date'] = $result['discount_end_date'];
+                $result['start_date'] = $result['start_date'];
+                $result['end_date'] = $result['end_date'];
             } else {
-                // Remove discount fields if no discount
-                unset($result['discount']);
+                // Remove discount fields if no active discount
                 unset($result['percentage']);
-                unset($result['discount_start_date']);
-                unset($result['discount_end_date']);
+                unset($result['start_date']);
+                unset($result['end_date']);
             }
+            // Always remove the discount_status field as it's internal
+            unset($result['discount_status']);
         }
         
         return $results;
@@ -791,28 +809,14 @@ public function getFoodSidesCountByStoreId($store_id)
 // UPDATE Food Side
 public function updateFoodSide($data)
 {
-    // Set default values for optional fields
-    $discount = $data['discount'] ?? 0;
-    $percentage = $data['percentage'] ?? 0;
-    $discount_start_date = $data['discount_start_date'] ?? null;
-    $discount_end_date = $data['discount_end_date'] ?? null;
-
     $query = "UPDATE food_sides SET 
               name = :name, 
               price = :price, 
-              discount = :discount, 
-              percentage = :percentage, 
-              discount_start_date = :discount_start_date,
-              discount_end_date = :discount_end_date,
               updated_at = NOW() 
               WHERE id = :id AND store_id = :store_id";
     $stmt = $this->conn->prepare($query);
     $stmt->bindParam(':name', $data['name']);
     $stmt->bindParam(':price', $data['price']);
-    $stmt->bindParam(':discount', $discount);
-    $stmt->bindParam(':percentage', $percentage);
-    $stmt->bindParam(':discount_start_date', $discount_start_date);
-    $stmt->bindParam(':discount_end_date', $discount_end_date);
     $stmt->bindParam(':id', $data['id']);
     $stmt->bindParam(':store_id', $data['store_id']);
     return $stmt->execute();
@@ -2104,10 +2108,13 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         $countStmt->execute();
         $totalCount = $countStmt->fetchColumn();
         
-        // Get paginated results
-        $query = "SELECT fsi.*, fs.section_name 
+        // Get paginated results with discount information
+        $query = "SELECT fsi.*, fs.section_name, 
+                         d.percentage, d.start_date, d.end_date, d.status as discount_status
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
+                  LEFT JOIN discount_items di ON fsi.id = di.item_id AND di.item_type = 'food_section_item'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
                   WHERE " . $whereClause . " 
                   ORDER BY fsi.created_at DESC 
                   LIMIT :limit OFFSET :offset";
@@ -2120,6 +2127,25 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
         $stmt->execute();
         
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Process discount fields for each item
+        foreach ($items as &$item) {
+            $item['price'] = (float)$item['price'];
+            
+            // Only include discount fields if there's an active discount with percentage > 0
+            if ($item['percentage'] && $item['percentage'] > 0 && $item['discount_status'] === 'active') {
+                $item['percentage'] = (float)$item['percentage'];
+                $item['start_date'] = $item['start_date'];
+                $item['end_date'] = $item['end_date'];
+            } else {
+                // Remove discount fields if no active discount
+                unset($item['percentage']);
+                unset($item['start_date']);
+                unset($item['end_date']);
+            }
+            // Always remove the discount_status field as it's internal
+            unset($item['discount_status']);
+        }
         
         return [
             'items' => $items,
@@ -2137,14 +2163,37 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
     // GET Section Item by ID with section details
     public function getSectionItemByIdWithDetails($itemId)
     {
-        $query = "SELECT fsi.*, fs.section_name, fs.store_id 
+        $query = "SELECT fsi.*, fs.section_name, fs.store_id,
+                         d.percentage, d.start_date, d.end_date, d.status as discount_status
                   FROM food_section_items fsi 
                   JOIN food_sections fs ON fsi.section_id = fs.id 
+                  LEFT JOIN discount_items di ON fsi.id = di.item_id AND di.item_type = 'food_section_item'
+                  LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
                   WHERE fsi.id = :item_id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':item_id', $itemId);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result) {
+            $result['price'] = (float)$result['price'];
+            
+            // Only include discount fields if there's an active discount with percentage > 0
+            if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
+                $result['percentage'] = (float)$result['percentage'];
+                $result['start_date'] = $result['start_date'];
+                $result['end_date'] = $result['end_date'];
+            } else {
+                // Remove discount fields if no active discount
+                unset($result['percentage']);
+                unset($result['start_date']);
+                unset($result['end_date']);
+            }
+            // Always remove the discount_status field as it's internal
+            unset($result['discount_status']);
+        }
+        
+        return $result;
     }
 
     // COUNT Section Items by Store ID

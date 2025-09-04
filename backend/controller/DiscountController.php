@@ -62,9 +62,9 @@ class DiscountController
                 return ['status' => 'error', 'message' => 'Each item must have a valid item_id'];
             }
             
-            if (!isset($item['item_type']) || !in_array($item['item_type'], ['food_item', 'food_side', 'pack'])) {
+            if (!isset($item['item_type']) || !in_array($item['item_type'], ['item', 'food_item', 'side', 'pack', 'food_section_item'])) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => 'Each item must have a valid item_type (food_item, food_side, or pack)'];
+                return ['status' => 'error', 'message' => 'Each item must have a valid item_type (item, food_item, side, pack, or food_section_item)'];
             }
         }
 
@@ -131,9 +131,9 @@ class DiscountController
             return ['status' => 'error', 'message' => 'Each item must have a valid item_id'];
         }
         
-        if (!isset($item['item_type']) || !in_array($item['item_type'], ['food_item', 'food_side', 'pack'])) {
+        if (!isset($item['item_type']) || !in_array($item['item_type'], ['item', 'food_item', 'side', 'pack', 'food_section_item'])) {
             http_response_code(400);
-            return ['status' => 'error', 'message' => 'Each item must have a valid item_type (food_item, food_side, or pack)'];
+            return ['status' => 'error', 'message' => 'Each item must have a valid item_type (item, food_item, side, pack, or food_section_item)'];
         }
     }
 

@@ -162,6 +162,7 @@ public function getAllByStoreIdWithDetails($storeId)
                 WHEN di.item_type = 'item' THEN i.name
                 WHEN di.item_type = 'side' THEN fs.name
                 WHEN di.item_type = 'pack' THEN p.name
+                WHEN di.item_type = 'food_section_item' THEN fsi.name
                 ELSE NULL
             END as item_name
         FROM {$this->table} d
@@ -170,6 +171,7 @@ public function getAllByStoreIdWithDetails($storeId)
         LEFT JOIN items i ON di.item_id = i.id AND di.item_type = 'item'
         LEFT JOIN food_sides fs ON di.item_id = fs.id AND di.item_type = 'side'
         LEFT JOIN packages p ON di.item_id = p.id AND di.item_type = 'pack'
+        LEFT JOIN food_section_items fsi ON di.item_id = fsi.id AND di.item_type = 'food_section_item'
         WHERE d.store_id = :store_id
         ORDER BY d.created_at DESC
     ";

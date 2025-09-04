@@ -356,16 +356,24 @@ public function getAllItems($user, $page = 1, $limit = 10)
 
     foreach ($items as &$item) {
         $item['price'] = (float)$item['price'];
-        $item['discount_price'] = $item['discount_price'] !== null ? (float)$item['discount_price'] : null;
-        $item['percentage'] = $item['percentage'] !== null ? (int)$item['percentage'] : null;
-        $item['discount_start_date'] = $item['discount_start_date'] !== null 
-        ? date('Y-m-d', strtotime($item['discount_start_date'])) 
-        : null;
-
-    $item['discount_end_date'] = $item['discount_end_date'] !== null 
-        ? date('Y-m-d', strtotime($item['discount_end_date'])) 
-        : null;
         $item['total_orders'] = (int)$item['total_orders'];
+        
+        // Only include discount fields if there's an active discount with percentage > 0
+        if ($item['percentage'] && $item['percentage'] > 0) {
+            $item['percentage'] = (float)$item['percentage'];
+            $item['start_date'] = $item['discount_start_date'];
+            $item['end_date'] = $item['discount_end_date'];
+        } else {
+            // Remove discount fields if no active discount
+            unset($item['percentage']);
+            unset($item['start_date']);
+            unset($item['end_date']);
+        }
+        // Always remove the internal discount fields
+        unset($item['discount_id']);
+        unset($item['discount_start_date']);
+        unset($item['discount_end_date']);
+        unset($item['discount_price']);
     }
 
     return [
