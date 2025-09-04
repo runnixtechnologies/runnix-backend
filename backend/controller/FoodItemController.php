@@ -1285,13 +1285,10 @@ public function createFoodSection($data, $user)
     }
 }
 
-
-// READ All Sections by Store
 public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit = 10)
 {
     // Debug logging
     error_log("FoodItemController::getAllFoodSectionsByStoreId called with user: " . json_encode($user));
-    error_log("FoodItemController::getAllFoodSectionsByStoreId called with page: " . $page . ", limit: " . $limit);
 
     // Check if store exists
     $store = $this->storeModel->getStoreById($storeId);
@@ -1309,7 +1306,7 @@ public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit =
     // Pagination math
     $offset = ($page - 1) * $limit;
 
-    // ✅ Use the updated model method
+    // Call model
     $result = $this->foodItem->getAllFoodSectionsByStoreId($storeId, $limit, $offset);
 
     // Count total
@@ -1319,7 +1316,7 @@ public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit =
     http_response_code(200);
     return [
         'status' => 'success',
-        'data' => $result ?: [],
+        'data' => $result,
         'meta' => [
             'page' => $page,
             'limit' => $limit,
@@ -1330,7 +1327,6 @@ public function getAllFoodSectionsByStoreId($storeId, $user, $page = 1, $limit =
         ]
     ];
 }
-
 
 // UPDATE Food Section
 public function updateFoodSection($id, $data, $user)

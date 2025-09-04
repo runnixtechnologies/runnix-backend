@@ -1083,48 +1083,51 @@ public function createFoodSection($data)
     }
 }
 
-
 // READ All Sections by Store (with pagination)
 public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = null)
 {
     try {
-        // Build base query
-        $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, 
-                         fs.price, fs.status, fs.created_at, fs.updated_at
+        $query = "SELECT fs.id, fs.store_id, fs.section_name AS name, 
+                         fs.max_quantity, fs.required, fs.price, fs.status, 
+                         fs.created_at, fs.updated_at
                   FROM food_sections fs
-                  WHERE fs.store_id = :store_id 
+                  WHERE fs.store_id = :store_id
                     AND fs.status = 'active'
                   ORDER BY fs.id DESC";
 
-        // Add pagination safely by casting to int
         if ($limit !== null) {
-            $query .= " LIMIT " . (int)$limit;
+            $query .= " LIMIT :limit";
             if ($offset !== null) {
-                $query .= " OFFSET " . (int)$offset;
+                $query .= " OFFSET :offset";
             }
         }
 
-        // Prepare and execute
         $stmt = $this->conn->prepare($query);
         $stmt->bindValue(':store_id', (int)$storeId, PDO::PARAM_INT);
-        $stmt->execute();
 
+        if ($limit !== null) {
+            $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        }
+        if ($offset !== null) {
+            $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
         $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Enhance results
         foreach ($sections as &$section) {
             $section['price'] = (float)$section['price'];
             $section['max_quantity'] = (int)$section['max_quantity'];
             $section['required'] = (bool)$section['required'];
 
-            // Optional discount
-            $discountQuery = "SELECT d.percentage, d.id as discount_id, 
-                                     d.start_date as discount_start_date, d.end_date as discount_end_date
-                              FROM discount_items di 
-                              JOIN discounts d ON di.discount_id = d.id 
-                              WHERE di.item_id = :section_id 
-                                AND di.item_type = 'section' 
-                                AND d.status = 'active' 
+            // Discount check
+            $discountQuery = "SELECT d.percentage, d.id AS discount_id, 
+                                     d.start_date AS discount_start_date, d.end_date AS discount_end_date
+                              FROM discount_items di
+                              JOIN discounts d ON di.discount_id = d.id
+                              WHERE di.item_id = :section_id
+                                AND di.item_type = 'section'
+                                AND d.status = 'active'
                                 AND NOW() BETWEEN d.start_date AND d.end_date
                               LIMIT 1";
             $discountStmt = $this->conn->prepare($discountQuery);
@@ -1138,10 +1141,10 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
                 $section['discount_end_date'] = $discount['discount_end_date'];
             }
 
-            // Optional order count
-            $orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders 
-                           FROM food_section_items fsi 
-                           JOIN order_items oi ON fsi.item_id = oi.item_id 
+            // Orders count
+            $orderQuery = "SELECT COUNT(DISTINCT oi.order_id) as total_orders
+                           FROM food_section_items fsi
+                           JOIN order_items oi ON fsi.item_id = oi.item_id
                            WHERE fsi.section_id = :section_id";
             $orderStmt = $this->conn->prepare($orderQuery);
             $orderStmt->execute(['section_id' => $section['id']]);
@@ -1158,36 +1161,20 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
     }
 }
 
-// READ All Sections by Store (paginated version)
-public function getAllFoodSectionsByStoreIdPaginated($storeId, $limit, $offset)
-{
-    return $this->getAllFoodSectionsByStoreId($storeId, $limit, $offset);
-}
-
 // Count total food sections by store
 public function countFoodSectionsByStoreId($storeId)
 {
     try {
-        // Debug logging
-        error_log("countFoodSectionsByStoreId called with storeId: " . $storeId);
-        
-        // Ensure table exists
-        $this->ensureFoodSectionsTableExists();
-        
-        $query = "SELECT COUNT(*) FROM food_sections WHERE store_id = :store_id AND status = 'active'";
-        error_log("Count SQL Query: " . $query);
-        error_log("Count Parameter: store_id = " . $storeId);
-        
+        $query = "SELECT COUNT(*) 
+                  FROM food_sections 
+                  WHERE store_id = :store_id 
+                    AND status = 'active'";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':store_id', $storeId, PDO::PARAM_INT);
+        $stmt->bindValue(':store_id', (int)$storeId, PDO::PARAM_INT);
         $stmt->execute();
-        $count = (int)$stmt->fetchColumn();
-        
-        error_log("Count result: " . $count);
-        return $count;
+        return (int)$stmt->fetchColumn();
     } catch (PDOException $e) {
         error_log("countFoodSectionsByStoreId error: " . $e->getMessage());
-        error_log("countFoodSectionsByStoreId error trace: " . $e->getTraceAsString());
         return 0;
     }
 }
