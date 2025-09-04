@@ -16,6 +16,45 @@ class FoodItem
         $this->conn = (new Database())->getConnection();
     }
 
+    /**
+     * Ensure food_sections table exists
+     */
+    private function ensureFoodSectionsTableExists()
+    {
+        try {
+            // Check if table exists
+            $checkQuery = "SHOW TABLES LIKE 'food_sections'";
+            $stmt = $this->conn->prepare($checkQuery);
+            $stmt->execute();
+            $tableExists = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$tableExists) {
+                error_log("food_sections table does not exist, creating it...");
+                
+                // Create the table
+                $createTableQuery = "CREATE TABLE IF NOT EXISTS food_sections (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    store_id INT NOT NULL,
+                    section_name VARCHAR(255) NOT NULL,
+                    max_quantity INT DEFAULT 0,
+                    required BOOLEAN DEFAULT FALSE,
+                    price DECIMAL(10,2) DEFAULT 0.00,
+                    status ENUM('active', 'inactive') DEFAULT 'active',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_store_id (store_id),
+                    INDEX idx_status (status)
+                )";
+                
+                $stmt = $this->conn->prepare($createTableQuery);
+                $stmt->execute();
+                error_log("food_sections table created successfully");
+            }
+        } catch (Exception $e) {
+            error_log("Error ensuring food_sections table exists: " . $e->getMessage());
+        }
+    }
+
     
     // Create Food Item
    public function create($data)
@@ -1052,6 +1091,9 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
         // Debug logging
         error_log("getAllFoodSectionsByStoreId called with storeId: " . $storeId . ", limit: " . $limit . ", offset: " . $offset);
         
+        // First, check if food_sections table exists, if not create it
+        $this->ensureFoodSectionsTableExists();
+        
         // First, get all sections for this store with basic information
         $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at
                   FROM food_sections fs
@@ -1179,6 +1221,9 @@ public function countFoodSectionsByStoreId($storeId)
         // Debug logging
         error_log("countFoodSectionsByStoreId called with storeId: " . $storeId);
         
+        // Ensure table exists
+        $this->ensureFoodSectionsTableExists();
+        
         $query = "SELECT COUNT(*) FROM food_sections WHERE store_id = :store_id AND status = 'active'";
         error_log("Count SQL Query: " . $query);
         error_log("Count Parameter: store_id = " . $storeId);
@@ -1204,6 +1249,9 @@ public function getFoodSectionById($id)
     try {
         // Debug logging
         error_log("getFoodSectionById called with id: " . $id);
+        
+        // Ensure table exists
+        $this->ensureFoodSectionsTableExists();
         
         // Get the section with discount information
         $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, fs.required, fs.price, fs.status, fs.created_at, fs.updated_at,
