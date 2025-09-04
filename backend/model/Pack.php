@@ -185,6 +185,8 @@ public function countByStore($storeId)
     public function getPackById($id)
     {
         try {
+            error_log("Pack::getPackById - Searching for pack with ID: $id");
+            
             // Get the pack data with discount information
             $sql = "SELECT p.id, p.store_id, p.name, p.price, p.discount, p.percentage, 
                            p.discount_start_date, p.discount_end_date, p.status, p.created_at, p.updated_at
@@ -194,7 +196,10 @@ public function countByStore($storeId)
             $stmt->execute(['id' => $id]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
+            error_log("Pack::getPackById - Query result: " . json_encode($result));
+            
             if (!$result) {
+                error_log("Pack::getPackById - No pack found with ID: $id");
                 return false;
             }
             

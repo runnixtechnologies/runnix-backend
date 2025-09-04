@@ -334,30 +334,44 @@ public function deletePacksBulk($data, $user)
 
     public function getPackById($id, $user)
     {
+        error_log("PackController::getPackById - Starting with ID: $id, User: " . json_encode($user));
+        
         // Get store_id from database if not in JWT token
         $storeId = $user['store_id'] ?? null;
+        error_log("PackController::getPackById - Initial store_id from JWT: " . ($storeId ?? 'null'));
+        
         if (!$storeId) {
+            error_log("PackController::getPackById - No store_id in JWT, fetching from database for user_id: " . $user['user_id']);
             // Fetch store from database using user_id
             $store = $this->storeModel->getStoreByUserId($user['user_id']);
             if (!$store) {
+                error_log("PackController::getPackById - Store not found for user_id: " . $user['user_id']);
                 http_response_code(403);
                 return ['status' => 'error', 'message' => 'Store not found for user'];
             }
             $storeId = $store['id'];
+            error_log("PackController::getPackById - Store found with ID: $storeId");
         }
         
+        error_log("PackController::getPackById - Final store_id: $storeId");
+        
         $pack = $this->packModel->getPackById($id);
+        error_log("PackController::getPackById - Pack data: " . json_encode($pack));
         
         if ($pack) {
+            error_log("PackController::getPackById - Pack found, checking ownership. Pack store_id: " . $pack['store_id'] . ", User store_id: $storeId");
             // Check if the pack belongs to the user's store
             if ($pack['store_id'] != $storeId) {
+                error_log("PackController::getPackById - Ownership check failed. Pack belongs to store " . $pack['store_id'] . " but user belongs to store $storeId");
                 http_response_code(403);
                 return ['status' => 'error', 'message' => 'Unauthorized to access this pack'];
             }
             
+            error_log("PackController::getPackById - Ownership check passed, returning pack data");
             http_response_code(200); // OK
             return ['status' => 'success', 'data' => $pack];
         } else {
+            error_log("PackController::getPackById - Pack not found with ID: $id");
             http_response_code(404); // Not Found
             return ['status' => 'error', 'message' => 'Pack not found'];
         }

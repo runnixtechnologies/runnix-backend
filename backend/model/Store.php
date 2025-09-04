@@ -72,10 +72,13 @@ class Store
 
     public function getStoreByUserId($user_id)
     {
+        error_log("Store::getStoreByUserId - Searching for store with user_id: $user_id");
         $sql = "SELECT * FROM " . $this->table . " WHERE user_id = :user_id LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([':user_id' => $user_id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("Store::getStoreByUserId - Query result: " . json_encode($result));
+        return $result;
     }
 
     public function storeIDExists($store_id) {
