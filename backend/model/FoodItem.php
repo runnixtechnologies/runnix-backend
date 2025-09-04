@@ -1092,7 +1092,7 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
                          fs.created_at, fs.updated_at
                   FROM food_sections fs
                   WHERE fs.store_id = :store_id
-                    AND fs.status = 'active'
+                  
                   ORDER BY fs.id DESC";
 
         if ($limit !== null) {
