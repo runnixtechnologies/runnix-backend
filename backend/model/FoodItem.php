@@ -691,7 +691,8 @@ public function getFoodSideById($id)
     try {
         // Get the food side data with discount information
 		$sql = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
-                     d.percentage, d.start_date, d.end_date, d.status as discount_status
+                     d.id as discount_id, d.percentage, d.start_date as discount_start_date, d.end_date as discount_end_date, d.status as discount_status,
+                     ROUND((fs.price - (fs.price * COALESCE(d.percentage, 0) / 100)), 2) as discount_price
                   FROM food_sides fs
                   LEFT JOIN discount_items di ON fs.id = di.item_id AND di.item_type = 'food_side'
                   LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = fs.store_id AND d.status = 'active'
@@ -719,14 +720,18 @@ public function getFoodSideById($id)
         
         // Only include discount fields if there's an active discount with percentage > 0
         if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
+            $result['discount_id'] = (int)$result['discount_id'];
             $result['percentage'] = (float)$result['percentage'];
+            $result['discount_price'] = (float)$result['discount_price'];
             $result['discount_start_date'] = $result['discount_start_date'];
             $result['discount_end_date'] = $result['discount_end_date'];
         } else {
             // Remove discount fields if no active discount
+            unset($result['discount_id']);
             unset($result['percentage']);
-            unset($result['start_date']);
-            unset($result['end_date']);
+            unset($result['discount_price']);
+            unset($result['discount_start_date']);
+            unset($result['discount_end_date']);
         }
         // Always remove the discount_status field as it's internal
         unset($result['discount_status']);
@@ -746,7 +751,8 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
 {
     try {
             $query = "SELECT fs.id, fs.store_id, fs.name, fs.price, fs.status, fs.created_at, fs.updated_at,
-                         d.percentage, d.start_date as discount_start_date, d.end_date as discount_end_date, d.status as discount_status,
+                         d.id as discount_id, d.percentage, d.start_date as discount_start_date, d.end_date as discount_end_date, d.status as discount_status,
+                         ROUND((fs.price - (fs.price * COALESCE(d.percentage, 0) / 100)), 2) as discount_price,
                          COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                   FROM food_sides fs
                   LEFT JOIN food_item_sides fis ON fs.id = fis.side_id
@@ -771,12 +777,16 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
             
             // Only include discount fields if there's an active discount with percentage > 0
             if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
+                $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['percentage'];
+                $result['discount_price'] = (float)$result['discount_price'];
                 $result['discount_start_date'] = $result['discount_start_date'];
                 $result['discount_end_date'] = $result['discount_end_date'];
             } else {
                 // Remove discount fields if no active discount
+                unset($result['discount_id']);
                 unset($result['percentage']);
+                unset($result['discount_price']);
                 unset($result['discount_start_date']);
                 unset($result['discount_end_date']);
             }
