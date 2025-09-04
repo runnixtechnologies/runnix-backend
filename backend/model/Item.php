@@ -229,7 +229,7 @@ public function getItemsByStoreIdPaginated($storeId, $limit, $offset)
             d.id AS discount_id, 
             d.end_date AS discount_end_date, 
             d.percentage, 
-            (i.price - (i.price * COALESCE(d.percentage, 0) / 100)) AS discount_price,
+            ROUND((i.price - (i.price * COALESCE(d.percentage, 0) / 100)), 2) AS discount_price,
             COALESCE(COUNT(DISTINCT oi.order_id), 0) AS total_orders
         FROM items i
         LEFT JOIN discount_items di ON i.id = di.item_id AND di.item_type = 'item'
@@ -271,7 +271,7 @@ public function getItemById($itemId)
                 d.id AS discount_id, 
                 d.end_date AS discount_end_date, 
                 d.percentage, 
-                (i.price - (i.price * COALESCE(d.percentage, 0) / 100)) AS discount_price,
+                ROUND((i.price - (i.price * COALESCE(d.percentage, 0) / 100)), 2) AS discount_price,
                 COALESCE(COUNT(DISTINCT oi.order_id), 0) AS total_orders
             FROM {$this->table} i
             LEFT JOIN discount_items di ON i.id = di.item_id AND di.item_type = 'item'
@@ -341,7 +341,7 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
             d.id AS discount_id, 
             d.end_date AS discount_end_date, 
             d.percentage, 
-            (i.price - (i.price * d.percentage / 100)) AS discount_price,
+            ROUND((i.price - (i.price * d.percentage / 100)), 2) AS discount_price,
             COUNT(oi.id) AS total_orders
         FROM items i
         LEFT JOIN discount_items di ON i.id = di.item_id

@@ -412,7 +412,7 @@ private function getFoodItemWithOptions($foodItemId)
                        d.percentage as discount_percentage,
                        d.start_date as discount_start_date,
                        d.end_date as discount_end_date,
-                       (fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
+                       ROUND((fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)), 2) as calculated_discount_price,
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} fi
                 LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
@@ -497,7 +497,7 @@ public function getByItemId($id)
                    d.percentage as discount_percentage,
                    d.start_date as discount_start_date,
                    d.end_date as discount_end_date,
-                   (fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
+                   ROUND((fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)), 2) as calculated_discount_price,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM {$this->table} fi
             LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
@@ -1105,7 +1105,7 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
     try {
         // Debug log
         error_log("[getAllFoodSectionsByStoreId] storeId=$storeId, limit=$limit, offset=$offset");
-
+        
         // Base query
         $query = "SELECT fs.id, fs.store_id, fs.section_name, fs.max_quantity, fs.required, 
                          fs.price, fs.status, fs.created_at, fs.updated_at
@@ -1113,20 +1113,20 @@ public function getAllFoodSectionsByStoreId($storeId, $limit = null, $offset = n
                   WHERE fs.store_id = :store_id 
                     AND fs.status = 'active'
                   ORDER BY fs.id DESC";
-
+    
         if ($limit !== null) {
             $query .= " LIMIT " . (int)$limit;
             if ($offset !== null) {
                 $query .= " OFFSET " . (int)$offset;
             }
         }
-
+        
         $stmt = $this->conn->prepare($query);
         $stmt->bindValue(':store_id', (int)$storeId, PDO::PARAM_INT);
         $stmt->execute();
 
         $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+        
         // Attach items for each section
         foreach ($sections as &$section) {
             $section['max_quantity'] = (int)$section['max_quantity'];
@@ -1168,12 +1168,12 @@ public function countFoodSectionsByStoreId($storeId)
                     AND status = 'active'";
         error_log("SQL (count): " . $query);
         error_log("Param store_id: " . $storeId);
-
+        
         $stmt = $this->conn->prepare($query);
         $stmt->bindValue(':store_id', (int)$storeId, PDO::PARAM_INT);
         $stmt->execute();
         $count = (int)$stmt->fetchColumn();
-
+        
         error_log("Count result: " . $count);
         return $count;
     } catch (PDOException $e) {
@@ -1189,7 +1189,7 @@ public function getFoodSectionById($id)
 {
     try {
         $id = (int) $id; // sanitize
-
+        
         $query = "SELECT fs.id, fs.store_id, fs.section_name as name, fs.max_quantity, 
                          fs.required, fs.price, fs.status, fs.created_at, fs.updated_at,
                          d.percentage,
@@ -1202,13 +1202,13 @@ public function getFoodSectionById($id)
                   LEFT JOIN discounts d 
                          ON di.discount_id = d.id 
                         AND d.status = 'active' 
-                        AND NOW() BETWEEN d.start_date AND d.end_date
+                      AND NOW() BETWEEN d.start_date AND d.end_date
                   WHERE fs.id = :id AND fs.status = 'active'";
-
-        $stmt = $this->conn->prepare($query);
+        
+    $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
-        $section = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->execute();
+    $section = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$section) {
             return null;
@@ -1218,7 +1218,7 @@ public function getFoodSectionById($id)
         $section['price'] = (float)$section['price'];
         $section['max_quantity'] = (int)$section['max_quantity'];
         $section['required'] = (bool)$section['required'];
-
+        
         // Attach discount ONLY if present
         if ($section['discount_id']) {
             $section['percentage'] = (float)$section['percentage'];
@@ -1386,7 +1386,7 @@ public function getItemsByStoreAndCategory($storeId, $categoryId)
                    d.percentage as discount_percentage,
                    d.start_date as discount_start_date,
                    d.end_date as discount_end_date,
-                   (fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
+                   ROUND((fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)), 2) as calculated_discount_price,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM food_items fi
             LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
@@ -1460,7 +1460,7 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
                    d.percentage as discount_percentage,
                    d.start_date as discount_start_date,
                    d.end_date as discount_end_date,
-                   (fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)) as calculated_discount_price,
+                   ROUND((fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)), 2) as calculated_discount_price,
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM food_items fi
             LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'

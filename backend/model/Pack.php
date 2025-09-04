@@ -117,7 +117,7 @@ public function deleteBulk($packIds, $storeId)
     try {
         $sql = "SELECT p.id, p.store_id, p.name, p.price, p.status, p.created_at, p.updated_at,
                        d.id as discount_id, d.percentage, d.start_date, d.end_date, d.status as discount_status,
-                       (p.price - (p.price * COALESCE(d.percentage, 0) / 100)) as discount_price,
+                       ROUND((p.price - (p.price * COALESCE(d.percentage, 0) / 100)), 2) as discount_price,
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} p
                 LEFT JOIN item_packs ip ON p.id = ip.pack_id
@@ -146,7 +146,7 @@ public function deleteBulk($packIds, $storeId)
             if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
                 $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['percentage'];
-                $result['discount_price'] = (float)$result['discount_price'];
+            $result['discount_price'] = (float)$result['discount_price'];
                 $result['start_date'] = $result['start_date'];
                 $result['end_date'] = $result['end_date'];
             } else {
@@ -185,7 +185,7 @@ public function countByStore($storeId)
             // Get the pack data with discount information
             $sql = "SELECT p.id, p.store_id, p.name, p.price, p.status, p.created_at, p.updated_at,
                            d.id as discount_id, d.percentage, d.start_date, d.end_date, d.status as discount_status,
-                           (p.price - (p.price * COALESCE(d.percentage, 0) / 100)) as discount_price
+                           ROUND((p.price - (p.price * COALESCE(d.percentage, 0) / 100)), 2) as discount_price
                     FROM {$this->table} p
                     LEFT JOIN discount_items di ON p.id = di.item_id AND di.item_type = 'pack'
                     LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = p.store_id AND d.status = 'active'
@@ -218,7 +218,7 @@ public function countByStore($storeId)
             if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
                 $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['percentage'];
-                $result['discount_price'] = (float)$result['discount_price'];
+            $result['discount_price'] = (float)$result['discount_price'];
                 $result['start_date'] = $result['start_date'];
                 $result['end_date'] = $result['end_date'];
             } else {
