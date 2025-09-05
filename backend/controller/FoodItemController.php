@@ -700,7 +700,7 @@ class FoodItemController
 
     public function getByItemId($id,$user)
     {
-        $result = $this->foodItem->getByItemId($id);
+        $result = $this->foodItem->getByItemId($id, $user['store_id']);
         if ($result) {
             http_response_code(200); // OK
             return ['status' => 'success', 'data' => $result];

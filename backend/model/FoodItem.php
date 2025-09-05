@@ -416,7 +416,7 @@ private function getFoodItemWithOptions($foodItemId)
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} fi
                 LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
-                LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+                LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = :store_id AND d.status = 'active' 
                     AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
                     AND (d.end_date IS NULL OR d.end_date >= CURDATE())
                 LEFT JOIN order_items oi ON fi.id = oi.item_id
@@ -491,7 +491,7 @@ private function getFoodItemWithOptions($foodItemId)
     }
 
     // Get a single Food Item by id
-public function getByItemId($id)
+public function getByItemId($id, $store_id = null)
 {
     $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
                    fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
@@ -503,13 +503,25 @@ public function getByItemId($id)
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM {$this->table} fi
             LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
-            LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-                AND NOW() BETWEEN d.start_date AND d.end_date
+            LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = :store_id AND d.status = 'active' 
+                AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
+                AND (d.end_date IS NULL OR d.end_date >= CURDATE())
             LEFT JOIN order_items oi ON fi.id = oi.item_id
-            WHERE fi.id = :id
-            GROUP BY fi.id";
+            WHERE fi.id = :id";
+    
+    // Add store_id filter if provided
+    if ($store_id !== null) {
+        $sql .= " AND fi.store_id = :store_id";
+    }
+    
+    $sql .= " GROUP BY fi.id";
+    
     $stmt = $this->conn->prepare($sql);
-    $stmt->execute(['id' => $id]);
+    $params = ['id' => $id];
+    if ($store_id !== null) {
+        $params['store_id'] = $store_id;
+    }
+    $stmt->execute($params);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($result) {
