@@ -80,14 +80,24 @@ class DiscountController
 
     public function updateDiscount($discountId, $data, $user)
 {
+    // Log the update request
+    error_log("=== DISCOUNT CONTROLLER UPDATE ===");
+    error_log("Discount ID: " . $discountId);
+    error_log("Update data: " . json_encode($data));
+    error_log("User data: " . json_encode($user));
+    
     // Extract store_id and store_type_id from authenticated user
     if (!isset($user['store_id'])) {
+        error_log("=== ERROR: STORE ID NOT FOUND ===");
         http_response_code(403);
         return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
     }
     
     $data['store_id'] = $user['store_id'];
     $data['store_type_id'] = $user['store_type_id'] ?? null;
+    
+    error_log("Store ID: " . $data['store_id']);
+    error_log("Store Type ID: " . $data['store_type_id']);
     
     if (empty($discountId)) {
         http_response_code(400);
@@ -137,11 +147,21 @@ class DiscountController
         }
     }
 
+    error_log("=== CALLING MODEL UPDATE ===");
+    error_log("About to call discountModel->update with ID: " . $discountId);
+    error_log("Data being passed to model: " . json_encode($data));
+    
     $updated = $this->discountModel->update($discountId, $data);
+    
+    error_log("=== MODEL UPDATE RESULT ===");
+    error_log("Update result: " . ($updated ? 'SUCCESS' : 'FAILED'));
+    
     if ($updated) {
+        error_log("=== UPDATE SUCCESS ===");
         http_response_code(200);
         return ['status' => 'success', 'message' => 'Discount updated successfully'];
     } else {
+        error_log("=== UPDATE FAILED ===");
         http_response_code(403);
         return ['status' => 'error', 'message' => 'Update failed. Check discount ID and store ownership.'];
     }

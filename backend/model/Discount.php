@@ -212,6 +212,10 @@ public function getById($id)
 
 public function update($discountId, $data)
 {
+    error_log("=== DISCOUNT MODEL UPDATE ===");
+    error_log("Discount ID: " . $discountId);
+    error_log("Update data: " . json_encode($data));
+    
     // Update discount with more flexible WHERE clause
     $sql = "UPDATE {$this->table} 
             SET percentage = :percentage, 
@@ -221,40 +225,65 @@ public function update($discountId, $data)
             WHERE id = :id 
               AND store_id = :store_id";
 
+    error_log("SQL Query: " . $sql);
+    error_log("Parameters: " . json_encode([
+        'id' => $discountId,
+        'store_id' => $data['store_id'],
+        'percentage' => $data['percentage'],
+        'start_date' => $data['start_date'] ?? null,
+        'end_date' => $data['end_date'] ?? null
+    ]));
+
     $stmt = $this->conn->prepare($sql);
-    $stmt->execute([
+    $result = $stmt->execute([
         'id' => $discountId,
         'store_id' => $data['store_id'],
         'percentage' => $data['percentage'],
         'start_date' => $data['start_date'] ?? null,
         'end_date' => $data['end_date'] ?? null
     ]);
+    
+    $rowCount = $stmt->rowCount();
+    error_log("Execute result: " . ($result ? 'SUCCESS' : 'FAILED'));
+    error_log("Rows affected: " . $rowCount);
 
-    if ($stmt->rowCount() === 0) {
+    if ($rowCount === 0) {
+        error_log("=== NO ROWS UPDATED ===");
         // No discount updated — maybe store_id mismatch
         return false;
     }
+    
+    error_log("=== DISCOUNT UPDATED SUCCESSFULLY ===");
 
     // Delete old items for that discount (scoped)
+    error_log("=== UPDATING DISCOUNT ITEMS ===");
     $deleteSql = "DELETE FROM discount_items 
                   WHERE discount_id = :discount_id";
+    error_log("Delete SQL: " . $deleteSql);
     $deleteStmt = $this->conn->prepare($deleteSql);
-    $deleteStmt->execute(['discount_id' => $discountId]);
+    $deleteResult = $deleteStmt->execute(['discount_id' => $discountId]);
+    $deletedRows = $deleteStmt->rowCount();
+    error_log("Delete result: " . ($deleteResult ? 'SUCCESS' : 'FAILED'));
+    error_log("Deleted rows: " . $deletedRows);
 
     // Reinsert updated items
-    foreach ($data['items'] as $item) {
+    error_log("Items to insert: " . json_encode($data['items']));
+    foreach ($data['items'] as $index => $item) {
         $sqlItem = "INSERT INTO discount_items 
                     (discount_id, item_id, item_type, created_at)
                     VALUES (:discount_id, :item_id, :item_type, NOW())";
 
+        error_log("Inserting item " . ($index + 1) . ": " . json_encode($item));
         $stmtItem = $this->conn->prepare($sqlItem);
-        $stmtItem->execute([
+        $insertResult = $stmtItem->execute([
             'discount_id' => $discountId,
             'item_id' => $item['item_id'],
             'item_type' => $item['item_type']
         ]);
+        error_log("Insert result for item " . ($index + 1) . ": " . ($insertResult ? 'SUCCESS' : 'FAILED'));
     }
 
+    error_log("=== DISCOUNT UPDATE COMPLETED SUCCESSFULLY ===");
     return true;
 }
 
