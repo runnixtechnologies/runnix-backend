@@ -417,7 +417,8 @@ private function getFoodItemWithOptions($foodItemId)
                 FROM {$this->table} fi
                 LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
                 LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
-                    AND NOW() BETWEEN d.start_date AND d.end_date
+                    AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
+                    AND (d.end_date IS NULL OR d.end_date >= CURDATE())
                 LEFT JOIN order_items oi ON fi.id = oi.item_id
                 WHERE fi.store_id = :store_id AND fi.deleted = 0 
                 GROUP BY fi.id
@@ -452,20 +453,21 @@ private function getFoodItemWithOptions($foodItemId)
             
             // Only include discount fields if there's an active discount with percentage > 0
             if ($result['discount_percentage'] && $result['discount_percentage'] > 0) {
+                $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['discount_percentage'];
+                $result['discount_price'] = (float)$result['calculated_discount_price'];
                 $result['discount_start_date'] = $result['discount_start_date'];
                 $result['discount_end_date'] = $result['discount_end_date'];
             } else {
                 // Remove discount fields if no active discount
+                unset($result['discount_id']);
                 unset($result['percentage']);
+                unset($result['discount_price']);
                 unset($result['discount_start_date']);
                 unset($result['discount_end_date']);
             }
             // Always remove the internal discount fields
-            unset($result['discount_id']);
             unset($result['discount_percentage']);
-            unset($result['discount_start_date']);
-            unset($result['discount_end_date']);
             unset($result['calculated_discount_price']);
         }
         
@@ -518,20 +520,21 @@ public function getByItemId($id)
         
         // Only include discount fields if there's an active discount with percentage > 0
         if ($result['discount_percentage'] && $result['discount_percentage'] > 0) {
+            $result['discount_id'] = (int)$result['discount_id'];
             $result['percentage'] = (float)$result['discount_percentage'];
-            $result['start_date'] = $result['discount_start_date'];
-            $result['end_date'] = $result['discount_end_date'];
+            $result['discount_price'] = (float)$result['calculated_discount_price'];
+            $result['discount_start_date'] = $result['discount_start_date'];
+            $result['discount_end_date'] = $result['discount_end_date'];
         } else {
             // Remove discount fields if no active discount
+            unset($result['discount_id']);
             unset($result['percentage']);
-            unset($result['start_date']);
-            unset($result['end_date']);
+            unset($result['discount_price']);
+            unset($result['discount_start_date']);
+            unset($result['discount_end_date']);
         }
         // Always remove the internal discount fields
-        unset($result['discount_id']);
         unset($result['discount_percentage']);
-        unset($result['discount_start_date']);
-        unset($result['discount_end_date']);
         unset($result['calculated_discount_price']);
     }
     
