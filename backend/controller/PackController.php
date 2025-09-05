@@ -151,7 +151,7 @@ public function deletePacksBulk($data, $user)
         }
         
         $data['store_id'] = $user['store_id'];
-        
+
         $result = $this->packModel->update($data);
         if ($result) {
             http_response_code(200); // OK

@@ -43,15 +43,17 @@ if (!isset($user['store_id'])) {
 // Get pagination parameters
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+$active_only = isset($_GET['active_only']) ? filter_var($_GET['active_only'], FILTER_VALIDATE_BOOLEAN) : false;
 
 error_log("=== CALLING FOOD ITEM CONTROLLER ===");
 error_log("Store ID: " . $user['store_id']);
 error_log("Page: " . $page);
 error_log("Limit: " . $limit);
+error_log("Active Only: " . ($active_only ? 'true' : 'false'));
 error_log("User data: " . json_encode($user));
 
 $controller = new FoodItemController();
-$response = $controller->getAllFoodItemsByStoreId($user['store_id'], $user, $page, $limit);
+$response = $controller->getAllFoodItemsByStoreId($user['store_id'], $user, $page, $limit, $active_only);
 
 error_log("=== CONTROLLER RESPONSE ===");
 error_log("Response: " . json_encode($response));

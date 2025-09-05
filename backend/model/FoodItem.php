@@ -404,7 +404,7 @@ private function getFoodItemWithOptions($foodItemId)
     return $stmt->fetch() !== false;
 }
     // Get All Food Items by Store (with pagination)
-    public function getAllByStoreId($store_id, $limit = null, $offset = null)
+    public function getAllByStoreId($store_id, $limit = null, $offset = null, $active_only = false)
     {
         $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
                        fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
@@ -416,13 +416,18 @@ private function getFoodItemWithOptions($foodItemId)
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} fi
                 LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
-                LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = :store_id AND d.status = 'active' 
-                    AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
-                    AND (d.end_date IS NULL OR d.end_date >= CURDATE())
-                LEFT JOIN order_items oi ON fi.id = oi.item_id
-                WHERE fi.store_id = :store_id AND fi.deleted = 0 
-                GROUP BY fi.id
-                ORDER BY fi.created_at DESC";
+                LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = :store_id AND d.status = 'active'";
+        
+        // Add date filtering only if active_only is true
+        if ($active_only) {
+            $sql .= " AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
+                      AND (d.end_date IS NULL OR d.end_date >= CURDATE())";
+        }
+        
+        $sql .= " LEFT JOIN order_items oi ON fi.id = oi.item_id
+                  WHERE fi.store_id = :store_id AND fi.deleted = 0 
+                  GROUP BY fi.id
+                  ORDER BY fi.created_at DESC";
         
         // Add pagination if limit is provided
         if ($limit !== null) {
@@ -442,23 +447,43 @@ private function getFoodItemWithOptions($foodItemId)
             }
         }
         
+        error_log("=== FOOD ITEM SQL QUERY DEBUG ===");
+        error_log("SQL Query: " . $sql);
+        error_log("Store ID: " . $store_id);
+        error_log("Limit: " . ($limit ?? 'null'));
+        error_log("Offset: " . ($offset ?? 'null'));
+        error_log("Current Date (CURDATE()): " . date('Y-m-d'));
+        
         $stmt->execute();
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        error_log("=== FOOD ITEM QUERY RESULTS ===");
+        error_log("Number of results: " . count($results));
+        foreach ($results as $index => $result) {
+            error_log("Result " . ($index + 1) . ": " . json_encode($result));
+        }
+        
         // Convert numeric fields to appropriate types for each result
         foreach ($results as &$result) {
+            error_log("=== PROCESSING RESULT ===");
+            error_log("Raw result: " . json_encode($result));
+            error_log("Discount ID: " . ($result['discount_id'] ?? 'null'));
+            error_log("Discount percentage: " . ($result['discount_percentage'] ?? 'null'));
+            
             $result['price'] = (float)$result['price'];
             $result['max_qty'] = (int)$result['max_qty'];
             $result['total_orders'] = (int)$result['total_orders'];
             
             // Only include discount fields if there's an active discount with percentage > 0
             if ($result['discount_percentage'] && $result['discount_percentage'] > 0) {
+                error_log("=== INCLUDING DISCOUNT FIELDS ===");
                 $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['discount_percentage'];
                 $result['discount_price'] = (float)$result['calculated_discount_price'];
                 $result['discount_start_date'] = $result['discount_start_date'];
                 $result['discount_end_date'] = $result['discount_end_date'];
             } else {
+                error_log("=== REMOVING DISCOUNT FIELDS ===");
                 // Remove discount fields if no active discount
                 unset($result['discount_id']);
                 unset($result['percentage']);
@@ -469,6 +494,8 @@ private function getFoodItemWithOptions($foodItemId)
             // Always remove the internal discount fields
             unset($result['discount_percentage']);
             unset($result['calculated_discount_price']);
+            
+            error_log("Final processed result: " . json_encode($result));
         }
         
         return $results;
@@ -732,7 +759,7 @@ public function getFoodSideById($id)
 		$orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
 		
 		// Add total_orders and convert numeric fields
-		        $result['total_orders'] = (int)$orderCount['total_orders'];
+		$result['total_orders'] = (int)$orderCount['total_orders'];
         $result['price'] = (float)$result['price'];
         
         // Debug: Log the raw result to see what's being returned
@@ -742,7 +769,7 @@ public function getFoodSideById($id)
         if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
             $result['discount_id'] = (int)$result['discount_id'];
             $result['percentage'] = (float)$result['percentage'];
-            $result['discount_price'] = (float)$result['discount_price'];
+        $result['discount_price'] = (float)$result['discount_price'];
             $result['discount_start_date'] = $result['discount_start_date'];
             $result['discount_end_date'] = $result['discount_end_date'];
         } else {
@@ -804,7 +831,7 @@ public function getAllFoodSidesByStoreId($store_id, $limit = 10, $offset = 0)
             if ($result['percentage'] && $result['percentage'] > 0 && $result['discount_status'] === 'active') {
                 $result['discount_id'] = (int)$result['discount_id'];
                 $result['percentage'] = (float)$result['percentage'];
-                $result['discount_price'] = (float)$result['discount_price'];
+            $result['discount_price'] = (float)$result['discount_price'];
                 $result['discount_start_date'] = $result['discount_start_date'];
                 $result['discount_end_date'] = $result['discount_end_date'];
             } else {

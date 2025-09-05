@@ -749,7 +749,7 @@ class FoodItemController
 }
 
 
-public function getAllFoodItemsByStoreId($storeId, $user, $page = 1, $limit = 10)
+public function getAllFoodItemsByStoreId($storeId, $user, $page = 1, $limit = 10, $active_only = false)
 {
     // Check if store exists
     $store = $this->storeModel->getStoreById($storeId);
@@ -766,8 +766,14 @@ public function getAllFoodItemsByStoreId($storeId, $user, $page = 1, $limit = 10
 
     $offset = ($page - 1) * $limit;
 
+    // For merchants, default to showing all discounts (active_only = false)
+    // For customers, default to showing only active discounts (active_only = true)
+    if ($user['role'] === 'merchant') {
+        $active_only = false; // Merchants see all their discounts
+    }
+
     // Fetch food items with pagination
-    $foodItems = $this->foodItem->getAllByStoreIdPaginated($storeId, $limit, $offset);
+    $foodItems = $this->foodItem->getAllByStoreId($storeId, $limit, $offset, $active_only);
     $totalCount = $this->foodItem->countFoodItemsByStoreId($storeId);
     
     // Always return success with data (empty array if no items found)
