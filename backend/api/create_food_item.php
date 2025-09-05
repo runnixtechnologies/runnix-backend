@@ -4,6 +4,10 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Force error logging to a specific file for debugging
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../php-error.log');
+
 require_once '../../vendor/autoload.php';
 require_once '../config/cors.php';
 require_once '../middleware/authMiddleware.php';
@@ -12,6 +16,12 @@ use Controller\FoodItemController;
 use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
+
+// Log that the endpoint was hit
+error_log("=== CREATE FOOD ITEM ENDPOINT HIT ===");
+error_log("Timestamp: " . date('Y-m-d H:i:s'));
+error_log("Request URI: " . $_SERVER['REQUEST_URI']);
+error_log("HTTP Method: " . $_SERVER['REQUEST_METHOD']);
 
 // Log incoming request for debugging
 error_log("=== API CREATE FOOD ITEM REQUEST ===");
@@ -84,10 +94,32 @@ if (isset($data['sides'])) {
     error_log("ERROR: Sides data is not set!");
 }
 
-$user = authenticateRequest();
-$controller = new FoodItemController();
-$response = $controller->create($data,$user);
-echo json_encode($response);
+try {
+    error_log("=== STARTING AUTHENTICATION ===");
+    $user = authenticateRequest();
+    error_log("=== AUTHENTICATION SUCCESS ===");
+    error_log("User data: " . json_encode($user));
+    
+    error_log("=== STARTING FOOD ITEM CREATION ===");
+    $controller = new FoodItemController();
+    $response = $controller->create($data, $user);
+    error_log("=== FOOD ITEM CREATION COMPLETED ===");
+    error_log("Response: " . json_encode($response));
+    
+    echo json_encode($response);
+} catch (Exception $e) {
+    error_log("=== ERROR IN CREATE FOOD ITEM ===");
+    error_log("Error: " . $e->getMessage());
+    error_log("File: " . $e->getFile());
+    error_log("Line: " . $e->getLine());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Internal server error: ' . $e->getMessage()
+    ]);
+}
 
 /**
  * Convert boolean strings to actual booleans for mobile app compatibility
