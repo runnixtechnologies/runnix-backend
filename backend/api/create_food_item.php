@@ -13,22 +13,41 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
+// Log incoming request for debugging
+error_log("=== API CREATE FOOD ITEM REQUEST ===");
+error_log("Content-Type: " . ($_SERVER['CONTENT_TYPE'] ?? 'not set'));
+error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
+error_log("Raw POST: " . json_encode($_POST));
+error_log("Raw FILES: " . json_encode($_FILES));
+error_log("Raw Input: " . file_get_contents("php://input"));
+
 // Handle content type (JSON or FormData)
 $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 if (stripos($contentType, 'application/json') !== false) {
     $data = json_decode(file_get_contents("php://input"), true) ?? [];
+    error_log("Parsed as JSON: " . json_encode($data));
 } elseif (stripos($contentType, 'multipart/form-data') !== false) {
     $data = $_POST;
+    error_log("Parsed as FormData: " . json_encode($data));
     
     // Parse JSON strings for sides, packs, and sections when using form-data
     if (isset($data['sides']) && is_string($data['sides'])) {
+        error_log("Sides before JSON decode: " . $data['sides']);
         $data['sides'] = json_decode($data['sides'], true);
+        error_log("Sides after JSON decode: " . json_encode($data['sides']));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON decode error for sides: " . json_last_error_msg());
+        }
     }
     if (isset($data['packs']) && is_string($data['packs'])) {
+        error_log("Packs before JSON decode: " . $data['packs']);
         $data['packs'] = json_decode($data['packs'], true);
+        error_log("Packs after JSON decode: " . json_encode($data['packs']));
     }
     if (isset($data['sections']) && is_string($data['sections'])) {
+        error_log("Sections before JSON decode: " . $data['sections']);
         $data['sections'] = json_decode($data['sections'], true);
+        error_log("Sections after JSON decode: " . json_encode($data['sections']));
     }
     
     // Convert boolean strings to actual booleans for mobile app compatibility

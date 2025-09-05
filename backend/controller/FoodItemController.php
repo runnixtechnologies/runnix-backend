@@ -21,6 +21,16 @@ class FoodItemController
 
    public function create($data,$user)
 {
+    // Log the complete incoming request for debugging
+    error_log("=== FOOD ITEM CREATION REQUEST DEBUG ===");
+    error_log("Raw POST data: " . json_encode($_POST));
+    error_log("Raw FILES data: " . json_encode($_FILES));
+    error_log("Content-Type: " . ($_SERVER['CONTENT_TYPE'] ?? 'not set'));
+    error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
+    error_log("Parsed data: " . json_encode($data));
+    error_log("User data: " . json_encode($user));
+    error_log("=== END REQUEST DEBUG ===");
+    
     $photo = null;
 
     // Handle photo upload
@@ -146,6 +156,13 @@ class FoodItemController
         error_log("Sides data: " . json_encode($data['sides']));
         error_log("Sides type: " . gettype($data['sides']));
         error_log("Sides keys: " . (is_array($data['sides']) ? implode(', ', array_keys($data['sides'])) : 'not an array'));
+        
+        // Log each field individually
+        if (is_array($data['sides'])) {
+            foreach ($data['sides'] as $key => $value) {
+                error_log("Sides[$key]: " . json_encode($value) . " (type: " . gettype($value) . ")");
+            }
+        }
         
         if (!is_array($data['sides'])) {
             error_log("ERROR: Sides is not an array");
