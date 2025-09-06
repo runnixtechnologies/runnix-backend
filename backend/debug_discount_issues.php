@@ -1,4 +1,9 @@
 <?php
+/**
+ * Debug script to help identify discount deletion and editing issues
+ * Run this script to check for common problems
+ */
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -7,131 +12,174 @@ require_once '../vendor/autoload.php';
 require_once 'config/cors.php';
 
 use Model\Discount;
-use Model\FoodItem;
+use Config\Database;
 
-echo "<h2>Discount Debug Information</h2>";
+echo "<h2>Discount Debug Report</h2>\n";
+echo "<p>Generated at: " . date('Y-m-d H:i:s') . "</p>\n";
 
-// Test database connection
 try {
     $discountModel = new Discount();
-    $foodItemModel = new FoodItem();
-    echo "<p>✅ Database connection successful</p>";
-} catch (Exception $e) {
-    echo "<p>❌ Database connection failed: " . $e->getMessage() . "</p>";
-    exit;
-}
-
-// Check discounts table structure
-echo "<h3>1. Checking Discounts Table</h3>";
-try {
-    $pdo = (new \Config\Database())->getConnection();
-    $stmt = $pdo->query("DESCRIBE discounts");
-    $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo "<p>Discounts table columns:</p><ul>";
-    foreach ($columns as $column) {
-        echo "<li>{$column['Field']} - {$column['Type']}</li>";
+    $conn = (new Database())->getConnection();
+    
+    echo "<h3>1. Database Connection Test</h3>\n";
+    echo "✓ Database connection successful<br>\n";
+    
+    echo "<h3>2. Check Discount Tables Structure</h3>\n";
+    
+    // Check discounts table
+    $stmt = $conn->query("DESCRIBE discounts");
+    $discountColumns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo "<strong>discounts table columns:</strong><br>\n";
+    foreach ($discountColumns as $column) {
+        echo "- {$column['Field']} ({$column['Type']})<br>\n";
     }
-    echo "</ul>";
-} catch (Exception $e) {
-    echo "<p>❌ Error checking discounts table: " . $e->getMessage() . "</p>";
-}
-
-// Check discount_items table structure
-echo "<h3>2. Checking Discount Items Table</h3>";
-try {
-    $stmt = $pdo->query("DESCRIBE discount_items");
-    $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo "<p>Discount items table columns:</p><ul>";
-    foreach ($columns as $column) {
-        echo "<li>{$column['Field']} - {$column['Type']}</li>";
+    
+    // Check discount_items table
+    $stmt = $conn->query("DESCRIBE discount_items");
+    $discountItemsColumns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo "<br><strong>discount_items table columns:</strong><br>\n";
+    foreach ($discountItemsColumns as $column) {
+        echo "- {$column['Field']} ({$column['Type']})<br>\n";
     }
-    echo "</ul>";
-} catch (Exception $e) {
-    echo "<p>❌ Error checking discount_items table: " . $e->getMessage() . "</p>";
-}
-
-// Check existing discounts
-echo "<h3>3. Checking Existing Discounts</h3>";
-try {
-    $stmt = $pdo->query("SELECT * FROM discounts LIMIT 5");
-    $discounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    if (empty($discounts)) {
-        echo "<p>No discounts found in database</p>";
+    
+    echo "<h3>3. Recent Discount Activity</h3>\n";
+    
+    // Get recent discounts
+    $stmt = $conn->query("
+        SELECT d.*, 
+               COUNT(di.id) as item_count,
+               GROUP_CONCAT(CONCAT(di.item_type, ':', di.item_id)) as items
+        FROM discounts d 
+        LEFT JOIN discount_items di ON d.id = di.discount_id 
+        GROUP BY d.id 
+        ORDER BY d.created_at DESC 
+        LIMIT 10
+    ");
+    $recentDiscounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (empty($recentDiscounts)) {
+        echo "No discounts found in the database.<br>\n";
     } else {
-        echo "<p>Found " . count($discounts) . " discounts:</p>";
-        foreach ($discounts as $discount) {
-            echo "<pre>" . json_encode($discount, JSON_PRETTY_PRINT) . "</pre>";
+        echo "<table border='1' cellpadding='5'>\n";
+        echo "<tr><th>ID</th><th>Store ID</th><th>Percentage</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Item Count</th><th>Items</th><th>Created</th></tr>\n";
+        
+        foreach ($recentDiscounts as $discount) {
+            echo "<tr>";
+            echo "<td>{$discount['id']}</td>";
+            echo "<td>{$discount['store_id']}</td>";
+            echo "<td>{$discount['percentage']}%</td>";
+            echo "<td>{$discount['start_date']}</td>";
+            echo "<td>{$discount['end_date']}</td>";
+            echo "<td>{$discount['status']}</td>";
+            echo "<td>{$discount['item_count']}</td>";
+            echo "<td>{$discount['items']}</td>";
+            echo "<td>{$discount['created_at']}</td>";
+            echo "</tr>\n";
         }
+        echo "</table>\n";
     }
-} catch (Exception $e) {
-    echo "<p>❌ Error checking existing discounts: " . $e->getMessage() . "</p>";
-}
-
-// Check discount items
-echo "<h3>4. Checking Discount Items</h3>";
-try {
-    $stmt = $pdo->query("SELECT * FROM discount_items LIMIT 5");
-    $discountItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    if (empty($discountItems)) {
-        echo "<p>No discount items found in database</p>";
+    
+    echo "<h3>4. Store Analysis</h3>\n";
+    
+    // Get store statistics
+    $stmt = $conn->query("
+        SELECT s.id, s.store_name, s.biz_email,
+               COUNT(d.id) as discount_count,
+               MAX(d.created_at) as last_discount_created
+        FROM stores s 
+        LEFT JOIN discounts d ON s.id = d.store_id 
+        GROUP BY s.id 
+        ORDER BY discount_count DESC
+    ");
+    $storeStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    echo "<table border='1' cellpadding='5'>\n";
+    echo "<tr><th>Store ID</th><th>Store Name</th><th>Email</th><th>Discount Count</th><th>Last Discount</th></tr>\n";
+    
+    foreach ($storeStats as $store) {
+        echo "<tr>";
+        echo "<td>{$store['id']}</td>";
+        echo "<td>{$store['store_name']}</td>";
+        echo "<td>{$store['biz_email']}</td>";
+        echo "<td>{$store['discount_count']}</td>";
+        echo "<td>{$store['last_discount_created']}</td>";
+        echo "</tr>\n";
+    }
+    echo "</table>\n";
+    
+    echo "<h3>5. Potential Issues Check</h3>\n";
+    
+    // Check for orphaned discount_items
+    $stmt = $conn->query("
+        SELECT COUNT(*) as orphaned_count 
+        FROM discount_items di 
+        LEFT JOIN discounts d ON di.discount_id = d.id 
+        WHERE d.id IS NULL
+    ");
+    $orphaned = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($orphaned['orphaned_count'] > 0) {
+        echo "⚠️ Found {$orphaned['orphaned_count']} orphaned discount_items (items without parent discount)<br>\n";
     } else {
-        echo "<p>Found " . count($discountItems) . " discount items:</p>";
-        foreach ($discountItems as $item) {
-            echo "<pre>" . json_encode($item, JSON_PRETTY_PRINT) . "</pre>";
-        }
+        echo "✓ No orphaned discount_items found<br>\n";
     }
-} catch (Exception $e) {
-    echo "<p>❌ Error checking discount items: " . $e->getMessage() . "</p>";
-}
-
-// Test sides query
-echo "<h3>5. Testing Sides Query</h3>";
-try {
-    $sides = $foodItemModel->getAllFoodSidesByStoreId(12, 5, 0); // Assuming store_id 12
-    if (empty($sides)) {
-        echo "<p>No sides found for store_id 12</p>";
+    
+    // Check for discounts without items
+    $stmt = $conn->query("
+        SELECT COUNT(*) as empty_discounts 
+        FROM discounts d 
+        LEFT JOIN discount_items di ON d.id = di.discount_id 
+        WHERE di.id IS NULL
+    ");
+    $empty = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($empty['empty_discounts'] > 0) {
+        echo "⚠️ Found {$empty['empty_discounts']} discounts without items<br>\n";
     } else {
-        echo "<p>Found " . count($sides) . " sides:</p>";
-        foreach ($sides as $side) {
-            echo "<pre>" . json_encode($side, JSON_PRETTY_PRINT) . "</pre>";
-        }
+        echo "✓ All discounts have associated items<br>\n";
     }
+    
+    // Check for duplicate discount IDs (should never happen with auto-increment)
+    $stmt = $conn->query("
+        SELECT id, COUNT(*) as count 
+        FROM discounts 
+        GROUP BY id 
+        HAVING COUNT(*) > 1
+    ");
+    $duplicates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (!empty($duplicates)) {
+        echo "⚠️ Found duplicate discount IDs:<br>\n";
+        foreach ($duplicates as $dup) {
+            echo "- ID {$dup['id']} appears {$dup['count']} times<br>\n";
+        }
+    } else {
+        echo "✓ No duplicate discount IDs found<br>\n";
+    }
+    
+    echo "<h3>6. Error Log Check</h3>\n";
+    $errorLogPath = __DIR__ . '/php-error.log';
+    if (file_exists($errorLogPath)) {
+        $logSize = filesize($errorLogPath);
+        echo "Error log file exists: {$errorLogPath} (Size: " . number_format($logSize) . " bytes)<br>\n";
+        
+        if ($logSize > 0) {
+            echo "<strong>Last 10 lines of error log:</strong><br>\n";
+            $lines = file($errorLogPath);
+            $lastLines = array_slice($lines, -10);
+            echo "<pre>" . htmlspecialchars(implode('', $lastLines)) . "</pre>\n";
+        }
+    } else {
+        echo "No error log file found at: {$errorLogPath}<br>\n";
+    }
+    
 } catch (Exception $e) {
-    echo "<p>❌ Error testing sides query: " . $e->getMessage() . "</p>";
+    echo "<h3>Error</h3>\n";
+    echo "Error: " . $e->getMessage() . "<br>\n";
+    echo "File: " . $e->getFile() . "<br>\n";
+    echo "Line: " . $e->getLine() . "<br>\n";
 }
 
-echo "<h3>6. Test Discount Creation</h3>";
-echo "<p>To test discount creation, use this JSON:</p>";
-echo "<pre>{
-  \"percentage\": 10,
-  \"start_date\": \"2025-01-01\",
-  \"end_date\": \"2025-12-31\",
-  \"items\": [
-    {
-      \"item_id\": 1,
-      \"item_type\": \"food_side\"
-    }
-  ]
-}</pre>";
-
-echo "<h3>7. Test Discount Update</h3>";
-echo "<p>To test discount update, use this JSON:</p>";
-echo "<pre>{
-  \"id\": 1,
-  \"percentage\": 15,
-  \"start_date\": \"2025-01-01\",
-  \"end_date\": \"2025-12-31\",
-  \"items\": [
-    {
-      \"item_id\": 1,
-      \"item_type\": \"food_side\"
-    }
-  ]
-}</pre>";
-
-echo "<h3>8. Test Discount Deletion</h3>";
-echo "<p>To test discount deletion, send DELETE request with:</p>";
-echo "<pre>{
-  \"id\": 1
-}</pre>";
+echo "<hr>\n";
+echo "<p><em>Debug report completed. Check the results above for any issues.</em></p>\n";
 ?>

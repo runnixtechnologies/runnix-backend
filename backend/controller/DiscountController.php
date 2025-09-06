@@ -114,12 +114,43 @@ class DiscountController
     $data['store_id'] = $user['store_id'];
     $data['store_type_id'] = $user['store_type_id'] ?? null;
     
+    // Validate that the discount ID in the data matches the parameter
+    if (isset($data['id']) && $data['id'] != $discountId) {
+        error_log("=== ERROR: ID MISMATCH ===");
+        error_log("Parameter discountId: " . $discountId);
+        error_log("Data ID: " . $data['id']);
+        http_response_code(400);
+        return ['status' => 'error', 'message' => 'Discount ID mismatch. The ID in the request body must match the URL parameter.'];
+    }
+    
+    // Ensure the data contains the correct ID
+    $data['id'] = $discountId;
+    
     error_log("Store ID: " . $data['store_id']);
     error_log("Store Type ID: " . $data['store_type_id']);
     
     if (empty($discountId)) {
         http_response_code(400);
         return ['status' => 'error', 'message' => 'Discount ID is required'];
+    }
+    
+    // Validate that the discount exists and belongs to the user
+    error_log("=== VALIDATING DISCOUNT OWNERSHIP ===");
+    $existingDiscount = $this->discountModel->getById($discountId);
+    error_log("Existing discount: " . json_encode($existingDiscount));
+    
+    if (!$existingDiscount) {
+        error_log("=== ERROR: DISCOUNT NOT FOUND ===");
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Discount not found'];
+    }
+    
+    if ($existingDiscount['store_id'] != $data['store_id']) {
+        error_log("=== ERROR: UNAUTHORIZED UPDATE ===");
+        error_log("Existing discount store_id: " . $existingDiscount['store_id']);
+        error_log("User store_id: " . $data['store_id']);
+        http_response_code(403);
+        return ['status' => 'error', 'message' => 'Unauthorized to update this discount'];
     }
     
     if (!isset($data['percentage']) || !is_numeric($data['percentage']) || $data['percentage'] < 0 || $data['percentage'] > 100) {
@@ -187,27 +218,51 @@ class DiscountController
 
 public function deleteDiscount($id, $user)
 {
+    // Log the delete request
+    error_log("=== DISCOUNT CONTROLLER DELETE ===");
+    error_log("Discount ID: " . $id);
+    error_log("User data: " . json_encode($user));
+    
     // Extract store_id from authenticated user
     if (!isset($user['store_id'])) {
+        error_log("=== ERROR: STORE ID NOT FOUND ===");
         http_response_code(403);
         return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
     }
     
     $storeId = $user['store_id'];
+    error_log("Store ID: " . $storeId);
     
     // Fetch discount and validate ownership
+    error_log("=== FETCHING DISCOUNT FOR VALIDATION ===");
     $discount = $this->discountModel->getById($id);
+    error_log("Fetched discount: " . json_encode($discount));
 
-    if (!$discount || $discount['store_id'] != $storeId) {
+    if (!$discount) {
+        error_log("=== ERROR: DISCOUNT NOT FOUND ===");
+        http_response_code(404);
+        return ['status' => 'error', 'message' => 'Discount not found'];
+    }
+    
+    if ($discount['store_id'] != $storeId) {
+        error_log("=== ERROR: UNAUTHORIZED ACCESS ===");
+        error_log("Discount store_id: " . $discount['store_id']);
+        error_log("User store_id: " . $storeId);
         http_response_code(403);
         return ['status' => 'error', 'message' => 'Unauthorized to delete this discount'];
     }
 
     // Proceed with deletion
-    if ($this->discountModel->delete($id)) {
+    error_log("=== PROCEEDING WITH DELETION ===");
+    $deleteResult = $this->discountModel->delete($id);
+    error_log("Delete result: " . ($deleteResult ? 'SUCCESS' : 'FAILED'));
+    
+    if ($deleteResult) {
+        error_log("=== DELETE SUCCESS ===");
         http_response_code(200);
         return ['status' => 'success', 'message' => 'Discount deleted'];
     } else {
+        error_log("=== DELETE FAILED ===");
         http_response_code(500);
         return ['status' => 'error', 'message' => 'Failed to delete discount'];
     }

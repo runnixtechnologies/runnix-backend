@@ -310,14 +310,22 @@ public function update($discountId, $data)
 
    public function delete($id)
 {
+    error_log("=== DISCOUNT MODEL DELETE ===");
+    error_log("Discount ID to delete: " . $id);
+    
     try {
         // Begin transaction
+        error_log("=== STARTING TRANSACTION ===");
         $this->conn->beginTransaction();
 
         // Step 1: Delete related discount_items
+        error_log("=== DELETING DISCOUNT ITEMS ===");
         $sqlItems = "DELETE FROM discount_items WHERE discount_id = :id";
+        error_log("SQL: " . $sqlItems);
         $stmtItems = $this->conn->prepare($sqlItems);
         $resultItems = $stmtItems->execute(['id' => $id]);
+        $deletedItemsCount = $stmtItems->rowCount();
+        error_log("Deleted discount_items count: " . $deletedItemsCount);
         
         if (!$resultItems) {
             error_log("Failed to delete discount_items: " . json_encode($stmtItems->errorInfo()));
@@ -326,9 +334,13 @@ public function update($discountId, $data)
         }
 
         // Step 2: Delete the main discount
+        error_log("=== DELETING MAIN DISCOUNT ===");
         $sqlDiscount = "DELETE FROM {$this->table} WHERE id = :id";
+        error_log("SQL: " . $sqlDiscount);
         $stmtDiscount = $this->conn->prepare($sqlDiscount);
         $resultDiscount = $stmtDiscount->execute(['id' => $id]);
+        $deletedDiscountCount = $stmtDiscount->rowCount();
+        error_log("Deleted discount count: " . $deletedDiscountCount);
         
         if (!$resultDiscount) {
             error_log("Failed to delete discount: " . json_encode($stmtDiscount->errorInfo()));
@@ -337,17 +349,21 @@ public function update($discountId, $data)
         }
 
         // Check if any rows were actually deleted
-        if ($stmtDiscount->rowCount() === 0) {
+        if ($deletedDiscountCount === 0) {
             error_log("No discount found with ID: " . $id);
             $this->conn->rollBack();
             return false;
         }
 
+        error_log("=== COMMITTING TRANSACTION ===");
         $this->conn->commit();
+        error_log("=== DISCOUNT DELETE SUCCESSFUL ===");
         return true;
     } catch (\PDOException $e) {
+        error_log("=== ROLLING BACK TRANSACTION ===");
         $this->conn->rollBack();
         error_log("Discount delete failed: " . $e->getMessage());
+        error_log("PDO Error Info: " . json_encode($this->conn->errorInfo()));
         return false;
     }
 }
