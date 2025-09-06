@@ -416,7 +416,7 @@ private function getFoodItemWithOptions($foodItemId)
                        COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
                 FROM {$this->table} fi
                 LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
-                LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = :store_id AND d.status = 'active'";
+                LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active'";
         
         // Add date filtering only if active_only is true
         if ($active_only) {
@@ -426,6 +426,7 @@ private function getFoodItemWithOptions($foodItemId)
         
         $sql .= " LEFT JOIN order_items oi ON fi.id = oi.item_id
                   WHERE fi.store_id = :store_id AND fi.deleted = 0 
+                    AND (d.store_id IS NULL OR d.store_id = :store_id)
                   GROUP BY fi.id
                   ORDER BY fi.created_at DESC";
         
@@ -542,7 +543,7 @@ public function getByItemId($id, $store_id = null)
                    COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
             FROM {$this->table} fi
             LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
-            LEFT JOIN discounts d ON di.discount_id = d.id AND d.store_id = :store_id AND d.status = 'active' 
+            LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
                 AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
                 AND (d.end_date IS NULL OR d.end_date >= CURDATE())
             LEFT JOIN order_items oi ON fi.id = oi.item_id
@@ -550,7 +551,7 @@ public function getByItemId($id, $store_id = null)
     
     // Add store_id filter if provided
     if ($store_id !== null) {
-        $sql .= " AND fi.store_id = :store_id";
+        $sql .= " AND fi.store_id = :store_id AND (d.store_id IS NULL OR d.store_id = :store_id)";
     }
     
     $sql .= " GROUP BY fi.id";
