@@ -17,9 +17,21 @@ class Discount
 
     public function create($data)
     {
+        error_log("=== DISCOUNT MODEL CREATE ===");
+        error_log("Create data: " . json_encode($data));
+        
         try {
             $sql = "INSERT INTO {$this->table} (store_id, store_type_id, percentage, start_date, end_date, status, created_at, updated_at)
                     VALUES (:store_id, :store_type_id, :percentage, :start_date, :end_date, 'active', NOW(), NOW())";
+
+            error_log("SQL Query: " . $sql);
+            error_log("Parameters: " . json_encode([
+                'store_id' => $data['store_id'],
+                'store_type_id' => $data['store_type_id'] ?? null,
+                'percentage' => $data['percentage'],
+                'start_date' => $data['start_date'] ?? null,
+                'end_date' => $data['end_date'] ?? null
+            ]));
 
             $stmt = $this->conn->prepare($sql);
             $result = $stmt->execute([
@@ -30,16 +42,21 @@ class Discount
                 'end_date' => $data['end_date'] ?? null
             ]);
 
+            error_log("Execute result: " . ($result ? 'SUCCESS' : 'FAILED'));
             if (!$result) {
                 error_log("Discount creation failed: " . json_encode($stmt->errorInfo()));
                 return false;
             }
 
             $discountId = $this->conn->lastInsertId();
+            error_log("Created discount ID: " . $discountId);
 
             // Insert into discount_items
-            foreach ($data['items'] as $item) {
+            error_log("=== INSERTING DISCOUNT ITEMS ===");
+            error_log("Items to insert: " . json_encode($data['items']));
+            foreach ($data['items'] as $index => $item) {
                 $sqlItem = "INSERT INTO discount_items (discount_id, item_id, item_type, created_at) VALUES (:discount_id, :item_id, :item_type, NOW())";
+                error_log("Inserting item " . ($index + 1) . ": " . json_encode($item));
                 $stmtItem = $this->conn->prepare($sqlItem);
                 $resultItem = $stmtItem->execute([
                     'discount_id' => $discountId,
@@ -47,11 +64,14 @@ class Discount
                     'item_type' => $item['item_type']
                 ]);
 
+                error_log("Item " . ($index + 1) . " insert result: " . ($resultItem ? 'SUCCESS' : 'FAILED'));
                 if (!$resultItem) {
                     error_log("Discount item creation failed: " . json_encode($stmtItem->errorInfo()));
                     return false;
                 }
             }
+            
+            error_log("=== DISCOUNT CREATION COMPLETED SUCCESSFULLY ===");
 
             return $discountId;
         } catch (\Exception $e) {

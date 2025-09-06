@@ -14,14 +14,23 @@ class DiscountController
 
     public function createDiscount($data, $user)
     {
+        // Log the create request
+        error_log("=== DISCOUNT CONTROLLER CREATE ===");
+        error_log("Create data: " . json_encode($data));
+        error_log("User data: " . json_encode($user));
+        
         // Extract store_id and store_type_id from authenticated user
         if (!isset($user['store_id'])) {
+            error_log("=== ERROR: STORE ID NOT FOUND ===");
             http_response_code(403);
             return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
         }
         
         $data['store_id'] = $user['store_id'];
         $data['store_type_id'] = $user['store_type_id'] ?? null;
+        
+        error_log("Store ID: " . $data['store_id']);
+        error_log("Store Type ID: " . $data['store_type_id']);
         
 
         
@@ -68,11 +77,20 @@ class DiscountController
             }
         }
 
+        error_log("=== CALLING MODEL CREATE ===");
+        error_log("About to call discountModel->create with data: " . json_encode($data));
+        
         $discountId = $this->discountModel->create($data);
+        
+        error_log("=== MODEL CREATE RESULT ===");
+        error_log("Create result: " . ($discountId ? 'SUCCESS - ID: ' . $discountId : 'FAILED'));
+        
         if ($discountId) {
+            error_log("=== CREATE SUCCESS ===");
             http_response_code(201);
             return ['status' => 'success', 'message' => 'Discount created', 'discount_id' => $discountId];
         } else {
+            error_log("=== CREATE FAILED ===");
             http_response_code(500);
             return ['status' => 'error', 'message' => 'Failed to create discount'];
         }

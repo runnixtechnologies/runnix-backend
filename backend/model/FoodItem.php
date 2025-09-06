@@ -452,6 +452,7 @@ private function getFoodItemWithOptions($foodItemId)
         error_log("Store ID: " . $store_id);
         error_log("Limit: " . ($limit ?? 'null'));
         error_log("Offset: " . ($offset ?? 'null'));
+        error_log("Active Only: " . ($active_only ? 'true' : 'false'));
         error_log("Current Date (CURDATE()): " . date('Y-m-d'));
         
         $stmt->execute();
@@ -462,6 +463,17 @@ private function getFoodItemWithOptions($foodItemId)
         foreach ($results as $index => $result) {
             error_log("Result " . ($index + 1) . ": " . json_encode($result));
         }
+        
+        // Debug: Check if there are any discount_items for this store
+        error_log("=== DEBUGGING DISCOUNT ITEMS ===");
+        $debugSql = "SELECT di.*, d.percentage, d.start_date, d.end_date, d.status 
+                     FROM discount_items di 
+                     LEFT JOIN discounts d ON di.discount_id = d.id 
+                     WHERE d.store_id = :store_id AND di.item_type = 'food_item'";
+        $debugStmt = $this->conn->prepare($debugSql);
+        $debugStmt->execute(['store_id' => $store_id]);
+        $debugResults = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
+        error_log("Discount items for store " . $store_id . ": " . json_encode($debugResults));
         
         // Convert numeric fields to appropriate types for each result
         foreach ($results as &$result) {
