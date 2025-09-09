@@ -16,20 +16,21 @@ The business profile update system allows merchants to update their store inform
 
 ### 1. Send OTP for Business Phone Update
 
-**Endpoint**: `POST /api/send_business_phone_otp.php`
+**Endpoint**: `POST /api/send_otp.php`
 
 **Purpose**: Send OTP to a new business phone number for verification
 
 **Headers**:
 ```
 Content-Type: application/json
-Authorization: Bearer <jwt_token>
 ```
 
 **Request Body**:
 ```json
 {
-    "phone": "08102940964"
+    "phone": "08102940964",
+    "purpose": "business_phone_update",
+    "user_id": 123
 }
 ```
 
@@ -43,21 +44,17 @@ Authorization: Bearer <jwt_token>
 
 **Error Responses**:
 - `400`: Invalid phone format or missing phone number
-- `401`: Unauthorized (invalid/missing token)
-- `403`: User is not a merchant
-- `409`: Phone number already exists
 - `500`: Failed to send OTP
 
 ### 2. Verify OTP for Business Phone Update
 
-**Endpoint**: `POST /api/verify_business_phone_otp.php`
+**Endpoint**: `POST /api/verify_otp.php`
 
 **Purpose**: Verify the OTP sent to the business phone number
 
 **Headers**:
 ```
 Content-Type: application/json
-Authorization: Bearer <jwt_token>
 ```
 
 **Request Body**:
@@ -78,8 +75,7 @@ Authorization: Bearer <jwt_token>
 
 **Error Responses**:
 - `400`: Invalid phone/OTP format or missing fields
-- `401`: Unauthorized or invalid/expired OTP
-- `403`: User is not a merchant
+- `401`: Invalid or expired OTP
 - `500`: Internal server error
 
 ### 3. Update Business Profile
@@ -130,10 +126,10 @@ Authorization: Bearer <jwt_token>
 ### For Phone Number Changes:
 
 1. **User enters new phone number** in the form
-2. **Send OTP**: Call `POST /api/send_business_phone_otp.php` with the new phone number
+2. **Send OTP**: Call `POST /api/send_otp.php` with the new phone number and purpose
 3. **User receives OTP** via SMS
 4. **User enters OTP** in the verification modal
-5. **Verify OTP**: Call `POST /api/verify_business_phone_otp.php` with phone and OTP
+5. **Verify OTP**: Call `POST /api/verify_otp.php` with phone and OTP
 6. **Submit form**: Call `PUT /api/update_business_profile.php` with all form data
 
 ### For Other Field Changes:
@@ -197,15 +193,13 @@ All endpoints include comprehensive error logging and return appropriate HTTP st
 2. **Phone Change with OTP**:
    ```bash
    # Step 1: Send OTP
-   curl -X POST /api/send_business_phone_otp.php \
+   curl -X POST /api/send_otp.php \
      -H "Content-Type: application/json" \
-     -H "Authorization: Bearer <token>" \
-     -d '{"phone": "08123456789"}'
+     -d '{"phone": "08123456789", "purpose": "business_phone_update", "user_id": 123}'
    
    # Step 2: Verify OTP
-   curl -X POST /api/verify_business_phone_otp.php \
+   curl -X POST /api/verify_otp.php \
      -H "Content-Type: application/json" \
-     -H "Authorization: Bearer <token>" \
      -d '{"phone": "08123456789", "otp": "123456"}'
    
    # Step 3: Update Profile
