@@ -199,6 +199,84 @@ class Store
         }
     }
 
+    // Update store profile information
+    public function updateStoreProfile($storeId, $data)
+    {
+        try {
+            $this->conn->beginTransaction();
+            
+            $updateFields = [];
+            $params = ['store_id' => $storeId];
+            
+            // Build dynamic update query based on provided fields
+            if (isset($data['store_name'])) {
+                $updateFields[] = "store_name = :store_name";
+                $params['store_name'] = $data['store_name'];
+            }
+            
+            if (isset($data['biz_address'])) {
+                $updateFields[] = "biz_address = :biz_address";
+                $params['biz_address'] = $data['biz_address'];
+            }
+            
+            if (isset($data['biz_phone'])) {
+                $updateFields[] = "biz_phone = :biz_phone";
+                $params['biz_phone'] = $data['biz_phone'];
+            }
+            
+            if (isset($data['biz_reg_number'])) {
+                $updateFields[] = "biz_reg_number = :biz_reg_number";
+                $params['biz_reg_number'] = $data['biz_reg_number'];
+            }
+            
+            if (empty($updateFields)) {
+                $this->conn->rollBack();
+                return false;
+            }
+            
+            $updateFields[] = "updated_at = NOW()";
+            
+            $sql = "UPDATE {$this->table} SET " . implode(', ', $updateFields) . " WHERE id = :store_id";
+            
+            $stmt = $this->conn->prepare($sql);
+            $result = $stmt->execute($params);
+            
+            if ($result && $stmt->rowCount() > 0) {
+                $this->conn->commit();
+                return true;
+            } else {
+                $this->conn->rollBack();
+                return false;
+            }
+            
+        } catch (\PDOException $e) {
+            $this->conn->rollBack();
+            error_log("Update store profile error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    // Check if store field value already exists (for uniqueness validation)
+    public function storeFieldExists($field, $value, $excludeStoreId = null)
+    {
+        $allowedFields = ['store_name', 'biz_email', 'biz_phone', 'biz_reg_number'];
+        if (!in_array($field, $allowedFields)) {
+            throw new \InvalidArgumentException("Invalid field for storeFieldExists check");
+        }
+
+        $sql = "SELECT COUNT(*) FROM stores WHERE {$field} = :value";
+        $params = [':value' => $value];
+        
+        if ($excludeStoreId) {
+            $sql .= " AND id != :exclude_id";
+            $params[':exclude_id'] = $excludeStoreId;
+        }
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn() > 0;
+    }
+
     // Operating Hours Methods
     public function getOperatingHours($storeId)
     {

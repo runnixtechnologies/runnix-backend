@@ -310,5 +310,94 @@ public function getActiveCategoriesByStoreType($user)
             return ['status' => 'error', 'message' => 'Failed to update operating hours'];
         }
     }
+    
+    public function updateStoreProfile($data, $user)
+    {
+        // Extract store_id from authenticated user
+        if (!isset($user['store_id'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Store ID not found. Please ensure you are logged in as a merchant with a store setup.'];
+        }
+        
+        $storeId = $user['store_id'];
+        
+        // Verify store belongs to the user
+        $store = $this->store->getStoreById($storeId);
+        if (!$store || $store['user_id'] != $user['user_id']) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Unauthorized access to store.'];
+        }
+        
+        // Validate required fields
+        $requiredFields = ['store_name', 'biz_address', 'biz_phone', 'biz_reg_number'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || empty(trim($data[$field]))) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => "$field is required"];
+            }
+        }
+        
+        // Validate phone number format
+        $phone = $data['biz_phone'];
+        if (!preg_match('/^0?\d{10}$/', $phone)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid phone number format. Use 10 or 11 digits.'];
+        }
+        
+        // Format phone number to international format
+        $formattedPhone = '234' . ltrim($phone, '0');
+        
+        // Check if phone number is being changed
+        $phoneChanged = $store['biz_phone'] !== $formattedPhone;
+        
+        if ($phoneChanged) {
+            // Check if new phone number already exists
+            if ($this->store->storeFieldExists('biz_phone', $formattedPhone, $storeId)) {
+                http_response_code(409);
+                return ['status' => 'error', 'message' => 'Business phone number already exists'];
+            }
+            
+            // Check if OTP was verified for phone change
+            $otpModel = new \Model\Otp();
+            if (!$otpModel->isOtpVerified($formattedPhone, 'business_phone_update')) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Phone number OTP not verified. Please verify OTP before updating.'];
+            }
+        }
+        
+        // Check for other field uniqueness
+        if ($this->store->storeFieldExists('store_name', $data['store_name'], $storeId)) {
+            http_response_code(409);
+            return ['status' => 'error', 'message' => 'Store name already exists'];
+        }
+        
+        if ($this->store->storeFieldExists('biz_reg_number', $data['biz_reg_number'], $storeId)) {
+            http_response_code(409);
+            return ['status' => 'error', 'message' => 'Business registration number already exists'];
+        }
+        
+        // Prepare update data
+        $updateData = [
+            'store_name' => trim($data['store_name']),
+            'biz_address' => trim($data['biz_address']),
+            'biz_phone' => $formattedPhone,
+            'biz_reg_number' => trim($data['biz_reg_number'])
+        ];
+        
+        // Update store profile
+        $result = $this->store->updateStoreProfile($storeId, $updateData);
+        
+        if ($result) {
+            http_response_code(200);
+            return [
+                'status' => 'success', 
+                'message' => 'Business profile updated successfully',
+                'data' => $updateData
+            ];
+        } else {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to update business profile'];
+        }
+    }
 
 }
