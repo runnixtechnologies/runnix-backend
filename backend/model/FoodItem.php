@@ -406,29 +406,12 @@ private function getFoodItemWithOptions($foodItemId)
     // Get All Food Items by Store (with pagination)
     public function getAllByStoreId($store_id, $limit = null, $offset = null, $active_only = false)
     {
+        // First, get the basic food items
         $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
-                       fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
-                       d.id as discount_id,
-                       d.percentage as discount_percentage,
-                       d.start_date as discount_start_date,
-                       d.end_date as discount_end_date,
-                       ROUND((fi.price - (fi.price * COALESCE(d.percentage, 0) / 100)), 2) as calculated_discount_price,
-                       COALESCE(COUNT(DISTINCT oi.order_id), 0) as total_orders
+                       fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at
                 FROM {$this->table} fi
-                LEFT JOIN discount_items di ON fi.id = di.item_id AND di.item_type = 'food_item'
-                LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active'";
-        
-        // Add date filtering only if active_only is true
-        if ($active_only) {
-            $sql .= " AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
-                      AND (d.end_date IS NULL OR d.end_date >= CURDATE())";
-        }
-        
-        $sql .= " LEFT JOIN order_items oi ON fi.id = oi.item_id
-                  WHERE fi.store_id = :store_id AND fi.deleted = 0 
-                    AND (d.store_id IS NULL OR d.store_id = :store_id)
-                  GROUP BY fi.id
-                  ORDER BY fi.created_at DESC";
+                WHERE fi.store_id = :store_id AND fi.deleted = 0
+                ORDER BY fi.created_at DESC";
         
         // Add pagination if limit is provided
         if ($limit !== null) {
@@ -461,54 +444,56 @@ private function getFoodItemWithOptions($foodItemId)
         
         error_log("=== FOOD ITEM QUERY RESULTS ===");
         error_log("Number of results: " . count($results));
-        foreach ($results as $index => $result) {
-            error_log("Result " . ($index + 1) . ": " . json_encode($result));
-        }
         
-        // Debug: Check if there are any discount_items for this store
-        error_log("=== DEBUGGING DISCOUNT ITEMS ===");
-        $debugSql = "SELECT di.*, d.percentage, d.start_date, d.end_date, d.status 
-                     FROM discount_items di 
-                     LEFT JOIN discounts d ON di.discount_id = d.id 
-                     WHERE d.store_id = :store_id AND di.item_type = 'food_item'";
-        $debugStmt = $this->conn->prepare($debugSql);
-        $debugStmt->execute(['store_id' => $store_id]);
-        $debugResults = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
-        error_log("Discount items for store " . $store_id . ": " . json_encode($debugResults));
-        
-        // Convert numeric fields to appropriate types for each result
+        // Now enhance each result with discount and order information
         foreach ($results as &$result) {
-            error_log("=== PROCESSING RESULT ===");
-            error_log("Raw result: " . json_encode($result));
-            error_log("Discount ID: " . ($result['discount_id'] ?? 'null'));
-            error_log("Discount percentage: " . ($result['discount_percentage'] ?? 'null'));
-            
             $result['price'] = (float)$result['price'];
             $result['max_qty'] = (int)$result['max_qty'];
-            $result['total_orders'] = (int)$result['total_orders'];
             
-            // Only include discount fields if there's an active discount with percentage > 0
-            if ($result['discount_percentage'] && $result['discount_percentage'] > 0) {
-                error_log("=== INCLUDING DISCOUNT FIELDS ===");
-                $result['discount_id'] = (int)$result['discount_id'];
-                $result['percentage'] = (float)$result['discount_percentage'];
-                $result['discount_price'] = (float)$result['calculated_discount_price'];
-                $result['discount_start_date'] = $result['discount_start_date'];
-                $result['discount_end_date'] = $result['discount_end_date'];
-            } else {
-                error_log("=== REMOVING DISCOUNT FIELDS ===");
-                // Remove discount fields if no active discount
-                unset($result['discount_id']);
-                unset($result['percentage']);
-                unset($result['discount_price']);
-                unset($result['discount_start_date']);
-                unset($result['discount_end_date']);
+            // Get discount information for this food item
+            $discountSql = "SELECT d.id, d.percentage, d.start_date, d.end_date, d.status
+                           FROM discounts d
+                           INNER JOIN discount_items di ON d.id = di.discount_id
+                           WHERE di.item_id = :item_id 
+                             AND di.item_type = 'food_item'
+                             AND d.store_id = :store_id
+                             AND d.status = 'active'";
+            
+            if ($active_only) {
+                $discountSql .= " AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
+                                 AND (d.end_date IS NULL OR d.end_date >= CURDATE())";
             }
-            // Always remove the internal discount fields
-            unset($result['discount_percentage']);
-            unset($result['calculated_discount_price']);
             
-            error_log("Final processed result: " . json_encode($result));
+            $discountStmt = $this->conn->prepare($discountSql);
+            $discountStmt->execute([
+                'item_id' => $result['id'],
+                'store_id' => $store_id
+            ]);
+            $discount = $discountStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($discount) {
+                $result['discount_id'] = (int)$discount['id'];
+                $result['percentage'] = (float)$discount['percentage'];
+                $result['discount_start_date'] = $discount['start_date'];
+                $result['discount_end_date'] = $discount['end_date'];
+                $result['discount_price'] = round($result['price'] - ($result['price'] * $discount['percentage'] / 100), 2);
+            } else {
+                // No discount
+                $result['discount_id'] = null;
+                $result['percentage'] = null;
+                $result['discount_start_date'] = null;
+                $result['discount_end_date'] = null;
+                $result['discount_price'] = null;
+            }
+            
+            // Get order count for this food item
+            $orderSql = "SELECT COUNT(DISTINCT order_id) as total_orders 
+                        FROM order_items 
+                        WHERE item_id = :item_id";
+            $orderStmt = $this->conn->prepare($orderSql);
+            $orderStmt->execute(['item_id' => $result['id']]);
+            $orderCount = $orderStmt->fetch(PDO::FETCH_ASSOC);
+            $result['total_orders'] = (int)($orderCount['total_orders'] ?? 0);
         }
         
         return $results;

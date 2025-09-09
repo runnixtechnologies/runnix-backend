@@ -417,16 +417,36 @@ class FoodItemController
     }
 
     // Check for duplicate food item name in the store before proceeding
+    error_log("=== CHECKING FOR DUPLICATE FOOD ITEM NAME ===");
+    error_log("Store ID: " . $data['store_id']);
+    error_log("Food item name: " . $data['name']);
+    
     $existingItemCheck = $this->conn->prepare("SELECT COUNT(*) FROM food_items WHERE store_id = :store_id AND name = :name AND deleted = 0");
     $existingItemCheck->execute([
         'store_id' => $data['store_id'],
         'name' => $data['name']
     ]);
     
-    if ($existingItemCheck->fetchColumn() > 0) {
+    $duplicateCount = $existingItemCheck->fetchColumn();
+    error_log("Duplicate count: " . $duplicateCount);
+    
+    if ($duplicateCount > 0) {
+        error_log("=== DUPLICATE NAME FOUND ===");
+        
+        // Get details of existing items with this name
+        $existingItemsStmt = $this->conn->prepare("SELECT id, name, status, deleted, created_at FROM food_items WHERE store_id = :store_id AND name = :name");
+        $existingItemsStmt->execute([
+            'store_id' => $data['store_id'],
+            'name' => $data['name']
+        ]);
+        $existingItems = $existingItemsStmt->fetchAll(PDO::FETCH_ASSOC);
+        error_log("Existing items with this name: " . json_encode($existingItems));
+        
         http_response_code(409); // Conflict
         return ['status' => 'error', 'message' => 'Food item with this name already exists in this store. Please choose a different name.'];
     }
+    
+    error_log("=== NO DUPLICATE FOUND - PROCEEDING WITH CREATION ===");
 
     try {
         $result = $this->foodItem->createWithOptions($data);
