@@ -59,6 +59,14 @@ if (stripos($contentType, 'application/json') !== false) {
         $data['sections'] = json_decode($data['sections'], true);
         error_log("Sections after JSON decode: " . json_encode($data['sections']));
     }
+    if (isset($data['section_items']) && is_string($data['section_items'])) {
+        error_log("Section items before JSON decode: " . $data['section_items']);
+        $data['section_items'] = json_decode($data['section_items'], true);
+        error_log("Section items after JSON decode: " . json_encode($data['section_items']));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON decode error for section_items: " . json_last_error_msg());
+        }
+    }
     
     // Convert boolean strings to actual booleans for mobile app compatibility
     $data = convertBooleanStrings($data);

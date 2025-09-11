@@ -514,7 +514,7 @@ class FoodItemController
         error_log("Existing items with this name: " . json_encode($existingItems));
         
         http_response_code(409); // Conflict
-        return ['status' => 'error', 'message' => 'Food item with this name already exists in this store. Please choose a different name.'];
+        return ['status' => 'error', 'message' => 'A food item with the name "'.$data['name'].'" already exists in your store. Please choose a different name or edit the existing item.'];
     }
     
     error_log("=== NO DUPLICATE FOUND - PROCEEDING WITH CREATION ===");
