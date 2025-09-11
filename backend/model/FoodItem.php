@@ -178,37 +178,28 @@ public function createWithOptions($data)
             }
         }
 
-        // Handle sections if provided
+        // Handle sections if provided (new preferred format)
         if (isset($data['sections']) && is_array($data['sections'])) {
-            // Check if it's the old format (object with items array)
-            if (isset($data['sections']['items']) && is_array($data['sections']['items'])) {
-                // Old format
+            // Check if it's the new preferred format (array of section objects with section_id and item_ids)
+            if (isset($data['sections'][0]) && is_array($data['sections'][0]) && isset($data['sections'][0]['section_id'])) {
+                // New preferred format - array of section objects
+                if (!empty($data['sections'])) {
+                    $this->createFoodItemSectionsWithItems($foodItemId, $data['sections']);
+                }
+            } elseif (isset($data['sections']['items']) && is_array($data['sections']['items'])) {
+                // Legacy format - single object with items array
                 if (!empty($data['sections']['items'])) {
                     $this->createFoodItemSectionsWithConfig($foodItemId, $data['sections']);
                 }
             } else {
-                // New format - array of objects with enhanced section support
+                // Legacy format - array of objects with id
                 if (!empty($data['sections'])) {
                     $this->createFoodItemSectionsFromArray($foodItemId, $data['sections']);
                 }
             }
         }
 
-        // Handle section_items if provided
-        if (isset($data['section_items']) && is_array($data['section_items'])) {
-            // Check if it's the old format (object with items array)
-            if (isset($data['section_items']['items']) && is_array($data['section_items']['items'])) {
-                // Old format
-                if (!empty($data['section_items']['items'])) {
-                    $this->createFoodItemSectionItemsWithConfig($foodItemId, $data['section_items']);
-                }
-            } else {
-                // New format - array of objects with id
-                if (!empty($data['section_items'])) {
-                    $this->createFoodItemSectionItemsFromArray($foodItemId, $data['section_items']);
-                }
-            }
-        }
+        // Note: section_items handling removed - now handled within sections structure
 
         // Commit transaction
         $this->conn->commit();
@@ -324,17 +315,35 @@ private function getFoodItemWithOptions($foodItemId)
         'items' => $packsIds
     ];
 
-    $foodItem['sections'] = [
-        'required' => $sectionsConfig ? (bool)$sectionsConfig['required'] : false,
-        'max_quantity' => $sectionsConfig ? (int)$sectionsConfig['max_quantity'] : 0,
-        'items' => $sectionsIds
-    ];
-
-    $foodItem['section_items'] = [
-        'required' => $sectionItemsConfig ? (bool)$sectionItemsConfig['required'] : false,
-        'max_quantity' => $sectionItemsConfig ? (int)$sectionItemsConfig['max_quantity'] : 0,
-        'items' => $sectionItemsIds
-    ];
+    // Build sections with their associated items in the new preferred format
+    $sectionsArray = [];
+    foreach ($sections as $section) {
+        $sectionId = $section['id'];
+        
+        // Get section items for this specific section
+        $sectionItemsSql = "SELECT fisi.section_item_id 
+                           FROM food_item_section_items fisi 
+                           JOIN food_section_items fsi ON fisi.section_item_id = fsi.id 
+                           WHERE fisi.item_id = :item_id AND fsi.section_id = :section_id";
+        $sectionItemsStmt = $this->conn->prepare($sectionItemsSql);
+        $sectionItemsStmt->execute([
+            'item_id' => $foodItemId,
+            'section_id' => $sectionId
+        ]);
+        $sectionItemIds = array_map('intval', array_column($sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_item_id'));
+        
+        $sectionsArray[] = [
+            'section_id' => (int)$sectionId,
+            'required' => $sectionsConfig ? (bool)$sectionsConfig['required'] : false,
+            'max_quantity' => $sectionsConfig ? (int)$sectionsConfig['max_quantity'] : 0,
+            'item_ids' => $sectionItemIds
+        ];
+    }
+    
+    $foodItem['sections'] = $sectionsArray;
+    
+    // Remove section_items from response as it's now part of sections
+    unset($foodItem['section_items']);
 
     return $foodItem;
 }
@@ -547,56 +556,33 @@ private function getFoodItemWithOptions($foodItemId)
             $sectionsIdsStmt->execute(['item_id' => $result['id']]);
             $sectionsIds = array_map('intval', array_column($sectionsIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_id'));
 
-            if (!empty($sectionsConfigRows)) {
-                $sectionsItems = [];
-                foreach ($sectionsConfigRows as $row) {
-                    $sectionsItems[] = [
-                        'section_id' => (int)$row['section_id'],
-                        'required' => (bool)$row['required'],
-                        'max_quantity' => (int)$row['max_quantity'],
-                    ];
-                }
-                $result['sections'] = $sectionsItems;
-            } else {
-                // Fallback global config
-                $globalSectionsConfigStmt = $this->conn->prepare("SELECT required, max_quantity FROM food_item_sections_config WHERE item_id = :item_id LIMIT 1");
-                $globalSectionsConfigStmt->execute(['item_id' => $result['id']]);
-                $globalSectionsConfig = $globalSectionsConfigStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-                $result['sections'] = [
-                    'required' => $globalSectionsConfig ? (bool)$globalSectionsConfig['required'] : false,
-                    'max_quantity' => $globalSectionsConfig ? (int)$globalSectionsConfig['max_quantity'] : 0,
-                    'items' => $sectionsIds,
+            // Build sections with their associated items in the new preferred format
+            $sectionsArray = [];
+            foreach ($sectionsConfigRows as $row) {
+                $sectionId = $row['section_id'];
+                
+                // Get section items for this specific section
+                $sectionItemsSql = "SELECT fisi.section_item_id 
+                                   FROM food_item_section_items fisi 
+                                   JOIN food_section_items fsi ON fisi.section_item_id = fsi.id 
+                                   WHERE fisi.item_id = :item_id AND fsi.section_id = :section_id";
+                $sectionItemsStmt = $this->conn->prepare($sectionItemsSql);
+                $sectionItemsStmt->execute([
+                    'item_id' => $result['id'],
+                    'section_id' => $sectionId
+                ]);
+                $sectionItemIds = array_map('intval', array_column($sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_item_id'));
+                
+                $sectionsArray[] = [
+                    'section_id' => (int)$sectionId,
+                    'required' => (bool)$row['required'],
+                    'max_quantity' => (int)$row['max_quantity'],
+                    'item_ids' => $sectionItemIds
                 ];
             }
+            $result['sections'] = $sectionsArray;
 
-            // Attach section_items config and IDs
-            // Prefer per-section items config if present
-            $sectionItemsConfigStmt = $this->conn->prepare("SELECT section_id, required, max_quantity FROM food_item_section_items_config WHERE item_id = :item_id");
-            $sectionItemsConfigStmt->execute(['item_id' => $result['id']]);
-            $sectionItemsConfigRows = $sectionItemsConfigStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $sectionItemIdsStmt = $this->conn->prepare("SELECT section_item_id FROM food_item_section_items WHERE item_id = :item_id");
-            $sectionItemIdsStmt->execute(['item_id' => $result['id']]);
-            $sectionItemIds = array_map('intval', array_column($sectionItemIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_item_id'));
-
-            if (!empty($sectionItemsConfigRows)) {
-                $sectionItems = [];
-                foreach ($sectionItemsConfigRows as $row) {
-                    $sectionItems[] = [
-                        'section_id' => (int)$row['section_id'],
-                        'required' => (bool)$row['required'],
-                        'max_quantity' => (int)$row['max_quantity'],
-                        'items' => $sectionItemIds,
-                    ];
-                }
-                $result['section_items'] = $sectionItems;
-            } else {
-                $result['section_items'] = [
-                    'required' => false,
-                    'max_quantity' => 0,
-                    'items' => $sectionItemIds,
-                ];
-            }
+            // Note: section_items handling removed - now part of sections structure
         }
         
         return $results;
@@ -710,56 +696,33 @@ public function getByItemId($id, $store_id = null)
         $sectionsIdsStmt->execute(['item_id' => $result['id']]);
         $sectionsIds = array_map('intval', array_column($sectionsIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_id'));
 
-        if (!empty($sectionsConfigRows)) {
-            $sectionsItems = [];
-            foreach ($sectionsConfigRows as $row) {
-                $sectionsItems[] = [
-                    'section_id' => (int)$row['section_id'],
-                    'required' => (bool)$row['required'],
-                    'max_quantity' => (int)$row['max_quantity'],
-                ];
-            }
-            $result['sections'] = $sectionsItems;
-        } else {
-            // Fallback global config
-            $globalSectionsConfigStmt = $this->conn->prepare("SELECT required, max_quantity FROM food_item_sections_config WHERE item_id = :item_id LIMIT 1");
-            $globalSectionsConfigStmt->execute(['item_id' => $result['id']]);
-            $globalSectionsConfig = $globalSectionsConfigStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-            $result['sections'] = [
-                'required' => $globalSectionsConfig ? (bool)$globalSectionsConfig['required'] : false,
-                'max_quantity' => $globalSectionsConfig ? (int)$globalSectionsConfig['max_quantity'] : 0,
-                'items' => $sectionsIds,
+        // Build sections with their associated items in the new preferred format
+        $sectionsArray = [];
+        foreach ($sectionsConfigRows as $row) {
+            $sectionId = $row['section_id'];
+            
+            // Get section items for this specific section
+            $sectionItemsSql = "SELECT fisi.section_item_id 
+                               FROM food_item_section_items fisi 
+                               JOIN food_section_items fsi ON fisi.section_item_id = fsi.id 
+                               WHERE fisi.item_id = :item_id AND fsi.section_id = :section_id";
+            $sectionItemsStmt = $this->conn->prepare($sectionItemsSql);
+            $sectionItemsStmt->execute([
+                'item_id' => $result['id'],
+                'section_id' => $sectionId
+            ]);
+            $sectionItemIds = array_map('intval', array_column($sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_item_id'));
+            
+            $sectionsArray[] = [
+                'section_id' => (int)$sectionId,
+                'required' => (bool)$row['required'],
+                'max_quantity' => (int)$row['max_quantity'],
+                'item_ids' => $sectionItemIds
             ];
         }
+        $result['sections'] = $sectionsArray;
 
-        // Attach section_items config and IDs
-        // Prefer per-section items config if present
-        $sectionItemsConfigStmt = $this->conn->prepare("SELECT section_id, required, max_quantity FROM food_item_section_items_config WHERE item_id = :item_id");
-        $sectionItemsConfigStmt->execute(['item_id' => $result['id']]);
-        $sectionItemsConfigRows = $sectionItemsConfigStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $sectionItemIdsStmt = $this->conn->prepare("SELECT section_item_id FROM food_item_section_items WHERE item_id = :item_id");
-        $sectionItemIdsStmt->execute(['item_id' => $result['id']]);
-        $sectionItemIds = array_map('intval', array_column($sectionItemIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_item_id'));
-
-        if (!empty($sectionItemsConfigRows)) {
-            $sectionItems = [];
-            foreach ($sectionItemsConfigRows as $row) {
-                $sectionItems[] = [
-                    'section_id' => (int)$row['section_id'],
-                    'required' => (bool)$row['required'],
-                    'max_quantity' => (int)$row['max_quantity'],
-                    'items' => $sectionItemIds,
-                ];
-            }
-            $result['section_items'] = $sectionItems;
-        } else {
-            $result['section_items'] = [
-                'required' => false,
-                'max_quantity' => 0,
-                'items' => $sectionItemIds,
-            ];
-        }
+        // Note: section_items handling removed - now part of sections structure
     }
     
     return $result;
@@ -1879,6 +1842,52 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
                 'item_id' => $foodItemId,
                 'section_id' => $sectionId
             ]);
+        }
+    }
+}
+
+// New method to handle sections with items in the preferred format
+private function createFoodItemSectionsWithItems($foodItemId, $sectionsArray)
+{
+    foreach ($sectionsArray as $sectionData) {
+        // Create section configuration for this specific section
+        $configSql = "INSERT INTO food_item_sections_config (item_id, required, max_quantity) 
+                      VALUES (:item_id, :required, :max_quantity)";
+        $configStmt = $this->conn->prepare($configSql);
+        $configStmt->execute([
+            'item_id' => $foodItemId,
+            'required' => $sectionData['required'] ?? false,
+            'max_quantity' => $sectionData['max_quantity'] ?? 0
+        ]);
+
+        // Create the section relationship
+        $sectionSql = "INSERT INTO food_item_sections (item_id, section_id) VALUES (:item_id, :section_id)";
+        $sectionStmt = $this->conn->prepare($sectionSql);
+        $sectionStmt->execute([
+            'item_id' => $foodItemId,
+            'section_id' => $sectionData['section_id']
+        ]);
+
+        // Create section items relationships if item_ids are provided
+        if (!empty($sectionData['item_ids']) && is_array($sectionData['item_ids'])) {
+            $sectionItemSql = "INSERT INTO food_item_section_items (item_id, section_item_id, extra_price) VALUES (:item_id, :section_item_id, :extra_price)";
+            $sectionItemStmt = $this->conn->prepare($sectionItemSql);
+
+            foreach ($sectionData['item_ids'] as $itemId) {
+                $extraPrice = 0;
+                
+                // Handle both simple ID format and object format
+                if (is_array($itemId) && isset($itemId['id'])) {
+                    $extraPrice = $itemId['extra_price'] ?? 0;
+                    $itemId = $itemId['id'];
+                }
+
+                $sectionItemStmt->execute([
+                    'item_id' => $foodItemId,
+                    'section_item_id' => $itemId,
+                    'extra_price' => $extraPrice
+                ]);
+            }
         }
     }
 }
