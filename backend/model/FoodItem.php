@@ -194,7 +194,21 @@ public function createWithOptions($data)
             }
         }
 
-
+        // Handle section_items if provided
+        if (isset($data['section_items']) && is_array($data['section_items'])) {
+            // Check if it's the old format (object with items array)
+            if (isset($data['section_items']['items']) && is_array($data['section_items']['items'])) {
+                // Old format
+                if (!empty($data['section_items']['items'])) {
+                    $this->createFoodItemSectionItemsWithConfig($foodItemId, $data['section_items']);
+                }
+            } else {
+                // New format - array of objects with id
+                if (!empty($data['section_items'])) {
+                    $this->createFoodItemSectionItemsFromArray($foodItemId, $data['section_items']);
+                }
+            }
+        }
 
         // Commit transaction
         $this->conn->commit();
@@ -292,29 +306,34 @@ private function getFoodItemWithOptions($foodItemId)
     $sectionItemsStmt->execute(['item_id' => $foodItemId]);
     $sectionItems = $sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Build the complete response
+    // Build the complete response - return only IDs for consistency
+    $sidesIds = array_map('intval', array_column($sides, 'id'));
+    $packsIds = array_map('intval', array_column($packs, 'id'));
+    $sectionsIds = array_map('intval', array_column($sections, 'id'));
+    $sectionItemsIds = array_map('intval', array_column($sectionItems, 'id'));
+
     $foodItem['sides'] = [
         'required' => $sidesConfig ? (bool)$sidesConfig['required'] : false,
         'max_quantity' => $sidesConfig ? (int)$sidesConfig['max_quantity'] : 0,
-        'items' => $sides
+        'items' => $sidesIds
     ];
 
     $foodItem['packs'] = [
         'required' => $packsConfig ? (bool)$packsConfig['required'] : false,
         'max_quantity' => $packsConfig ? (int)$packsConfig['max_quantity'] : 0,
-        'items' => $packs
+        'items' => $packsIds
     ];
 
     $foodItem['sections'] = [
         'required' => $sectionsConfig ? (bool)$sectionsConfig['required'] : false,
         'max_quantity' => $sectionsConfig ? (int)$sectionsConfig['max_quantity'] : 0,
-        'items' => $sections
+        'items' => $sectionsIds
     ];
 
     $foodItem['section_items'] = [
         'required' => $sectionItemsConfig ? (bool)$sectionItemsConfig['required'] : false,
         'max_quantity' => $sectionItemsConfig ? (int)$sectionItemsConfig['max_quantity'] : 0,
-        'items' => $sectionItems
+        'items' => $sectionItemsIds
     ];
 
     return $foodItem;
@@ -2039,6 +2058,37 @@ private function createFoodItemSectionsWithConfig($foodItemId, $sectionsData)
                 $stmt->execute([
                     'item_id' => $foodItemId,
                     'section_item_id' => $sectionItem['id'],
+                    'extra_price' => $extraPrice
+                ]);
+            }
+        }
+    }
+
+    // Create food item section items with config (structured format)
+    private function createFoodItemSectionItemsWithConfig($foodItemId, $sectionItemsData)
+    {
+        // First, create the food item section items configuration
+        $configSql = "INSERT INTO food_item_section_items_config (item_id, required, max_quantity) 
+                      VALUES (:item_id, :required, :max_quantity)";
+        $configStmt = $this->conn->prepare($configSql);
+        $configStmt->execute([
+            'item_id' => $foodItemId,
+            'required' => $sectionItemsData['required'] ?? false,
+            'max_quantity' => $sectionItemsData['max_quantity'] ?? 0
+        ]);
+
+        // Then, create the section item relationships
+        if (!empty($sectionItemsData['items']) && is_array($sectionItemsData['items'])) {
+            $sectionItemSql = "INSERT INTO food_item_section_items (item_id, section_item_id, extra_price) VALUES (:item_id, :section_item_id, :extra_price)";
+            $sectionItemStmt = $this->conn->prepare($sectionItemSql);
+
+            foreach ($sectionItemsData['items'] as $sectionItem) {
+                $sectionItemId = is_array($sectionItem) ? $sectionItem['id'] : $sectionItem;
+                $extraPrice = is_array($sectionItem) ? ($sectionItem['extra_price'] ?? 0) : 0;
+
+                $sectionItemStmt->execute([
+                    'item_id' => $foodItemId,
+                    'section_item_id' => $sectionItemId,
                     'extra_price' => $extraPrice
                 ]);
             }
