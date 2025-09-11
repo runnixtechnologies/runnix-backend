@@ -321,13 +321,13 @@ class FoodItemController
         error_log("Has max_quantity: " . (isset($data['sections']['max_quantity']) ? 'yes' : 'no'));
         error_log("Has items: " . (isset($data['sections']['items']) ? 'yes' : 'no'));
         
-        // Check if it's the structured format (object with required, max_quantity, items, item_ids)
-        if (isset($data['sections']['required']) || isset($data['sections']['max_quantity']) || isset($data['sections']['items']) || isset($data['sections']['item_ids'])) {
+        // Check if it's the structured format (object with required, max_quantity, items)
+        if (isset($data['sections']['required']) || isset($data['sections']['max_quantity']) || isset($data['sections']['items'])) {
             error_log("Detected structured format for sections");
             // Structured format - validate required fields
-            if (!isset($data['sections']['required']) || !isset($data['sections']['max_quantity']) || !isset($data['sections']['items']) || !isset($data['sections']['item_ids'])) {
+            if (!isset($data['sections']['required']) || !isset($data['sections']['max_quantity']) || !isset($data['sections']['items'])) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => 'Sections structured format must include: required (boolean), max_quantity (number), items (array of section IDs), and item_ids (array of item IDs)'];
+                return ['status' => 'error', 'message' => 'Sections structured format must include: required (boolean), max_quantity (number), and items (array of section IDs)'];
             }
             
             // Validate required field - handle various boolean representations
