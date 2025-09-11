@@ -499,15 +499,14 @@ private function getFoodItemWithOptions($foodItemId)
             $sidesConfigStmt->execute(['item_id' => $result['id']]);
             $sidesConfig = $sidesConfigStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-            $sidesStmt = $this->conn->prepare("SELECT side_id as id, extra_price FROM food_item_sides WHERE item_id = :item_id");
-            $sidesStmt->execute(['item_id' => $result['id']]);
-            $sides = $sidesStmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($sides as &$s) { $s['id'] = (int)$s['id']; $s['extra_price'] = (float)$s['extra_price']; }
+            $sidesIdsStmt = $this->conn->prepare("SELECT side_id FROM food_item_sides WHERE item_id = :item_id");
+            $sidesIdsStmt->execute(['item_id' => $result['id']]);
+            $sidesIds = array_map('intval', array_column($sidesIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'side_id'));
 
             $result['sides'] = [
                 'required' => $sidesConfig ? (bool)$sidesConfig['required'] : false,
                 'max_quantity' => $sidesConfig ? (int)$sidesConfig['max_quantity'] : 0,
-                'items' => $sides,
+                'items' => $sidesIds,
             ];
 
             // Attach packs config and IDs
@@ -515,15 +514,14 @@ private function getFoodItemWithOptions($foodItemId)
             $packsConfigStmt->execute(['item_id' => $result['id']]);
             $packsConfig = $packsConfigStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-            $packsStmt = $this->conn->prepare("SELECT pack_id as id, extra_price FROM food_item_packs WHERE item_id = :item_id");
-            $packsStmt->execute(['item_id' => $result['id']]);
-            $packs = $packsStmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($packs as &$p) { $p['id'] = (int)$p['id']; $p['extra_price'] = (float)$p['extra_price']; }
+            $packsIdsStmt = $this->conn->prepare("SELECT pack_id FROM food_item_packs WHERE item_id = :item_id");
+            $packsIdsStmt->execute(['item_id' => $result['id']]);
+            $packsIds = array_map('intval', array_column($packsIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'pack_id'));
 
             $result['packs'] = [
                 'required' => $packsConfig ? (bool)$packsConfig['required'] : false,
                 'max_quantity' => $packsConfig ? (int)$packsConfig['max_quantity'] : 0,
-                'items' => $packs,
+                'items' => $packsIds,
             ];
 
             // Attach sections config and IDs
@@ -564,20 +562,18 @@ private function getFoodItemWithOptions($foodItemId)
             $sectionItemsConfigStmt->execute(['item_id' => $result['id']]);
             $sectionItemsConfigRows = $sectionItemsConfigStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $sectionItemsStmt = $this->conn->prepare("SELECT section_id, section_item_id as id, extra_price FROM food_item_section_items WHERE item_id = :item_id");
-            $sectionItemsStmt->execute(['item_id' => $result['id']]);
-            $sectionItemsRows = $sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($sectionItemsRows as &$si) { $si['section_id'] = isset($si['section_id']) ? (int)$si['section_id'] : null; $si['id'] = (int)$si['id']; $si['extra_price'] = isset($si['extra_price']) ? (float)$si['extra_price'] : 0.0; }
+            $sectionItemIdsStmt = $this->conn->prepare("SELECT section_item_id FROM food_item_section_items WHERE item_id = :item_id");
+            $sectionItemIdsStmt->execute(['item_id' => $result['id']]);
+            $sectionItemIds = array_map('intval', array_column($sectionItemIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_item_id'));
 
             if (!empty($sectionItemsConfigRows)) {
                 $sectionItems = [];
                 foreach ($sectionItemsConfigRows as $row) {
-                    $itemsForSection = array_values(array_filter($sectionItemsRows, function($r) use ($row) { return (int)$r['section_id'] === (int)$row['section_id']; }));
                     $sectionItems[] = [
                         'section_id' => (int)$row['section_id'],
                         'required' => (bool)$row['required'],
                         'max_quantity' => (int)$row['max_quantity'],
-                        'items' => $itemsForSection,
+                        'items' => $sectionItemIds,
                     ];
                 }
                 $result['section_items'] = $sectionItems;
@@ -585,7 +581,7 @@ private function getFoodItemWithOptions($foodItemId)
                 $result['section_items'] = [
                     'required' => false,
                     'max_quantity' => 0,
-                    'items' => $sectionItemsRows,
+                    'items' => $sectionItemIds,
                 ];
             }
         }
@@ -668,36 +664,34 @@ public function getByItemId($id, $store_id = null)
         unset($result['discount_percentage']);
         unset($result['calculated_discount_price']);
 
-        // Attach sides config and items with extra_price
+        // Attach sides config and IDs
         $sidesConfigStmt = $this->conn->prepare("SELECT required, max_quantity FROM food_item_sides_config WHERE item_id = :item_id LIMIT 1");
         $sidesConfigStmt->execute(['item_id' => $result['id']]);
         $sidesConfig = $sidesConfigStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-        $sidesStmt = $this->conn->prepare("SELECT side_id as id, extra_price FROM food_item_sides WHERE item_id = :item_id");
-        $sidesStmt->execute(['item_id' => $result['id']]);
-        $sides = $sidesStmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($sides as &$s) { $s['id'] = (int)$s['id']; $s['extra_price'] = (float)$s['extra_price']; }
+        $sidesIdsStmt = $this->conn->prepare("SELECT side_id FROM food_item_sides WHERE item_id = :item_id");
+        $sidesIdsStmt->execute(['item_id' => $result['id']]);
+        $sidesIds = array_map('intval', array_column($sidesIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'side_id'));
 
         $result['sides'] = [
             'required' => $sidesConfig ? (bool)$sidesConfig['required'] : false,
             'max_quantity' => $sidesConfig ? (int)$sidesConfig['max_quantity'] : 0,
-            'items' => $sides,
+            'items' => $sidesIds,
         ];
 
-        // Attach packs config and items with extra_price
+        // Attach packs config and IDs
         $packsConfigStmt = $this->conn->prepare("SELECT required, max_quantity FROM food_item_packs_config WHERE item_id = :item_id LIMIT 1");
         $packsConfigStmt->execute(['item_id' => $result['id']]);
         $packsConfig = $packsConfigStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-        $packsStmt = $this->conn->prepare("SELECT pack_id as id, extra_price FROM food_item_packs WHERE item_id = :item_id");
-        $packsStmt->execute(['item_id' => $result['id']]);
-        $packs = $packsStmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($packs as &$p) { $p['id'] = (int)$p['id']; $p['extra_price'] = (float)$p['extra_price']; }
+        $packsIdsStmt = $this->conn->prepare("SELECT pack_id FROM food_item_packs WHERE item_id = :item_id");
+        $packsIdsStmt->execute(['item_id' => $result['id']]);
+        $packsIds = array_map('intval', array_column($packsIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'pack_id'));
 
         $result['packs'] = [
             'required' => $packsConfig ? (bool)$packsConfig['required'] : false,
             'max_quantity' => $packsConfig ? (int)$packsConfig['max_quantity'] : 0,
-            'items' => $packs,
+            'items' => $packsIds,
         ];
 
         // Attach sections config and IDs
@@ -732,26 +726,24 @@ public function getByItemId($id, $store_id = null)
             ];
         }
 
-        // Attach section_items config and items with extra_price
+        // Attach section_items config and IDs
         // Prefer per-section items config if present
         $sectionItemsConfigStmt = $this->conn->prepare("SELECT section_id, required, max_quantity FROM food_item_section_items_config WHERE item_id = :item_id");
         $sectionItemsConfigStmt->execute(['item_id' => $result['id']]);
         $sectionItemsConfigRows = $sectionItemsConfigStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $sectionItemsStmt = $this->conn->prepare("SELECT section_id, section_item_id as id, extra_price FROM food_item_section_items WHERE item_id = :item_id");
-        $sectionItemsStmt->execute(['item_id' => $result['id']]);
-        $sectionItemsRows = $sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($sectionItemsRows as &$si) { $si['section_id'] = isset($si['section_id']) ? (int)$si['section_id'] : null; $si['id'] = (int)$si['id']; $si['extra_price'] = isset($si['extra_price']) ? (float)$si['extra_price'] : 0.0; }
+        $sectionItemIdsStmt = $this->conn->prepare("SELECT section_item_id FROM food_item_section_items WHERE item_id = :item_id");
+        $sectionItemIdsStmt->execute(['item_id' => $result['id']]);
+        $sectionItemIds = array_map('intval', array_column($sectionItemIdsStmt->fetchAll(PDO::FETCH_ASSOC), 'section_item_id'));
 
         if (!empty($sectionItemsConfigRows)) {
             $sectionItems = [];
             foreach ($sectionItemsConfigRows as $row) {
-                $itemsForSection = array_values(array_filter($sectionItemsRows, function($r) use ($row) { return (int)$r['section_id'] === (int)$row['section_id']; }));
                 $sectionItems[] = [
                     'section_id' => (int)$row['section_id'],
                     'required' => (bool)$row['required'],
                     'max_quantity' => (int)$row['max_quantity'],
-                    'items' => $itemsForSection,
+                    'items' => $sectionItemIds,
                 ];
             }
             $result['section_items'] = $sectionItems;
@@ -759,7 +751,7 @@ public function getByItemId($id, $store_id = null)
             $result['section_items'] = [
                 'required' => false,
                 'max_quantity' => 0,
-                'items' => $sectionItemsRows,
+                'items' => $sectionItemIds,
             ];
         }
     }
