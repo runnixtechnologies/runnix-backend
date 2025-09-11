@@ -5,6 +5,7 @@ use Model\FoodItem;
 use Model\Store;
 use Config\JwtHandler;
 use Config\Database;
+use PDO;
 
 class FoodItemController
 {
