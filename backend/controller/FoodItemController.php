@@ -404,6 +404,89 @@ class FoodItemController
         }
     }
 
+    // Validate section_items data if provided
+    if (isset($data['section_items']) && is_array($data['section_items'])) {
+        // Debug logging to see what the mobile app is sending
+        error_log("=== SECTION ITEMS VALIDATION DEBUG ===");
+        error_log("Section items data: " . json_encode($data['section_items']));
+        error_log("Section items type: " . gettype($data['section_items']));
+        error_log("Section items keys: " . (is_array($data['section_items']) ? implode(', ', array_keys($data['section_items'])) : 'not an array'));
+        
+        if (!is_array($data['section_items'])) {
+            error_log("ERROR: Section items is not an array");
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Section items must be an array'];
+        }
+        
+        // Check if it's the structured format (object with required, max_quantity, items)
+        if (isset($data['section_items']['required']) || isset($data['section_items']['max_quantity']) || isset($data['section_items']['items'])) {
+            error_log("Detected structured format for section items");
+            
+            // Structured format - validate required fields
+            if (!isset($data['section_items']['required']) || !isset($data['section_items']['max_quantity']) || !isset($data['section_items']['items'])) {
+                error_log("ERROR: Missing required fields in structured format");
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Section items structured format must include: required (boolean), max_quantity (number), and items (array of section item IDs)'];
+            }
+            
+            // Validate required field - handle various boolean representations
+            $required = $data['section_items']['required'];
+            if (is_string($required)) {
+                $required = strtolower(trim($required));
+                if ($required === 'true' || $required === '1') {
+                    $data['section_items']['required'] = true;
+                } elseif ($required === 'false' || $required === '0') {
+                    $data['section_items']['required'] = false;
+                } else {
+                    error_log("ERROR: Invalid required string value: " . $required);
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Section items required must be a boolean (true/false)'];
+                }
+            } elseif (is_numeric($required)) {
+                $data['section_items']['required'] = (bool)$required;
+            } elseif (!is_bool($required)) {
+                error_log("ERROR: Required is not boolean, string, or numeric");
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Section items required must be a boolean (true/false)'];
+            }
+            
+            // Validate max_quantity field
+            if (!is_numeric($data['section_items']['max_quantity']) || $data['section_items']['max_quantity'] < 0) {
+                error_log("ERROR: Invalid max_quantity value");
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Section items max_quantity must be a non-negative number'];
+            }
+            
+            // Validate items array
+            if (!is_array($data['section_items']['items'])) {
+                error_log("ERROR: Items is not an array");
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Section items items must be an array'];
+            }
+            
+            foreach ($data['section_items']['items'] as $itemId) {
+                if (!is_numeric($itemId)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section item ID must be a valid number'];
+                }
+            }
+        } else {
+            error_log("Detected simple format for section items");
+            // Simple format - array of objects with id
+            foreach ($data['section_items'] as $sectionItem) {
+                if (!is_array($sectionItem)) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section item must be an object'];
+                }
+                
+                if (!isset($sectionItem['id']) || !is_numeric($sectionItem['id'])) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Each section item must have a valid id'];
+                }
+            }
+        }
+    }
+
     // Check for duplicate food item name in the store before proceeding
     error_log("=== CHECKING FOR DUPLICATE FOOD ITEM NAME ===");
     error_log("Store ID: " . $data['store_id']);
