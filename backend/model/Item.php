@@ -339,19 +339,18 @@ public function getItemsByStoreAndCategoryPaginated($storeId, $categoryId, $limi
             d.id AS discount_id, 
             d.end_date AS discount_end_date, 
             d.percentage, 
-            ROUND((i.price - (i.price * d.percentage / 100)), 2) AS discount_price,
-            COUNT(oi.id) AS total_orders
+            ROUND((i.price - (i.price * COALESCE(d.percentage, 0) / 100)), 2) AS discount_price,
+            COALESCE(COUNT(DISTINCT oi.order_id), 0) AS total_orders
         FROM items i
-        LEFT JOIN discount_items di ON i.id = di.item_id
-        LEFT JOIN discounts d ON di.discount_id = d.id
+        LEFT JOIN discount_items di ON i.id = di.item_id AND di.item_type = 'item'
+        LEFT JOIN discounts d ON di.discount_id = d.id AND d.status = 'active' 
+            AND (d.start_date IS NULL OR d.start_date <= CURDATE()) 
+            AND (d.end_date IS NULL OR d.end_date >= CURDATE())
         LEFT JOIN order_items oi ON i.id = oi.item_id
         WHERE i.store_id = :store_id 
           AND i.category_id = :category_id
           AND i.deleted = 0
-          AND (
-              d.id IS NULL OR (d.status = 'active' AND NOW() BETWEEN d.start_date AND d.end_date)
-          )
-        GROUP BY i.id, d.percentage
+        GROUP BY i.id
         ORDER BY i.created_at DESC
         LIMIT :limit OFFSET :offset
     ";
