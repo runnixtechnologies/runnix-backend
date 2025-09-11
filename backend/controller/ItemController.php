@@ -375,30 +375,6 @@ public function getAllItems($user, $page = 1, $limit = 10)
         unset($item['discount_end_date']);
         unset($item['discount_price']);
 
-        // Add option data structure (empty for items table since it doesn't support options)
-        $item['sides'] = [
-            'required' => false,
-            'max_quantity' => 0,
-            'items' => []
-        ];
-
-        $item['packs'] = [
-            'required' => false,
-            'max_quantity' => 0,
-            'items' => []
-        ];
-
-        $item['sections'] = [
-            'required' => false,
-            'max_quantity' => 0,
-            'items' => []
-        ];
-
-        $item['section_items'] = [
-            'required' => false,
-            'max_quantity' => 0,
-            'items' => []
-        ];
     }
 
     return [
@@ -453,30 +429,6 @@ public function getItemsByCategoryInStore($user, $categoryId, $page = 1, $limit 
     unset($item['discount_end_date']);
     unset($item['discount_price']);
 
-    // Add option data structure (empty for items table since it doesn't support options)
-    $item['sides'] = [
-        'required' => false,
-        'max_quantity' => 0,
-        'items' => []
-    ];
-
-    $item['packs'] = [
-        'required' => false,
-        'max_quantity' => 0,
-        'items' => []
-    ];
-
-    $item['sections'] = [
-        'required' => false,
-        'max_quantity' => 0,
-        'items' => []
-    ];
-
-    $item['section_items'] = [
-        'required' => false,
-        'max_quantity' => 0,
-        'items' => []
-    ];
 }
 
 
