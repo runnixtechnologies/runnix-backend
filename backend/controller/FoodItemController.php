@@ -373,18 +373,6 @@ class FoodItemController
                 }
             }
             
-            // Validate item_ids array (item IDs)
-            if (!is_array($data['sections']['item_ids'])) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Sections item_ids must be an array of item IDs'];
-            }
-            
-            foreach ($data['sections']['item_ids'] as $itemId) {
-                if (!is_numeric($itemId)) {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Each item ID must be a valid number'];
-                }
-            }
         } else {
             error_log("Detected simple format for sections");
             // Simple format - array of objects with id and selected_items
