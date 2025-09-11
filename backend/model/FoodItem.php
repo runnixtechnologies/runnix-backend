@@ -477,14 +477,8 @@ private function getFoodItemWithOptions($foodItemId)
                 $result['discount_start_date'] = $discount['start_date'];
                 $result['discount_end_date'] = $discount['end_date'];
                 $result['discount_price'] = round($result['price'] - ($result['price'] * $discount['percentage'] / 100), 2);
-            } else {
-                // No discount
-                $result['discount_id'] = null;
-                $result['percentage'] = null;
-                $result['discount_start_date'] = null;
-                $result['discount_end_date'] = null;
-                $result['discount_price'] = null;
             }
+            // Don't add discount fields if no discount exists
             
             // Get order count for this food item
             $orderSql = "SELECT COUNT(DISTINCT order_id) as total_orders 
@@ -652,13 +646,6 @@ public function getByItemId($id, $store_id = null)
             $result['discount_price'] = (float)$result['calculated_discount_price'];
             $result['discount_start_date'] = $result['discount_start_date'];
             $result['discount_end_date'] = $result['discount_end_date'];
-        } else {
-            // Remove discount fields if no active discount
-            unset($result['discount_id']);
-            unset($result['percentage']);
-            unset($result['discount_price']);
-            unset($result['discount_start_date']);
-            unset($result['discount_end_date']);
         }
         // Always remove the internal discount fields
         unset($result['discount_percentage']);
