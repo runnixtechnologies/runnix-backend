@@ -1,24 +1,20 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
+require_once '../../vendor/autoload.php';
+require_once '../config/cors.php';
 require_once '../middleware/authMiddleware.php';
-require_once '../controller/AnalyticsController.php';
 
 use Controller\AnalyticsController;
-use Middleware;
+use function Middleware\authenticateRequest;
+
+header('Content-Type: application/json');
 
 try {
     // Authenticate the request
-    $user = Middleware\authenticateRequest();
+    $user = authenticateRequest();
     
     // Check if user is a merchant
     if ($user['role'] !== 'merchant') {
