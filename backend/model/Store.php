@@ -153,11 +153,25 @@ class Store
 
     public function getStoreById($storeId)
     {
-        $sql = "SELECT * FROM stores WHERE id = :id";
+        $sql = "SELECT s.*, st.name AS store_type_name 
+                FROM stores s 
+                LEFT JOIN store_types st ON s.store_type_id = st.id 
+                WHERE s.id = :id";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([':id' => $storeId]);
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function getAllStores()
+    {
+        $sql = "SELECT s.*, st.name AS store_type_name 
+                FROM stores s 
+                LEFT JOIN store_types st ON s.store_type_id = st.id 
+                ORDER BY s.created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function updateStoreStatus($storeId, $isOnline) {
