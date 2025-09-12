@@ -14,6 +14,11 @@ class User
     {
         $this->conn = (new Database())->getConnection();
     }
+    
+    public function getConnection()
+    {
+        return $this->conn;
+    }
 
     private function generateReferralCode($email) {
         return substr(md5($email . time()), 0, 8);
@@ -92,7 +97,7 @@ public function verifyMerchant($merchant_id)
 
     public function getUserByPhone($phone)
 {
-    $sql = "SELECT * FROM {$this->table} WHERE phone = :phone LIMIT 1";
+    $sql = "SELECT * FROM {$this->table} WHERE phone = :phone AND deleted_at IS NULL LIMIT 1";
     $stmt = $this->conn->prepare($sql);
     $stmt->bindParam(':phone', $phone);
     $stmt->execute();
@@ -101,7 +106,7 @@ public function verifyMerchant($merchant_id)
 
 public function getUserByEmail($email)
 {
-    $sql = "SELECT * FROM {$this->table} WHERE email = :email LIMIT 1";
+    $sql = "SELECT * FROM {$this->table} WHERE email = :email AND deleted_at IS NULL LIMIT 1";
     $stmt = $this->conn->prepare($sql);
     $stmt->bindParam(':email', $email);
     $stmt->execute();
@@ -112,7 +117,7 @@ public function getUserByEmail($email)
 
     public function getUserByReferralCode($referral_code)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE referral_code = :referral_code LIMIT 1");
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE referral_code = :referral_code AND deleted_at IS NULL LIMIT 1");
         $stmt->bindParam(":referral_code", $referral_code);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -123,9 +128,9 @@ public function getUserByEmail($email)
 {
     // Determine if the identifier is an email or phone
     if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
-        $query = "SELECT * FROM {$this->table} WHERE email = :identifier";
+        $query = "SELECT * FROM {$this->table} WHERE email = :identifier AND deleted_at IS NULL";
     } else {
-        $query = "SELECT * FROM {$this->table} WHERE phone = :identifier";
+        $query = "SELECT * FROM {$this->table} WHERE phone = :identifier AND deleted_at IS NULL";
     }
 
     $stmt = $this->conn->prepare($query);
@@ -216,7 +221,7 @@ public function updateUserReferral($user_id, $referrer_id) {
 public function getUserById($userId)
 {
     try {
-        $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         return $user ?: null; // return null if user not found
@@ -248,6 +253,114 @@ public function deleteUser($userId)
     } catch (\Exception $e) {
         error_log("Error deleting user: " . $e->getMessage());
         return false;
+    }
+}
+
+// Soft delete user account (new method)
+public function softDeleteUser($userId, $deletedBy = null, $reason = null, $method = 'self')
+{
+    try {
+        $this->conn->beginTransaction();
+        
+        // Set reactivation deadline (30 days from now)
+        $reactivationDeadline = date('Y-m-d H:i:s', strtotime('+30 days'));
+        
+        $sql = "UPDATE {$this->table} 
+                SET deleted_at = NOW(), 
+                    deleted_by = :deleted_by, 
+                    deletion_reason = :reason, 
+                    deletion_method = :method,
+                    can_reactivate = TRUE,
+                    reactivation_deadline = :deadline,
+                    status = 'deleted'
+                WHERE id = :user_id AND deleted_at IS NULL";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':user_id', $userId);
+        $stmt->bindParam(':deleted_by', $deletedBy);
+        $stmt->bindParam(':reason', $reason);
+        $stmt->bindParam(':method', $method);
+        $stmt->bindParam(':deadline', $reactivationDeadline);
+        
+        $result = $stmt->execute();
+        
+        if ($result && $stmt->rowCount() > 0) {
+            $this->conn->commit();
+            return true;
+        } else {
+            $this->conn->rollBack();
+            return false;
+        }
+    } catch (\Exception $e) {
+        $this->conn->rollBack();
+        error_log("Error soft deleting user: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Reactivate user account
+public function reactivateUser($userId)
+{
+    try {
+        $sql = "UPDATE {$this->table} 
+                SET deleted_at = NULL, 
+                    deleted_by = NULL, 
+                    deletion_reason = NULL, 
+                    deletion_method = NULL,
+                    can_reactivate = TRUE,
+                    reactivation_deadline = NULL,
+                    status = 'active'
+                WHERE id = :user_id AND deleted_at IS NOT NULL";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':user_id', $userId);
+        
+        return $stmt->execute() && $stmt->rowCount() > 0;
+    } catch (\Exception $e) {
+        error_log("Error reactivating user: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Check if user is soft deleted
+public function isUserSoftDeleted($userId)
+{
+    try {
+        $stmt = $this->conn->prepare("SELECT deleted_at FROM {$this->table} WHERE id = :user_id");
+        $stmt->bindParam(':user_id', $userId);
+        $stmt->execute();
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result && !is_null($result['deleted_at']);
+    } catch (\Exception $e) {
+        error_log("Error checking soft delete status: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Get soft deleted users (for admin)
+public function getSoftDeletedUsers($limit = 50, $offset = 0)
+{
+    try {
+        $sql = "SELECT u.*, up.first_name, up.last_name, 
+                       deleter.email as deleted_by_email,
+                       deleter.phone as deleted_by_phone
+                FROM {$this->table} u
+                LEFT JOIN {$this->profileTable} up ON u.id = up.user_id
+                LEFT JOIN {$this->table} deleter ON u.deleted_by = deleter.id
+                WHERE u.deleted_at IS NOT NULL
+                ORDER BY u.deleted_at DESC
+                LIMIT :limit OFFSET :offset";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (\Exception $e) {
+        error_log("Error getting soft deleted users: " . $e->getMessage());
+        return [];
     }
 }
 

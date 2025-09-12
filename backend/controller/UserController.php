@@ -622,6 +622,83 @@ public function verifyEmailOtp(string $email, string $otp)
     return ["status" => "success", "message" => "User deleted successfully"];
 }
 
+// Soft delete user account with confirmation
+public function softDeleteAccount($data, $user)
+{
+    $userModel = new User();
+    
+    // Validate required fields
+    if (empty($data['confirmation']) || $data['confirmation'] !== 'yes') {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Account deletion requires confirmation. Please confirm by sending 'confirmation': 'yes'"];
+    }
+    
+    $userId = $user['user_id'];
+    $reason = $data['reason'] ?? null;
+    
+    // Check if user exists and is not already soft deleted
+    $existingUser = $userModel->getUserById($userId);
+    if (!$existingUser) {
+        http_response_code(404);
+        return ["status" => "error", "message" => "User not found or account already deleted"];
+    }
+    
+    // Check if user is already soft deleted
+    if ($userModel->isUserSoftDeleted($userId)) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Account is already deleted"];
+    }
+    
+    // Perform soft delete
+    $success = $userModel->softDeleteUser($userId, $userId, $reason, 'self');
+    
+    if ($success) {
+        // Log the deletion for audit purposes
+        error_log("User account soft deleted - User ID: {$userId}, Reason: {$reason}, Deleted at: " . date('Y-m-d H:i:s'));
+        
+        http_response_code(200);
+        return [
+            "status" => "success", 
+            "message" => "Your account has been successfully deleted. You can reactivate it within 30 days by contacting support.",
+            "reactivation_deadline" => date('Y-m-d H:i:s', strtotime('+30 days')),
+            "can_reactivate" => true
+        ];
+    } else {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to delete account. Please try again or contact support."];
+    }
+}
+
+// Reactivate user account (for support/admin use)
+public function reactivateAccount($userId, $adminUser = null)
+{
+    $userModel = new User();
+    
+    // Check if user exists and is soft deleted
+    if (!$userModel->isUserSoftDeleted($userId)) {
+        http_response_code(400);
+        return ["status" => "error", "message" => "Account is not deleted or does not exist"];
+    }
+    
+    // Perform reactivation
+    $success = $userModel->reactivateUser($userId);
+    
+    if ($success) {
+        // Log the reactivation for audit purposes
+        $adminId = $adminUser ? $adminUser['user_id'] : 'system';
+        error_log("User account reactivated - User ID: {$userId}, Reactivated by: {$adminId}, Reactivated at: " . date('Y-m-d H:i:s'));
+        
+        http_response_code(200);
+        return [
+            "status" => "success", 
+            "message" => "Account has been successfully reactivated"
+        ];
+    } else {
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to reactivate account. Please contact support."];
+    }
+}
+
 public function collectStoreDetails($data)
 {
     // Validate required fields
