@@ -659,8 +659,8 @@ public function softDeleteAccount($data, $user)
         http_response_code(200);
         return [
             "status" => "success", 
-            "message" => "Your account has been successfully deleted. You can reactivate it within 30 days by contacting support.",
-            "reactivation_deadline" => date('Y-m-d H:i:s', strtotime('+30 days')),
+            "message" => "Your account has been successfully deleted. You can reactivate it within 60 days by contacting support.",
+            "reactivation_deadline" => date('Y-m-d H:i:s', strtotime('+60 days')),
             "can_reactivate" => true
         ];
     } else {

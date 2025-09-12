@@ -50,7 +50,7 @@ ADD COLUMN reactivation_deadline TIMESTAMP NULL DEFAULT NULL COMMENT 'Deadline f
 ```json
 {
   "status": "success",
-  "message": "Your account has been successfully deleted. You can reactivate it within 30 days by contacting support.",
+  "message": "Your account has been successfully deleted. You can reactivate it within 60 days by contacting support.",
   "reactivation_deadline": "2024-02-15 10:30:00",
   "can_reactivate": true
 }
@@ -128,7 +128,7 @@ ADD COLUMN reactivation_deadline TIMESTAMP NULL DEFAULT NULL COMMENT 'Deadline f
 1. User clicks "Delete Account" button
 2. System shows confirmation prompt: "Are you sure you want to delete your account?"
 3. User clicks "Yes" → Frontend sends `confirmation: "yes"` to API
-4. System soft deletes account and returns success message
+4. System soft deletes account and returns success message (60-day reactivation window)
 5. User is logged out and cannot access the system
 6. Account data is preserved but hidden from other users
 
@@ -178,7 +178,7 @@ All user queries now include `AND deleted_at IS NULL` to exclude soft-deleted us
 ## Configuration
 
 ### **Reactivation Period**
-- Default: 30 days from deletion
+- Default: 60 days from deletion
 - Configurable in `User::softDeleteUser()` method
 - Can be extended or made permanent based on business needs
 

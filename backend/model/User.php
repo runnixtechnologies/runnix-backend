@@ -262,8 +262,8 @@ public function softDeleteUser($userId, $deletedBy = null, $reason = null, $meth
     try {
         $this->conn->beginTransaction();
         
-        // Set reactivation deadline (30 days from now)
-        $reactivationDeadline = date('Y-m-d H:i:s', strtotime('+30 days'));
+        // Set reactivation deadline (60 days from now)
+        $reactivationDeadline = date('Y-m-d H:i:s', strtotime('+60 days'));
         
         $sql = "UPDATE {$this->table} 
                 SET deleted_at = NOW(), 

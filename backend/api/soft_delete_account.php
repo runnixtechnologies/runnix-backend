@@ -42,7 +42,8 @@ if (empty($data['confirmation'])) {
 }
 
 // Log the deletion attempt for audit purposes
-error_log("Account deletion attempt - User ID: {$user['user_id']}, Email: {$user['email']}, Reason: " . ($data['reason'] ?? 'Not provided'));
+$email = $user['email'] ?? 'N/A';
+error_log("Account deletion attempt - User ID: {$user['user_id']}, Email: {$email}, Reason: " . ($data['reason'] ?? 'Not provided'));
 
 $userController = new UserController();
 $response = $userController->softDeleteAccount($data, $user);
