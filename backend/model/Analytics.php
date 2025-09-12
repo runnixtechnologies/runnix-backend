@@ -55,10 +55,15 @@ class Analytics
             unset($params['start_date']);
         }
         
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (float)$result['total_revenue'];
+        try {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (float)($result['total_revenue'] ?? 0);
+        } catch (\Exception $e) {
+            error_log("Analytics getTotalRevenue error: " . $e->getMessage());
+            return 0.0;
+        }
     }
 
     /**
@@ -87,10 +92,15 @@ class Analytics
             unset($params['start_date']);
         }
         
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int)$result['total_orders'];
+        try {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int)($result['total_orders'] ?? 0);
+        } catch (\Exception $e) {
+            error_log("Analytics getTotalOrders error: " . $e->getMessage());
+            return 0;
+        }
     }
 
     /**
@@ -339,26 +349,31 @@ class Analytics
             unset($params['start_date']);
         }
         
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Format results
-        $items = [];
-        foreach ($results as $row) {
-            $items[] = [
-                'id' => (int)$row['id'],
-                'name' => $row['name'],
-                'price' => (float)$row['price'],
-                'photo' => $row['photo'],
-                'short_description' => $row['short_description'],
-                'order_count' => (int)$row['order_count'],
-                'total_quantity' => (int)$row['total_quantity'],
-                'total_revenue' => (float)$row['total_revenue']
-            ];
+        try {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Format results
+            $items = [];
+            foreach ($results as $row) {
+                $items[] = [
+                    'id' => (int)$row['id'],
+                    'name' => $row['name'],
+                    'price' => (float)$row['price'],
+                    'photo' => $row['photo'],
+                    'short_description' => $row['short_description'],
+                    'order_count' => (int)($row['order_count'] ?? 0),
+                    'total_quantity' => (int)($row['total_quantity'] ?? 0),
+                    'total_revenue' => (float)($row['total_revenue'] ?? 0)
+                ];
+            }
+            
+            return $items;
+        } catch (\Exception $e) {
+            error_log("Analytics getTopFoodItems error: " . $e->getMessage());
+            return [];
         }
-        
-        return $items;
     }
 
     /**
