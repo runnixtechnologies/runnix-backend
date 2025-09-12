@@ -5,9 +5,10 @@ error_reporting(E_ALL);
 
 require_once '../../vendor/autoload.php';
 require_once '../config/cors.php';
-require_once '../middleware/auth.php';
+require_once '../middleware/authMiddleware.php';
 
 use Controller\UserController;
+use Middleware;
 
 header('Content-Type: application/json');
 
@@ -19,14 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Authenticate the request
-$authResult = authenticateRequest();
-if (!$authResult['authenticated']) {
+try {
+    $user = Middleware\authenticateRequest();
+} catch (Exception $e) {
     http_response_code(401);
-    echo json_encode(["status" => "error", "message" => $authResult['message']]);
+    echo json_encode(["status" => "error", "message" => "Authentication failed"]);
     exit;
 }
-
-$user = $authResult['user'];
 
 // Read the JSON input
 $data = json_decode(file_get_contents("php://input"), true);
