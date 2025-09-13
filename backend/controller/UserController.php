@@ -1098,36 +1098,24 @@ public function getStatus($user) {
         }
     }
     
-    public function changePassword($data, $user)
+    public function changePassword($userId, $currentPassword, $newPassword)
     {
-        $userId = $user['user_id'];
-        
         // Validate required fields
-        if (empty($data['current_password'])) {
+        if (empty($currentPassword)) {
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Current password is required'];
         }
         
-        if (empty($data['new_password'])) {
+        if (empty($newPassword)) {
             http_response_code(400);
             return ['status' => 'error', 'message' => 'New password is required'];
         }
         
-        if (empty($data['confirm_password'])) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Confirm password is required'];
-        }
-        
-        // Validate password confirmation
-        if ($data['new_password'] !== $data['confirm_password']) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'New password and confirm password do not match'];
-        }
-        
         // Validate password strength
-        if (strlen($data['new_password']) < 6) {
+        $passwordValidation = $this->validatePasswordStrength($newPassword);
+        if (!$passwordValidation['valid']) {
             http_response_code(400);
-            return ['status' => 'error', 'message' => 'New password must be at least 6 characters long'];
+            return ['status' => 'error', 'message' => $passwordValidation['message']];
         }
         
         // Get current user data
@@ -1138,23 +1126,116 @@ public function getStatus($user) {
         }
         
         // Verify current password
-        if (!password_verify($data['current_password'], $userData['password'])) {
+        if (!password_verify($currentPassword, $userData['password'])) {
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Current password is incorrect'];
         }
         
+        // Check if new password is same as current password
+        if (password_verify($newPassword, $userData['password'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'New password must be different from current password'];
+        }
+        
         // Hash new password
-        $hashedPassword = password_hash($data['new_password'], PASSWORD_DEFAULT);
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
         
         // Update password
         $result = $this->userModel->updatePassword($userId, $hashedPassword);
         
         if ($result) {
+            // Log password change activity
+            $this->logPasswordChange($userId, $userData['email'] ?? $userData['phone']);
+            
             http_response_code(200);
             return ['status' => 'success', 'message' => 'Password changed successfully'];
         } else {
             http_response_code(500);
             return ['status' => 'error', 'message' => 'Failed to change password'];
+        }
+    }
+
+    /**
+     * Validate password strength
+     */
+    private function validatePasswordStrength($password) {
+        $errors = [];
+        
+        // Minimum length
+        if (strlen($password) < 8) {
+            $errors[] = 'Password must be at least 8 characters long';
+        }
+        
+        // Maximum length
+        if (strlen($password) > 128) {
+            $errors[] = 'Password must be less than 128 characters';
+        }
+        
+        // Check for at least one uppercase letter
+        if (!preg_match('/[A-Z]/', $password)) {
+            $errors[] = 'Password must contain at least one uppercase letter';
+        }
+        
+        // Check for at least one lowercase letter
+        if (!preg_match('/[a-z]/', $password)) {
+            $errors[] = 'Password must contain at least one lowercase letter';
+        }
+        
+        // Check for at least one number
+        if (!preg_match('/[0-9]/', $password)) {
+            $errors[] = 'Password must contain at least one number';
+        }
+        
+        // Check for at least one special character
+        if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+            $errors[] = 'Password must contain at least one special character';
+        }
+        
+        // Check for common weak passwords
+        $weakPasswords = [
+            'password', 'password123', '12345678', 'qwerty123', 'admin123',
+            'letmein', 'welcome123', 'monkey123', 'dragon123', 'master123'
+        ];
+        
+        if (in_array(strtolower($password), $weakPasswords)) {
+            $errors[] = 'Password is too common. Please choose a stronger password';
+        }
+        
+        // Check for repeated characters
+        if (preg_match('/(.)\1{2,}/', $password)) {
+            $errors[] = 'Password cannot contain more than 2 consecutive identical characters';
+        }
+        
+        // Check for sequential characters
+        if (preg_match('/123|234|345|456|567|678|789|890|abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz/i', $password)) {
+            $errors[] = 'Password cannot contain sequential characters';
+        }
+        
+        if (empty($errors)) {
+            return ['valid' => true, 'message' => 'Password is strong'];
+        } else {
+            return ['valid' => false, 'message' => implode('. ', $errors)];
+        }
+    }
+
+    /**
+     * Log password change activity
+     */
+    private function logPasswordChange($userId, $identifier) {
+        try {
+            $logData = [
+                'user_id' => $userId,
+                'action' => 'password_change',
+                'identifier' => $identifier,
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+            
+            error_log("Password change activity: " . json_encode($logData));
+            
+        } catch (Exception $e) {
+            error_log("Failed to log password change: " . $e->getMessage());
         }
     }
 

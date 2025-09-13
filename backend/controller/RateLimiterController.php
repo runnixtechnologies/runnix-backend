@@ -29,6 +29,11 @@ class RateLimiterController
                 'window_duration' => 3600, // 1 hour
                 'block_duration' => 3600   // Block for 1 hour
             ],
+            'password_change' => [
+                'max_requests' => 3,      // 3 password changes per hour
+                'window_duration' => 3600, // 1 hour
+                'block_duration' => 3600   // Block for 1 hour
+            ],
             'login' => [
                 'max_requests' => 10,     // 10 OTPs per hour for login
                 'window_duration' => 3600, // 1 hour
@@ -67,6 +72,11 @@ class RateLimiterController
             ],
             'password_reset' => [
                 'max_requests' => 5,
+                'window_duration' => 3600,
+                'block_duration' => 3600
+            ],
+            'password_change' => [
+                'max_requests' => 3,
                 'window_duration' => 3600,
                 'block_duration' => 3600
             ],
