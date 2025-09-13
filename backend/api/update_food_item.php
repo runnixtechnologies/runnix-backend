@@ -1,5 +1,8 @@
 <?php
 
+// Log that the script is starting
+error_log("UPDATE FOOD ITEM SCRIPT STARTED - " . date('Y-m-d H:i:s'));
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -17,6 +20,14 @@ header('Content-Type: application/json');
 error_log("=== UPDATE FOOD ITEM DEBUG ===");
 error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
 error_log("Content Type: " . ($_SERVER['CONTENT_TYPE'] ?? 'not set'));
+error_log("Request URI: " . $_SERVER['REQUEST_URI']);
+error_log("HTTP Method: " . $_SERVER['REQUEST_METHOD']);
+error_log("Script Name: " . $_SERVER['SCRIPT_NAME']);
+
+// Log all superglobals for debugging
+error_log("POST data: " . json_encode($_POST));
+error_log("GET data: " . json_encode($_GET));
+error_log("REQUEST data: " . json_encode($_REQUEST));
 error_log("Raw Input: " . file_get_contents("php://input"));
 
 $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
