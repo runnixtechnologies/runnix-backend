@@ -697,13 +697,20 @@ public function getByItemId($id, $store_id = null)
         $result['price'] = (float)$result['price'];
         $result['total_orders'] = (int)$result['total_orders'];
         
-        // Only include discount fields if there's an active discount with percentage > 0
-        if ($result['discount_percentage'] && $result['discount_percentage'] > 0) {
+        // Only include discount fields if there's an active discount with valid discount_id and percentage > 0
+        if ($result['discount_id'] && $result['discount_percentage'] && $result['discount_percentage'] > 0) {
             $result['discount_id'] = (int)$result['discount_id'];
             $result['percentage'] = (float)$result['discount_percentage'];
             $result['discount_price'] = (float)$result['calculated_discount_price'];
             $result['discount_start_date'] = $result['discount_start_date'];
             $result['discount_end_date'] = $result['discount_end_date'];
+        } else {
+            // Remove discount fields if no valid discount
+            unset($result['discount_id']);
+            unset($result['percentage']);
+            unset($result['discount_price']);
+            unset($result['discount_start_date']);
+            unset($result['discount_end_date']);
         }
         // Always remove the internal discount fields
         unset($result['discount_percentage']);
