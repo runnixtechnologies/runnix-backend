@@ -418,7 +418,7 @@ private function getFoodItemWithOptions($foodItemId)
 
 
     public function itemExists($id) {
-    $query = "SELECT COUNT(*) FROM food_items WHERE id = :id";
+    $query = "SELECT COUNT(*) FROM food_items WHERE id = :id AND deleted = 0";
     $stmt = $this->conn->prepare($query);
     $stmt->execute(['id' => $id]);
     return $stmt->fetchColumn() > 0;
