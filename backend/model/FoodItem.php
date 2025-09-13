@@ -436,7 +436,7 @@ private function getFoodItemWithOptions($foodItemId)
     {
         // First, get the basic food items
         $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
-                       fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at
+                       fi.short_description, fi.status, fi.deleted, fi.created_at, fi.updated_at
                 FROM {$this->table} fi
                 WHERE fi.store_id = :store_id AND fi.deleted = 0
                 ORDER BY fi.created_at DESC";
@@ -476,7 +476,6 @@ private function getFoodItemWithOptions($foodItemId)
         // Now enhance each result with discount, order and options information
         foreach ($results as &$result) {
             $result['price'] = (float)$result['price'];
-            $result['max_qty'] = (int)$result['max_qty'];
             
             // Get discount information for this food item
             $discountSql = "SELECT d.id, d.percentage, d.start_date, d.end_date, d.status
@@ -572,7 +571,7 @@ private function getFoodItemWithOptions($foodItemId)
 
             // Get sections with their config data and details using proper JOIN
             $sectionsConfigStmt = $this->conn->prepare("
-                SELECT 
+                SELECT DISTINCT
                     fs.section_id,
                     fsc.required,
                     fsc.max_quantity
@@ -644,7 +643,7 @@ private function getFoodItemWithOptions($foodItemId)
 public function getByItemId($id, $store_id = null)
 {
     $sql = "SELECT fi.id, fi.store_id, fi.category_id, fi.section_id, fi.user_id, fi.name, fi.price, fi.photo, 
-                   fi.short_description, fi.max_qty, fi.status, fi.deleted, fi.created_at, fi.updated_at,
+                   fi.short_description, fi.status, fi.deleted, fi.created_at, fi.updated_at,
                    d.id as discount_id,
                    d.percentage as discount_percentage,
                    d.start_date as discount_start_date,
@@ -677,7 +676,6 @@ public function getByItemId($id, $store_id = null)
     if ($result) {
         // Convert numeric fields to appropriate types
         $result['price'] = (float)$result['price'];
-        $result['max_qty'] = (int)$result['max_qty'];
         $result['total_orders'] = (int)$result['total_orders'];
         
         // Only include discount fields if there's an active discount with percentage > 0
@@ -748,7 +746,7 @@ public function getByItemId($id, $store_id = null)
 
         // Get sections with their config data and details using proper JOIN
         $sectionsConfigStmt = $this->conn->prepare("
-            SELECT 
+            SELECT DISTINCT
                 fs.section_id,
                 fsc.required,
                 fsc.max_quantity
