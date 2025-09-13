@@ -418,10 +418,29 @@ private function getFoodItemWithOptions($foodItemId)
 
 
     public function itemExists($id) {
+    error_log("=== FOOD ITEM MODEL itemExists DEBUG ===");
+    error_log("Checking if food item exists with ID: " . $id);
+    error_log("ID type: " . gettype($id));
+    
     $query = "SELECT COUNT(*) FROM food_items WHERE id = :id AND deleted = 0";
+    error_log("Executing query: " . $query . " with ID: " . $id);
+    
     $stmt = $this->conn->prepare($query);
     $stmt->execute(['id' => $id]);
-    return $stmt->fetchColumn() > 0;
+    $count = $stmt->fetchColumn();
+    
+    error_log("Query result count: " . $count);
+    $exists = $count > 0;
+    error_log("Item exists result: " . ($exists ? 'true' : 'false'));
+    
+    // Also check what items exist with this ID regardless of deleted status
+    $debugQuery = "SELECT id, name, deleted, store_id FROM food_items WHERE id = :id";
+    $debugStmt = $this->conn->prepare($debugQuery);
+    $debugStmt->execute(['id' => $id]);
+    $debugResult = $debugStmt->fetch(PDO::FETCH_ASSOC);
+    error_log("Debug - All items with this ID: " . json_encode($debugResult));
+    
+    return $exists;
 }
 
     public function isFoodOwnedByUser($id, $userId)

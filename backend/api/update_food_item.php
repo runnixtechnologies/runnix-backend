@@ -13,25 +13,62 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
+// Log the request method and content type
+error_log("=== UPDATE FOOD ITEM DEBUG ===");
+error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
+error_log("Content Type: " . ($_SERVER['CONTENT_TYPE'] ?? 'not set'));
+error_log("Raw Input: " . file_get_contents("php://input"));
+
 $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 if (stripos($contentType, 'application/json') !== false) {
     $data = json_decode(file_get_contents("php://input"), true) ?? [];
+    error_log("JSON Data received: " . json_encode($data));
 } elseif (stripos($contentType, 'multipart/form-data') !== false) {
     $data = $_POST;  // File will be in $_FILES
+    error_log("Form Data received: " . json_encode($data));
 } else {
     $data = $_POST;
+    error_log("Default POST Data received: " . json_encode($data));
 }
 
+error_log("Final processed data: " . json_encode($data));
 
-$user = authenticateRequest();
+try {
+    $user = authenticateRequest();
+    error_log("User authenticated: " . json_encode($user));
+} catch (Exception $e) {
+    error_log("Authentication failed: " . $e->getMessage());
+    http_response_code(401);
+    echo json_encode(['status' => 'error', 'message' => 'Authentication failed']);
+    exit;
+}
 
-// Validate ID
+// Validate ID with detailed logging
+error_log("Validating food item ID...");
+error_log("ID field exists: " . (isset($data['id']) ? 'yes' : 'no'));
+error_log("ID value: " . ($data['id'] ?? 'not set'));
+error_log("ID type: " . gettype($data['id'] ?? null));
+
 if (!isset($data['id']) || !is_numeric($data['id']) || $data['id'] <= 0) {
+    error_log("ID validation failed - ID: " . ($data['id'] ?? 'not set'));
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'Valid food item ID is required']);
     exit;
 }
 
-$controller = new FoodItemController();
-$response = $controller->update($data,$user);
-echo json_encode($response);
+error_log("ID validation passed: " . $data['id']);
+
+try {
+    $controller = new FoodItemController();
+    error_log("Controller created successfully");
+    
+    $response = $controller->update($data, $user);
+    error_log("Update response: " . json_encode($response));
+    
+    echo json_encode($response);
+} catch (Exception $e) {
+    error_log("Exception in update process: " . $e->getMessage());
+    error_log("Exception trace: " . $e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Internal server error during update']);
+}

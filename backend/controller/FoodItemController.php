@@ -500,29 +500,50 @@ class FoodItemController
 
    public function update($data, $user)
 {
+    error_log("=== FOOD ITEM CONTROLLER UPDATE DEBUG ===");
+    error_log("Update data received: " . json_encode($data));
+    error_log("User data: " . json_encode($user));
+    
     // Validate required fields
+    error_log("Checking if ID exists in data...");
     if (!isset($data['id']) || empty($data['id'])) {
+        error_log("ID validation failed - ID not set or empty");
         http_response_code(400);
         return ['status' => 'error', 'message' => 'Food item ID is required'];
     }
+    
+    error_log("ID found in data: " . $data['id']);
 
     // Check if item exists
-    if (!$this->foodItem->itemExists($data['id'])) {
+    error_log("Checking if item exists with ID: " . $data['id']);
+    $itemExists = $this->foodItem->itemExists($data['id']);
+    error_log("Item exists check result: " . ($itemExists ? 'true' : 'false'));
+    
+    if (!$itemExists) {
+        error_log("Item does not exist in database");
         http_response_code(404);
         return ['status' => 'error', 'message' => 'Food item does not exist in the DB'];
     }
 
     // Authorization check - verify the food item belongs to the user's store
+    error_log("Getting existing item details...");
     $existingItem = $this->foodItem->getById($data['id']);
+    error_log("Existing item: " . json_encode($existingItem));
+    
     if (!$existingItem) {
+        error_log("Could not retrieve existing item details");
         http_response_code(404);
         return ['status' => 'error', 'message' => 'Food item not found'];
     }
     
+    error_log("Checking store authorization - User store_id: " . $user['store_id'] . ", Item store_id: " . $existingItem['store_id']);
     if ($existingItem['store_id'] != $user['store_id']) {
+        error_log("Store authorization failed");
         http_response_code(403);
         return ["status" => "error", "message" => "Unauthorized to update this item."];
     }
+    
+    error_log("Authorization check passed");
 
     // Handle photo upload if new photo is provided
     $photo = null;
