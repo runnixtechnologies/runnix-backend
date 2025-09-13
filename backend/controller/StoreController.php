@@ -329,12 +329,19 @@ public function getActiveCategoriesByStoreType($user)
         }
         
         // Validate required fields
-        $requiredFields = ['store_name', 'biz_address', 'biz_phone', 'biz_reg_number'];
+        $requiredFields = ['store_name', 'biz_address', 'biz_email', 'biz_phone', 'biz_reg_number'];
         foreach ($requiredFields as $field) {
             if (!isset($data[$field]) || empty(trim($data[$field]))) {
                 http_response_code(400);
                 return ['status' => 'error', 'message' => "$field is required"];
             }
+        }
+        
+        // Validate email format
+        $email = trim($data['biz_email']);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid email format'];
         }
         
         // Validate phone number format
@@ -371,6 +378,11 @@ public function getActiveCategoriesByStoreType($user)
             return ['status' => 'error', 'message' => 'Store name already exists'];
         }
         
+        if ($this->store->storeFieldExists('biz_email', $email, $storeId)) {
+            http_response_code(409);
+            return ['status' => 'error', 'message' => 'Business email already exists'];
+        }
+        
         if ($this->store->storeFieldExists('biz_reg_number', $data['biz_reg_number'], $storeId)) {
             http_response_code(409);
             return ['status' => 'error', 'message' => 'Business registration number already exists'];
@@ -380,6 +392,7 @@ public function getActiveCategoriesByStoreType($user)
         $updateData = [
             'store_name' => trim($data['store_name']),
             'biz_address' => trim($data['biz_address']),
+            'biz_email' => $email,
             'biz_phone' => $formattedPhone,
             'biz_reg_number' => trim($data['biz_reg_number'])
         ];

@@ -233,6 +233,11 @@ class Store
                 $params['biz_address'] = $data['biz_address'];
             }
             
+            if (isset($data['biz_email'])) {
+                $updateFields[] = "biz_email = :biz_email";
+                $params['biz_email'] = $data['biz_email'];
+            }
+            
             if (isset($data['biz_phone'])) {
                 $updateFields[] = "biz_phone = :biz_phone";
                 $params['biz_phone'] = $data['biz_phone'];
