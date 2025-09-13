@@ -571,7 +571,7 @@ private function getFoodItemWithOptions($foodItemId)
 
             // Get sections with their config data and details using proper JOIN
             $sectionsConfigStmt = $this->conn->prepare("
-                SELECT DISTINCT
+                SELECT 
                     fs.section_id,
                     fsc.required,
                     fsc.max_quantity
@@ -582,38 +582,57 @@ private function getFoodItemWithOptions($foodItemId)
             $sectionsConfigStmt->execute(['item_id' => $result['id']]);
             $sectionsConfigRows = $sectionsConfigStmt->fetchAll(PDO::FETCH_ASSOC);
 
+            // Group sections by section_id to avoid duplicates
+            $sectionsGrouped = [];
+            foreach ($sectionsConfigRows as $row) {
+                $sectionId = $row['section_id'];
+                if (!isset($sectionsGrouped[$sectionId])) {
+                    $sectionsGrouped[$sectionId] = [
+                        'section_id' => $sectionId,
+                        'required' => (bool)($row['required'] ?? false),
+                        'max_quantity' => (int)($row['max_quantity'] ?? 0)
+                    ];
+                } else {
+                    // If there are multiple configs for the same section, use the most restrictive
+                    if ($row['required'] && !$sectionsGrouped[$sectionId]['required']) {
+                        $sectionsGrouped[$sectionId]['required'] = true;
+                    }
+                    if ($row['max_quantity'] > $sectionsGrouped[$sectionId]['max_quantity']) {
+                        $sectionsGrouped[$sectionId]['max_quantity'] = (int)$row['max_quantity'];
+                    }
+                }
+            }
+
             // Build sections with their associated items in the new preferred format
             $sectionsArray = [];
-            if (!empty($sectionsConfigRows)) {
-                foreach ($sectionsConfigRows as $row) {
-                    $sectionId = $row['section_id'];
-                    
-                    // Get section items with details for this specific section
-                    $sectionItemsSql = "SELECT fsi.id, fsi.name, fsi.price, fisi.extra_price
-                                       FROM food_item_section_items fisi 
-                                       JOIN food_section_items fsi ON fisi.section_item_id = fsi.id 
-                                       WHERE fisi.item_id = :item_id AND fsi.section_id = :section_id";
-                    $sectionItemsStmt = $this->conn->prepare($sectionItemsSql);
-                    $sectionItemsStmt->execute([
-                        'item_id' => $result['id'],
-                        'section_id' => $sectionId
-                    ]);
-                    $sectionItemsDetails = $sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC);
-                    
-                    $sectionsArray[] = [
-                        'section_id' => (int)$sectionId,
-                        'required' => (bool)($row['required'] ?? false),
-                        'max_quantity' => (int)($row['max_quantity'] ?? 0),
-                        'items' => array_map(function($item) {
-                            return [
-                                'id' => (int)$item['id'],
-                                'name' => $item['name'],
-                                'price' => (float)$item['price'],
-                                'extra_price' => (float)$item['extra_price']
-                            ];
-                        }, $sectionItemsDetails)
-                    ];
-                }
+            foreach ($sectionsGrouped as $sectionData) {
+                $sectionId = $sectionData['section_id'];
+                
+                // Get section items with details for this specific section
+                $sectionItemsSql = "SELECT fsi.id, fsi.name, fsi.price, fisi.extra_price
+                                   FROM food_item_section_items fisi 
+                                   JOIN food_section_items fsi ON fisi.section_item_id = fsi.id 
+                                   WHERE fisi.item_id = :item_id AND fsi.section_id = :section_id";
+                $sectionItemsStmt = $this->conn->prepare($sectionItemsSql);
+                $sectionItemsStmt->execute([
+                    'item_id' => $result['id'],
+                    'section_id' => $sectionId
+                ]);
+                $sectionItemsDetails = $sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                $sectionsArray[] = [
+                    'section_id' => (int)$sectionId,
+                    'required' => $sectionData['required'],
+                    'max_quantity' => $sectionData['max_quantity'],
+                    'items' => array_map(function($item) {
+                        return [
+                            'id' => (int)$item['id'],
+                            'name' => $item['name'],
+                            'price' => (float)$item['price'],
+                            'extra_price' => (float)$item['extra_price']
+                        ];
+                    }, $sectionItemsDetails)
+                ];
             }
             $result['sections'] = $sectionsArray;
 
@@ -746,7 +765,7 @@ public function getByItemId($id, $store_id = null)
 
         // Get sections with their config data and details using proper JOIN
         $sectionsConfigStmt = $this->conn->prepare("
-            SELECT DISTINCT
+            SELECT 
                 fs.section_id,
                 fsc.required,
                 fsc.max_quantity
@@ -757,38 +776,57 @@ public function getByItemId($id, $store_id = null)
         $sectionsConfigStmt->execute(['item_id' => $result['id']]);
         $sectionsConfigRows = $sectionsConfigStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Group sections by section_id to avoid duplicates
+        $sectionsGrouped = [];
+        foreach ($sectionsConfigRows as $row) {
+            $sectionId = $row['section_id'];
+            if (!isset($sectionsGrouped[$sectionId])) {
+                $sectionsGrouped[$sectionId] = [
+                    'section_id' => $sectionId,
+                    'required' => (bool)($row['required'] ?? false),
+                    'max_quantity' => (int)($row['max_quantity'] ?? 0)
+                ];
+            } else {
+                // If there are multiple configs for the same section, use the most restrictive
+                if ($row['required'] && !$sectionsGrouped[$sectionId]['required']) {
+                    $sectionsGrouped[$sectionId]['required'] = true;
+                }
+                if ($row['max_quantity'] > $sectionsGrouped[$sectionId]['max_quantity']) {
+                    $sectionsGrouped[$sectionId]['max_quantity'] = (int)$row['max_quantity'];
+                }
+            }
+        }
+
         // Build sections with their associated items in the new preferred format
         $sectionsArray = [];
-        if (!empty($sectionsConfigRows)) {
-            foreach ($sectionsConfigRows as $row) {
-                $sectionId = $row['section_id'];
-                
-                // Get section items with details for this specific section
-                $sectionItemsSql = "SELECT fsi.id, fsi.name, fsi.price, fisi.extra_price
-                                   FROM food_item_section_items fisi 
-                                   JOIN food_section_items fsi ON fisi.section_item_id = fsi.id 
-                                   WHERE fisi.item_id = :item_id AND fsi.section_id = :section_id";
-                $sectionItemsStmt = $this->conn->prepare($sectionItemsSql);
-                $sectionItemsStmt->execute([
-                    'item_id' => $result['id'],
-                    'section_id' => $sectionId
-                ]);
-                $sectionItemsDetails = $sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                $sectionsArray[] = [
-                    'section_id' => (int)$sectionId,
-                    'required' => (bool)($row['required'] ?? false),
-                    'max_quantity' => (int)($row['max_quantity'] ?? 0),
-                    'items' => array_map(function($item) {
-                        return [
-                            'id' => (int)$item['id'],
-                            'name' => $item['name'],
-                            'price' => (float)$item['price'],
-                            'extra_price' => (float)$item['extra_price']
-                        ];
-                    }, $sectionItemsDetails)
-                ];
-            }
+        foreach ($sectionsGrouped as $sectionData) {
+            $sectionId = $sectionData['section_id'];
+            
+            // Get section items with details for this specific section
+            $sectionItemsSql = "SELECT fsi.id, fsi.name, fsi.price, fisi.extra_price
+                               FROM food_item_section_items fisi 
+                               JOIN food_section_items fsi ON fisi.section_item_id = fsi.id 
+                               WHERE fisi.item_id = :item_id AND fsi.section_id = :section_id";
+            $sectionItemsStmt = $this->conn->prepare($sectionItemsSql);
+            $sectionItemsStmt->execute([
+                'item_id' => $result['id'],
+                'section_id' => $sectionId
+            ]);
+            $sectionItemsDetails = $sectionItemsStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $sectionsArray[] = [
+                'section_id' => (int)$sectionId,
+                'required' => $sectionData['required'],
+                'max_quantity' => $sectionData['max_quantity'],
+                'items' => array_map(function($item) {
+                    return [
+                        'id' => (int)$item['id'],
+                        'name' => $item['name'],
+                        'price' => (float)$item['price'],
+                        'extra_price' => (float)$item['extra_price']
+                    ];
+                }, $sectionItemsDetails)
+            ];
         }
         $result['sections'] = $sectionsArray;
 
