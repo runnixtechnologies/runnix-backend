@@ -575,7 +575,7 @@ private function getFoodItemWithOptions($foodItemId)
                     fs.section_id,
                     fsc.required,
                     fsc.max_quantity,
-                    fsections.name as section_name
+                    fsections.section_name
                 FROM food_item_sections fs
                 LEFT JOIN food_item_sections_config fsc ON fs.item_id = fsc.item_id
                 LEFT JOIN food_sections fsections ON fs.section_id = fsections.id
@@ -780,7 +780,7 @@ public function getByItemId($id, $store_id = null)
                 fs.section_id,
                 fsc.required,
                 fsc.max_quantity,
-                fsections.name as section_name
+                fsections.section_name
             FROM food_item_sections fs
             LEFT JOIN food_item_sections_config fsc ON fs.item_id = fsc.item_id
             LEFT JOIN food_sections fsections ON fs.section_id = fsections.id
