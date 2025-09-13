@@ -66,7 +66,26 @@ if (!$passwordValidation['valid']) {
 }
 
 // Check rate limit for password change attempts
-$rateLimitResult = checkOtpRateLimit($user['phone'] ?? $user['email'], $user['email'] ? 'email' : 'phone', 'password_change');
+// Get user's phone/email from database for rate limiting
+$userModel = new \Model\User();
+$userData = $userModel->getUserById($user['user_id']);
+
+if ($userData) {
+    $identifier = $userData['phone'] ?? $userData['email'] ?? null;
+    $identifierType = isset($userData['email']) ? 'email' : 'phone';
+    
+    if ($identifier) {
+        $rateLimitResult = checkOtpRateLimit($identifier, $identifierType, 'password_change');
+    } else {
+        // If no identifier available, skip rate limiting but log the issue
+        error_log("Warning: No phone or email found in user data for rate limiting");
+        $rateLimitResult = ['allowed' => true, 'details' => []];
+    }
+} else {
+    // If user not found, skip rate limiting
+    error_log("Warning: User not found for rate limiting");
+    $rateLimitResult = ['allowed' => true, 'details' => []];
+}
 
 // If rate limit check passed, proceed with password change
 $userController = new UserController();
@@ -74,11 +93,14 @@ $response = $userController->changePassword($user['user_id'], $currentPassword, 
 
 // Add rate limit info to response
 if ($response['status'] === 'success') {
+    $phoneDetails = $rateLimitResult['details']['phone'] ?? [];
+    $emailDetails = $rateLimitResult['details']['email'] ?? [];
+    
     $response['rate_limit'] = [
         'allowed' => true,
-        'current_count' => $rateLimitResult['details']['phone']['current_count'] ?? $rateLimitResult['details']['email']['current_count'] ?? 0,
-        'max_requests' => $rateLimitResult['details']['phone']['max_requests'] ?? $rateLimitResult['details']['email']['max_requests'] ?? 0,
-        'remaining_requests' => $rateLimitResult['details']['phone']['remaining_requests'] ?? $rateLimitResult['details']['email']['remaining_requests'] ?? 0
+        'current_count' => $phoneDetails['current_count'] ?? $emailDetails['current_count'] ?? 0,
+        'max_requests' => $phoneDetails['max_requests'] ?? $emailDetails['max_requests'] ?? 0,
+        'remaining_requests' => $phoneDetails['remaining_requests'] ?? $emailDetails['remaining_requests'] ?? 0
     ];
 }
 
