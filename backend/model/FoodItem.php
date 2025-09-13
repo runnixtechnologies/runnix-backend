@@ -574,12 +574,10 @@ private function getFoodItemWithOptions($foodItemId)
             $sectionsConfigStmt = $this->conn->prepare("
                 SELECT 
                     fs.section_id,
-                    fs_sections.name as section_name,
                     fsc.required,
                     fsc.max_quantity
                 FROM food_item_sections fs
                 LEFT JOIN food_item_sections_config fsc ON fs.item_id = fsc.item_id
-                LEFT JOIN food_sections fs_sections ON fs.section_id = fs_sections.id
                 WHERE fs.item_id = :item_id
             ");
             $sectionsConfigStmt->execute(['item_id' => $result['id']]);
@@ -605,7 +603,6 @@ private function getFoodItemWithOptions($foodItemId)
                     
                     $sectionsArray[] = [
                         'section_id' => (int)$sectionId,
-                        'section_name' => $row['section_name'],
                         'required' => (bool)($row['required'] ?? false),
                         'max_quantity' => (int)($row['max_quantity'] ?? 0),
                         'items' => array_map(function($item) {
@@ -753,12 +750,10 @@ public function getByItemId($id, $store_id = null)
         $sectionsConfigStmt = $this->conn->prepare("
             SELECT 
                 fs.section_id,
-                fs_sections.name as section_name,
                 fsc.required,
                 fsc.max_quantity
             FROM food_item_sections fs
             LEFT JOIN food_item_sections_config fsc ON fs.item_id = fsc.item_id
-            LEFT JOIN food_sections fs_sections ON fs.section_id = fs_sections.id
             WHERE fs.item_id = :item_id
         ");
         $sectionsConfigStmt->execute(['item_id' => $result['id']]);
@@ -784,7 +779,6 @@ public function getByItemId($id, $store_id = null)
                 
                 $sectionsArray[] = [
                     'section_id' => (int)$sectionId,
-                    'section_name' => $row['section_name'],
                     'required' => (bool)($row['required'] ?? false),
                     'max_quantity' => (int)($row['max_quantity'] ?? 0),
                     'items' => array_map(function($item) {
