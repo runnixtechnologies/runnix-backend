@@ -31,15 +31,40 @@ error_log("REQUEST data: " . json_encode($_REQUEST));
 error_log("Raw Input: " . file_get_contents("php://input"));
 
 $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-if (stripos($contentType, 'application/json') !== false) {
-    $data = json_decode(file_get_contents("php://input"), true) ?? [];
-    error_log("JSON Data received: " . json_encode($data));
-} elseif (stripos($contentType, 'multipart/form-data') !== false) {
-    $data = $_POST;  // File will be in $_FILES
-    error_log("Form Data received: " . json_encode($data));
+error_log("Processing request with Content-Type: " . $contentType);
+
+// Handle PUT requests properly
+if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    error_log("Processing PUT request");
+    if (stripos($contentType, 'application/json') !== false) {
+        $rawInput = file_get_contents("php://input");
+        error_log("Raw PUT input: " . $rawInput);
+        $data = json_decode($rawInput, true) ?? [];
+        error_log("Parsed JSON Data: " . json_encode($data));
+    } elseif (stripos($contentType, 'multipart/form-data') !== false) {
+        // For PUT with multipart/form-data, we need to parse it manually
+        $data = $_POST;
+        error_log("PUT Form Data received: " . json_encode($data));
+    } else {
+        // Try to parse as JSON for PUT requests
+        $rawInput = file_get_contents("php://input");
+        error_log("Raw PUT input (fallback): " . $rawInput);
+        $data = json_decode($rawInput, true) ?? [];
+        error_log("Parsed JSON Data (fallback): " . json_encode($data));
+    }
 } else {
-    $data = $_POST;
-    error_log("Default POST Data received: " . json_encode($data));
+    // Handle POST requests as before
+    error_log("Processing non-PUT request");
+    if (stripos($contentType, 'application/json') !== false) {
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+        error_log("JSON Data received: " . json_encode($data));
+    } elseif (stripos($contentType, 'multipart/form-data') !== false) {
+        $data = $_POST;  // File will be in $_FILES
+        error_log("Form Data received: " . json_encode($data));
+    } else {
+        $data = $_POST;
+        error_log("Default POST Data received: " . json_encode($data));
+    }
 }
 
 error_log("Final processed data: " . json_encode($data));
