@@ -778,11 +778,28 @@ class FoodItemController
         }
     }
 
-    // Use the enhanced update method
-    $result = $this->foodItem->updateWithOptions($data);
-    if ($result && isset($result['status']) && $result['status'] === 'success') {
+    // Prepare data for the basic update method
+    $updateData = [
+        'id' => $data['id'],
+        'store_id' => $existingItem['store_id'],
+        'name' => $data['name'] ?? $existingItem['name'],
+        'short_description' => $data['short_description'] ?? $existingItem['short_description'],
+        'price' => $data['price'] ?? $existingItem['price'],
+        'section_id' => $data['section_id'] ?? $existingItem['section_id'],
+        'status' => $data['status'] ?? $existingItem['status'] ?? 'active',
+        'photo' => $photo ?? $existingItem['photo']
+    ];
+    
+    error_log("Prepared update data: " . json_encode($updateData));
+    
+    // Use the basic update method
+    error_log("Calling foodItem->update() with data: " . json_encode($updateData));
+    $result = $this->foodItem->update($updateData);
+    error_log("Update result: " . json_encode($result));
+    
+    if ($result) {
         http_response_code(200); // OK
-        return $result;
+        return ['status' => 'success', 'message' => 'Food item updated successfully'];
     } else {
         http_response_code(500); // Internal Server Error
         return ['status' => 'error', 'message' => 'Failed to update food item'];
