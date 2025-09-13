@@ -364,13 +364,18 @@ private function getFoodItemWithOptions($foodItemId)
     public function update($data)
     {
         // Check if another item with the same name exists in the store (excluding current item)
+        error_log("Checking for duplicate name: " . $data['name'] . " in store: " . $data['store_id'] . " (excluding item: " . $data['id'] . ")");
         $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND name = :name AND id != :id AND deleted = 0");
         $nameCheck->execute([
             'store_id' => $data['store_id'],
             'name' => $data['name'],
             'id' => $data['id']
         ]);
-        if ($nameCheck->fetchColumn() > 0) {
+        $duplicateCount = $nameCheck->fetchColumn();
+        error_log("Duplicate name check result: " . $duplicateCount . " items found");
+        
+        if ($duplicateCount > 0) {
+            error_log("Duplicate name detected - throwing exception");
             throw new \Exception('Item with this name already exists in this store. Please choose a different name.');
         }
 

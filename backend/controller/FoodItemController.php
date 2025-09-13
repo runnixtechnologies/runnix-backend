@@ -794,15 +794,29 @@ class FoodItemController
     
     // Use the basic update method
     error_log("Calling foodItem->update() with data: " . json_encode($updateData));
-    $result = $this->foodItem->update($updateData);
-    error_log("Update result: " . json_encode($result));
     
-    if ($result) {
-        http_response_code(200); // OK
-        return ['status' => 'success', 'message' => 'Food item updated successfully'];
-    } else {
-        http_response_code(500); // Internal Server Error
-        return ['status' => 'error', 'message' => 'Failed to update food item'];
+    try {
+        $result = $this->foodItem->update($updateData);
+        error_log("Update result: " . json_encode($result));
+        
+        if ($result) {
+            http_response_code(200); // OK
+            return ['status' => 'success', 'message' => 'Food item updated successfully'];
+        } else {
+            http_response_code(500); // Internal Server Error
+            return ['status' => 'error', 'message' => 'Failed to update food item'];
+        }
+    } catch (Exception $e) {
+        error_log("Update exception: " . $e->getMessage());
+        
+        // Check if it's a duplicate name error
+        if (strpos($e->getMessage(), 'already exists') !== false) {
+            http_response_code(409); // Conflict
+            return ['status' => 'error', 'message' => 'A food item with this name already exists in your store. Please choose a different name.'];
+        } else {
+            http_response_code(500); // Internal Server Error
+            return ['status' => 'error', 'message' => 'Failed to update food item: ' . $e->getMessage()];
+        }
     }
 }
 
