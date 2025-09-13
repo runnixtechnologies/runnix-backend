@@ -42,9 +42,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         $data = json_decode($rawInput, true) ?? [];
         error_log("Parsed JSON Data: " . json_encode($data));
     } elseif (stripos($contentType, 'multipart/form-data') !== false) {
-        // For PUT with multipart/form-data, we need to parse it manually
-        $data = $_POST;
-        error_log("PUT Form Data received: " . json_encode($data));
+        // For PUT with multipart/form-data, we need to use $_REQUEST or parse manually
+        error_log("PUT request with multipart/form-data");
+        
+        // Check if data is available in $_REQUEST (works for some PHP configurations)
+        if (!empty($_REQUEST)) {
+            $data = $_REQUEST;
+            error_log("PUT Form Data from \$_REQUEST: " . json_encode($data));
+        } elseif (!empty($_POST)) {
+            $data = $_POST;
+            error_log("PUT Form Data from \$_POST: " . json_encode($data));
+        } else {
+            // Parse raw input manually for multipart/form-data
+            $rawInput = file_get_contents("php://input");
+            error_log("Raw PUT input for form-data: " . $rawInput);
+            
+            // Simple boundary detection and parsing
+            $boundary = null;
+            if (preg_match('/boundary=([^\s;]+)/', $contentType, $matches)) {
+                $boundary = '--' . $matches[1];
+                error_log("Detected boundary: " . $boundary);
+                
+                $parts = explode($boundary, $rawInput);
+                $data = [];
+                
+                foreach ($parts as $part) {
+                    if (preg_match('/name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
+                        $data[trim($matches[1])] = trim($matches[2]);
+                    }
+                }
+                error_log("Parsed form-data: " . json_encode($data));
+            } else {
+                error_log("Could not detect boundary, using empty data");
+                $data = [];
+            }
+        }
     } else {
         // Try to parse as JSON for PUT requests
         $rawInput = file_get_contents("php://input");
