@@ -574,9 +574,11 @@ private function getFoodItemWithOptions($foodItemId)
                 SELECT 
                     fs.section_id,
                     fsc.required,
-                    fsc.max_quantity
+                    fsc.max_quantity,
+                    fsections.name as section_name
                 FROM food_item_sections fs
                 LEFT JOIN food_item_sections_config fsc ON fs.item_id = fsc.item_id
+                LEFT JOIN food_sections fsections ON fs.section_id = fsections.id
                 WHERE fs.item_id = :item_id
             ");
             $sectionsConfigStmt->execute(['item_id' => $result['id']]);
@@ -589,6 +591,7 @@ private function getFoodItemWithOptions($foodItemId)
                 if (!isset($sectionsGrouped[$sectionId])) {
                     $sectionsGrouped[$sectionId] = [
                         'section_id' => $sectionId,
+                        'section_name' => $row['section_name'] ?? null,
                         'required' => (bool)($row['required'] ?? false),
                         'max_quantity' => (int)($row['max_quantity'] ?? 0)
                     ];
@@ -622,6 +625,7 @@ private function getFoodItemWithOptions($foodItemId)
                 
                 $sectionsArray[] = [
                     'section_id' => (int)$sectionId,
+                    'section_name' => $sectionData['section_name'],
                     'required' => $sectionData['required'],
                     'max_quantity' => $sectionData['max_quantity'],
                     'items' => array_map(function($item) {
@@ -775,9 +779,11 @@ public function getByItemId($id, $store_id = null)
             SELECT 
                 fs.section_id,
                 fsc.required,
-                fsc.max_quantity
+                fsc.max_quantity,
+                fsections.name as section_name
             FROM food_item_sections fs
             LEFT JOIN food_item_sections_config fsc ON fs.item_id = fsc.item_id
+            LEFT JOIN food_sections fsections ON fs.section_id = fsections.id
             WHERE fs.item_id = :item_id
         ");
         $sectionsConfigStmt->execute(['item_id' => $result['id']]);
@@ -790,6 +796,7 @@ public function getByItemId($id, $store_id = null)
             if (!isset($sectionsGrouped[$sectionId])) {
                 $sectionsGrouped[$sectionId] = [
                     'section_id' => $sectionId,
+                    'section_name' => $row['section_name'] ?? null,
                     'required' => (bool)($row['required'] ?? false),
                     'max_quantity' => (int)($row['max_quantity'] ?? 0)
                 ];
@@ -823,6 +830,7 @@ public function getByItemId($id, $store_id = null)
             
             $sectionsArray[] = [
                 'section_id' => (int)$sectionId,
+                'section_name' => $sectionData['section_name'],
                 'required' => $sectionData['required'],
                 'max_quantity' => $sectionData['max_quantity'],
                 'items' => array_map(function($item) {
