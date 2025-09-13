@@ -641,11 +641,12 @@ class FoodItemController
         error_log("Category info: " . json_encode($categoryInfo));
         
         // Check if category belongs to the store's type
+        error_log("Executing category validation query...");
         $categoryCheck = $this->conn->prepare("
             SELECT c.id FROM categories c 
             JOIN store_types st ON c.store_type_id = st.id 
             JOIN stores s ON s.store_type_id = st.id 
-            WHERE c.id = :category_id AND s.id = :store_id AND c.status = 'active'
+            WHERE c.id = :category_id AND s.id = :store_id AND (c.status = 'active' OR c.status = '1')
         ");
         $categoryCheck->execute([
             'category_id' => $data['category_id'],
@@ -654,6 +655,38 @@ class FoodItemController
         
         $categoryValid = $categoryCheck->fetchColumn();
         error_log("Category validation result: " . ($categoryValid ? 'valid' : 'invalid'));
+        
+        // Additional debugging: Check the relationship step by step
+        error_log("=== STEP-BY-STEP CATEGORY VALIDATION ===");
+        
+        // Step 1: Check if category exists and is active
+        $step1Query = "SELECT id, name, status, store_type_id FROM categories WHERE id = :category_id";
+        $step1Stmt = $this->conn->prepare($step1Query);
+        $step1Stmt->execute(['category_id' => $data['category_id']]);
+        $categoryDetails = $step1Stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("Step 1 - Category details: " . json_encode($categoryDetails));
+        
+        // Step 2: Check store details
+        $step2Query = "SELECT id, store_name, store_type_id FROM stores WHERE id = :store_id";
+        $step2Stmt = $this->conn->prepare($step2Query);
+        $step2Stmt->execute(['store_id' => $existingItem['store_id']]);
+        $storeDetails = $step2Stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("Step 2 - Store details: " . json_encode($storeDetails));
+        
+        // Step 3: Check if store types match
+        if ($categoryDetails && $storeDetails) {
+            $categoryStoreTypeId = $categoryDetails['store_type_id'];
+            $storeStoreTypeId = $storeDetails['store_type_id'];
+            error_log("Step 3 - Store type comparison:");
+            error_log("  Category store_type_id: " . $categoryStoreTypeId);
+            error_log("  Store store_type_id: " . $storeStoreTypeId);
+            error_log("  Match: " . ($categoryStoreTypeId == $storeStoreTypeId ? 'YES' : 'NO'));
+            
+            // Step 4: Check status specifically
+            error_log("Step 4 - Status check:");
+            error_log("  Category status: " . $categoryDetails['status']);
+            error_log("  Status is active: " . ($categoryDetails['status'] == 'active' || $categoryDetails['status'] == '1' ? 'YES' : 'NO'));
+        }
         
         if ($categoryValid == 0) {
             error_log("Category validation failed - Category ID: " . $data['category_id'] . ", Store ID: " . $existingItem['store_id'] . ", Store Type ID: " . $storeTypeId);
