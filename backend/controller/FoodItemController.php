@@ -545,6 +545,20 @@ class FoodItemController
     
     error_log("Authorization check passed");
 
+    // Log all the data being processed
+    error_log("=== UPDATE DATA PROCESSING ===");
+    error_log("Data keys: " . implode(', ', array_keys($data)));
+    error_log("Category ID in data: " . ($data['category_id'] ?? 'not set'));
+    error_log("Name in data: " . ($data['name'] ?? 'not set'));
+    error_log("Price in data: " . ($data['price'] ?? 'not set'));
+    
+    // Check if category_id is provided for update
+    if (!isset($data['category_id']) || empty($data['category_id'])) {
+        error_log("Category ID not provided in update data, skipping category validation");
+    } else {
+        error_log("Category ID provided, proceeding with validation");
+    }
+
     // Handle photo upload if new photo is provided
     $photo = null;
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
@@ -608,6 +622,25 @@ class FoodItemController
         }
 
         // Validate category exists, is active, and belongs to the merchant's store type
+        error_log("=== CATEGORY VALIDATION DEBUG ===");
+        error_log("Category ID to validate: " . $data['category_id']);
+        error_log("Store ID: " . $existingItem['store_id']);
+        
+        // First, let's check what store type this store has
+        $storeTypeQuery = "SELECT store_type_id FROM stores WHERE id = :store_id";
+        $storeTypeStmt = $this->conn->prepare($storeTypeQuery);
+        $storeTypeStmt->execute(['store_id' => $existingItem['store_id']]);
+        $storeTypeId = $storeTypeStmt->fetchColumn();
+        error_log("Store type ID: " . $storeTypeId);
+        
+        // Check if the category exists and is active
+        $categoryExistsQuery = "SELECT id, name, status, store_type_id FROM categories WHERE id = :category_id";
+        $categoryExistsStmt = $this->conn->prepare($categoryExistsQuery);
+        $categoryExistsStmt->execute(['category_id' => $data['category_id']]);
+        $categoryInfo = $categoryExistsStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("Category info: " . json_encode($categoryInfo));
+        
+        // Check if category belongs to the store's type
         $categoryCheck = $this->conn->prepare("
             SELECT c.id FROM categories c 
             JOIN store_types st ON c.store_type_id = st.id 
@@ -619,10 +652,16 @@ class FoodItemController
             'store_id' => $existingItem['store_id']
         ]);
         
-        if ($categoryCheck->fetchColumn() == 0) {
+        $categoryValid = $categoryCheck->fetchColumn();
+        error_log("Category validation result: " . ($categoryValid ? 'valid' : 'invalid'));
+        
+        if ($categoryValid == 0) {
+            error_log("Category validation failed - Category ID: " . $data['category_id'] . ", Store ID: " . $existingItem['store_id'] . ", Store Type ID: " . $storeTypeId);
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Invalid category ID. Please select an active category that belongs to your store type.'];
         }
+        
+        error_log("Category validation passed");
     }
 
     // Validate sides data if provided
