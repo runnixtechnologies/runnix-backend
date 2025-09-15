@@ -785,6 +785,7 @@ class FoodItemController
         'name' => $data['name'] ?? $existingItem['name'],
         'short_description' => $data['short_description'] ?? $existingItem['short_description'],
         'price' => $data['price'] ?? $existingItem['price'],
+        'category_id' => $data['category_id'] ?? $existingItem['category_id'], // Include category_id
         'section_id' => $data['section_id'] ?? $existingItem['section_id'],
         'status' => $data['status'] ?? $existingItem['status'] ?? 'active',
         'photo' => $photo ?? $existingItem['photo']

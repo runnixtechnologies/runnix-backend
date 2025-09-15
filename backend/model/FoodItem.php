@@ -388,6 +388,7 @@ private function getFoodItemWithOptions($foodItemId)
                         name = :name,
                         short_description = :short_description,
                         price = :price,
+                        category_id = :category_id,
                         section_id = :section_id,
                         status = :status,
                         updated_at = NOW()";
@@ -397,6 +398,7 @@ private function getFoodItemWithOptions($foodItemId)
             }
 
             $query .= " WHERE id = :id";
+            $categoryId = $data['category_id'] ?? null;
             $sectionId = $data['section_id'] ?? null;
 
             $stmt = $this->conn->prepare($query);
@@ -405,6 +407,7 @@ private function getFoodItemWithOptions($foodItemId)
             $stmt->bindParam(':name', $data['name']);
             $stmt->bindParam(':short_description', $data['short_description']);
             $stmt->bindParam(':price', $data['price']);
+            $stmt->bindParam(':category_id', $categoryId);
             $stmt->bindParam(':section_id', $sectionId);
             $stmt->bindParam(':status', $data['status']);
 
