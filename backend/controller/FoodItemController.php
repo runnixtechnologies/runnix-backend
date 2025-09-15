@@ -819,7 +819,16 @@ class FoodItemController
             return ['status' => 'error', 'message' => 'Failed to update food item'];
         }
     } catch (Exception $e) {
-        error_log("Update exception: " . $e->getMessage());
+        // Enhanced error logging for debugging
+        error_log("=== FOOD ITEM UPDATE ERROR ===");
+        error_log("Error Message: " . $e->getMessage());
+        error_log("Error File: " . $e->getFile());
+        error_log("Error Line: " . $e->getLine());
+        error_log("Error Trace: " . $e->getTraceAsString());
+        error_log("Update Data: " . json_encode($updateData));
+        error_log("Original Data: " . json_encode($data));
+        error_log("Existing Item: " . json_encode($existingItem));
+        error_log("=== END ERROR LOG ===");
         
         // Check if it's a duplicate name error
         if (strpos($e->getMessage(), 'already exists') !== false) {

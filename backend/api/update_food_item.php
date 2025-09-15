@@ -135,8 +135,18 @@ try {
     
     echo json_encode($response);
 } catch (Exception $e) {
-    error_log("Exception in update process: " . $e->getMessage());
-    error_log("Exception trace: " . $e->getTraceAsString());
+    // Enhanced error logging for debugging
+    error_log("=== UPDATE FOOD ITEM ENDPOINT ERROR ===");
+    error_log("Error Message: " . $e->getMessage());
+    error_log("Error File: " . $e->getFile());
+    error_log("Error Line: " . $e->getLine());
+    error_log("Error Trace: " . $e->getTraceAsString());
+    error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
+    error_log("Content Type: " . ($_SERVER['CONTENT_TYPE'] ?? 'not set'));
+    error_log("Final processed data: " . json_encode($data));
+    error_log("User data: " . json_encode($user ?? 'not set'));
+    error_log("=== END ENDPOINT ERROR LOG ===");
+    
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Internal server error during update']);
 }
