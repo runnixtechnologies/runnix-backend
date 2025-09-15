@@ -9,7 +9,17 @@ require_once '../middleware/authMiddleware.php';
 use Controller\ItemController;
 use function Middleware\authenticateRequest;
 
-header ('Content-Type: application/json');
+header('Content-Type: application/json');
+
+// Check if it's a PUT request
+if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+    http_response_code(405);
+    echo json_encode([
+        "status" => "error", 
+        "message" => "Method not allowed. Use PUT method."
+    ]);
+    exit;
+}
 
 $user = authenticateRequest();
 

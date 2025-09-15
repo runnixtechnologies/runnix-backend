@@ -11,6 +11,16 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
+// Check if it's a PUT request
+if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+    http_response_code(405);
+    echo json_encode([
+        "status" => "error", 
+        "message" => "Method not allowed. Use PUT method."
+    ]);
+    exit;
+}
+
 $data = json_decode(file_get_contents("php://input"), true) ?? [];
 $user = authenticateRequest();
 $controller = new PackController();

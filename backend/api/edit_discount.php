@@ -16,6 +16,16 @@ use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
+// Check if it's a PUT request
+if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+    http_response_code(405);
+    echo json_encode([
+        "status" => "error", 
+        "message" => "Method not allowed. Use PUT method."
+    ]);
+    exit;
+}
+
 // Log that the endpoint was hit
 error_log("=== EDIT DISCOUNT ENDPOINT HIT ===");
 error_log("Timestamp: " . date('Y-m-d H:i:s'));
