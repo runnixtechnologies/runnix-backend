@@ -55,37 +55,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     } elseif (stripos($contentType, 'multipart/form-data') !== false) {
         error_log("PUT request with multipart/form-data");
         
-        // Check if data is available in $_REQUEST (works for some PHP configurations)
-        if (!empty($_REQUEST)) {
-            $data = $_REQUEST;
-            error_log("PUT Form Data from \$_REQUEST: " . json_encode($data));
-        } elseif (!empty($_POST)) {
-            $data = $_POST;
-            error_log("PUT Form Data from \$_POST: " . json_encode($data));
-        } else {
-            // Parse raw input manually for multipart/form-data
-            $rawInput = file_get_contents("php://input");
-            error_log("Raw PUT input for form-data: " . $rawInput);
+        // For PUT with multipart/form-data, PHP doesn't populate $_POST automatically
+        // We need to parse the raw input manually
+        $rawInput = file_get_contents("php://input");
+        error_log("Raw PUT input for form-data: " . substr($rawInput, 0, 500) . "...");
+        
+        // Enhanced multipart parsing
+        $data = [];
+        $files = [];
+        
+        if (preg_match('/boundary=([^\s;]+)/', $contentType, $matches)) {
+            $boundary = '--' . $matches[1];
+            error_log("Detected boundary: " . $boundary);
             
-            // Simple boundary detection and parsing
-            $boundary = null;
-            if (preg_match('/boundary=([^\s;]+)/', $contentType, $matches)) {
-                $boundary = '--' . $matches[1];
-                error_log("Detected boundary: " . $boundary);
+            $parts = explode($boundary, $rawInput);
+            error_log("Number of parts: " . count($parts));
+            
+            foreach ($parts as $i => $part) {
+                if (empty(trim($part)) || $part === '--') continue;
                 
-                $parts = explode($boundary, $rawInput);
-                $data = [];
+                error_log("Processing part $i: " . substr($part, 0, 100) . "...");
                 
-                foreach ($parts as $part) {
-                    if (preg_match('/name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
-                        $data[trim($matches[1])] = trim($matches[2]);
-                    }
+                // Parse form field
+                if (preg_match('/name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
+                    $fieldName = trim($matches[1]);
+                    $fieldValue = trim($matches[2]);
+                    $data[$fieldName] = $fieldValue;
+                    error_log("Found field: $fieldName = $fieldValue");
                 }
-                error_log("Parsed form-data: " . json_encode($data));
-            } else {
-                error_log("Could not detect boundary, using empty data");
-                $data = [];
+                
+                // Parse file field
+                if (preg_match('/name="([^"]+)"; filename="([^"]*)"\s*\r?\nContent-Type:\s*([^\r\n]+)\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
+                    $fieldName = trim($matches[1]);
+                    $fileName = trim($matches[2]);
+                    $fileType = trim($matches[3]);
+                    $fileContent = $matches[4];
+                    
+                    // Create temporary file for uploaded content
+                    $tempFile = tempnam(sys_get_temp_dir(), 'put_upload_');
+                    file_put_contents($tempFile, $fileContent);
+                    
+                    $files[$fieldName] = [
+                        'name' => $fileName,
+                        'type' => $fileType,
+                        'tmp_name' => $tempFile,
+                        'error' => UPLOAD_ERR_OK,
+                        'size' => strlen($fileContent)
+                    ];
+                    
+                    error_log("Found file: $fieldName = $fileName ($fileType)");
+                }
             }
+            
+            // Add files to $_FILES superglobal for compatibility
+            if (!empty($files)) {
+                $_FILES = array_merge($_FILES, $files);
+                error_log("Added files to \$_FILES: " . json_encode(array_keys($files)));
+            }
+            
+            error_log("Parsed form-data: " . json_encode($data));
+        } else {
+            error_log("Could not detect boundary in Content-Type: " . $contentType);
+            $data = [];
         }
     } else {
         error_log("PUT request with unknown content type, trying JSON fallback");
@@ -123,12 +154,24 @@ error_log("Data type: " . gettype($data));
 error_log("Data count: " . (is_array($data) ? count($data) : 'not array'));
 error_log("Data keys: " . (is_array($data) ? implode(', ', array_keys($data)) : 'not array'));
 
-// Check if data is empty
+// Check if data is empty and try fallback parsing
 if (empty($data)) {
     error_log("ERROR: Data is empty after processing!");
-    http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'No data received in PUT request']);
-    exit;
+    
+    // Try to parse as JSON as a fallback
+    $rawInput = file_get_contents("php://input");
+    error_log("Attempting JSON fallback with raw input: " . substr($rawInput, 0, 200) . "...");
+    
+    $jsonData = json_decode($rawInput, true);
+    if (json_last_error() === JSON_ERROR_NONE && !empty($jsonData)) {
+        error_log("JSON fallback successful: " . json_encode($jsonData));
+        $data = $jsonData;
+    } else {
+        error_log("JSON fallback failed: " . json_last_error_msg());
+        http_response_code(400);
+        echo json_encode(['status' => 'error', 'message' => 'No data received in PUT request']);
+        exit;
+    }
 }
 
 try {
