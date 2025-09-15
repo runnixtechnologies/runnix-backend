@@ -15,16 +15,25 @@ class FCMService
 {
     private $messaging;
     private $config;
+    private $isConfigured = false;
     
     public function __construct()
     {
         $this->config = FCMConfig::getInstance();
         
         if (!$this->config->isConfigured()) {
-            throw new Exception('FCM is not properly configured. Please check your environment variables.');
+            error_log('FCM is not properly configured. Please check your environment variables.');
+            $this->isConfigured = false;
+            return; // Don't throw exception, just mark as not configured
         }
         
+        $this->isConfigured = true;
         $this->initializeFirebase();
+    }
+    
+    public function isConfigured()
+    {
+        return $this->isConfigured;
     }
     
     private function initializeFirebase()
@@ -57,6 +66,13 @@ class FCMService
      */
     public function sendToDevice($token, $title, $body, $data = [])
     {
+        if (!$this->isConfigured()) {
+            return [
+                'status' => 'error',
+                'message' => 'FCM is not properly configured. Please check your environment variables.'
+            ];
+        }
+        
         try {
             $message = CloudMessage::withTarget('token', $token)
                 ->withNotification(Notification::create($title, $body))
@@ -84,6 +100,13 @@ class FCMService
      */
     public function sendToMultipleDevices($tokens, $title, $body, $data = [])
     {
+        if (!$this->isConfigured()) {
+            return [
+                'status' => 'error',
+                'message' => 'FCM is not properly configured. Please check your environment variables.'
+            ];
+        }
+        
         try {
             $message = CloudMessage::new()
                 ->withNotification(Notification::create($title, $body))
@@ -113,6 +136,13 @@ class FCMService
      */
     public function sendToTopic($topic, $title, $body, $data = [])
     {
+        if (!$this->isConfigured()) {
+            return [
+                'status' => 'error',
+                'message' => 'FCM is not properly configured. Please check your environment variables.'
+            ];
+        }
+        
         try {
             $message = CloudMessage::withTarget('topic', $topic)
                 ->withNotification(Notification::create($title, $body))
@@ -140,6 +170,13 @@ class FCMService
      */
     public function sendWithAndroidConfig($token, $title, $body, $data = [], $androidConfig = [])
     {
+        if (!$this->isConfigured()) {
+            return [
+                'status' => 'error',
+                'message' => 'FCM is not properly configured. Please check your environment variables.'
+            ];
+        }
+        
         try {
             $message = CloudMessage::withTarget('token', $token)
                 ->withNotification(Notification::create($title, $body))
@@ -172,6 +209,13 @@ class FCMService
      */
     public function sendWithIOSConfig($token, $title, $body, $data = [], $iosConfig = [])
     {
+        if (!$this->isConfigured()) {
+            return [
+                'status' => 'error',
+                'message' => 'FCM is not properly configured. Please check your environment variables.'
+            ];
+        }
+        
         try {
             $message = CloudMessage::withTarget('token', $token)
                 ->withNotification(Notification::create($title, $body))
@@ -204,6 +248,13 @@ class FCMService
      */
     public function subscribeToTopic($tokens, $topic)
     {
+        if (!$this->isConfigured()) {
+            return [
+                'status' => 'error',
+                'message' => 'FCM is not properly configured. Please check your environment variables.'
+            ];
+        }
+        
         try {
             $result = $this->messaging->subscribeToTopic($topic, $tokens);
             
@@ -228,6 +279,13 @@ class FCMService
      */
     public function unsubscribeFromTopic($tokens, $topic)
     {
+        if (!$this->isConfigured()) {
+            return [
+                'status' => 'error',
+                'message' => 'FCM is not properly configured. Please check your environment variables.'
+            ];
+        }
+        
         try {
             $result = $this->messaging->unsubscribeFromTopic($topic, $tokens);
             
@@ -252,6 +310,13 @@ class FCMService
      */
     public function validateToken($token)
     {
+        if (!$this->isConfigured()) {
+            return [
+                'status' => 'error',
+                'message' => 'FCM is not properly configured. Please check your environment variables.'
+            ];
+        }
+        
         try {
             // Try to send a test message to validate the token
             $message = CloudMessage::withTarget('token', $token)
