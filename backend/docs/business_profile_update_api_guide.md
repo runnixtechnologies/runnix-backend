@@ -90,13 +90,21 @@ Content-Type: application/json
 Authorization: Bearer <jwt_token>
 ```
 
-**Request Body**:
+**Request Body** (all fields are optional - provide only what you want to update):
 ```json
 {
     "store_name": "Palmy Mart",
     "biz_address": "103 Kishi-Iseyin Road, Kishi, Ilorin",
+    "biz_email": "contact@palmymart.com",
     "biz_phone": "08102940964",
     "biz_reg_number": "RN5344949309"
+}
+```
+
+**Example - Update only address**:
+```json
+{
+    "biz_address": "New Address Here"
 }
 ```
 
@@ -130,35 +138,45 @@ Authorization: Bearer <jwt_token>
 3. **User receives OTP** via SMS
 4. **User enters OTP** in the verification modal
 5. **Verify OTP**: Call `POST /api/verify_otp.php` with phone and OTP
-6. **Submit form**: Call `PUT /api/update_business_profile.php` with all form data
+6. **Submit form**: Call `PUT /api/update_business_profile.php` with only the fields you want to update
 
 ### For Other Field Changes:
 
 1. **User updates fields** (store name, address, registration number)
-2. **Submit form**: Call `PUT /api/update_business_profile.php` with all form data
+2. **Submit form**: Call `PUT /api/update_business_profile.php` with only the fields you want to update
 
 ## Validation Rules
 
+### All Fields Are Optional
+- **At least one field must be provided** for update
+- Only provided fields will be validated and updated
+- Fields not provided will remain unchanged
+
 ### Store Name
-- Required field
-- Must be unique across all stores
-- Trimmed of whitespace
+- Optional field
+- Must be unique across all stores (if provided)
+- Trimmed of whitespace (if provided)
 
 ### Business Address
-- Required field
-- Trimmed of whitespace
+- Optional field
+- Trimmed of whitespace (if provided)
+
+### Business Email
+- Optional field
+- Must be valid email format (if provided)
+- Must be unique across all stores (if provided)
 
 ### Business Phone Number
-- Required field
-- Must be 10 or 11 digits (Nigerian format)
+- Optional field
+- Must be 10 or 11 digits (Nigerian format) (if provided)
 - Automatically formatted to international format (234XXXXXXXXXX)
-- Must be unique across all stores
+- Must be unique across all stores (if provided)
 - Requires OTP verification if changed
 
 ### Business Registration Number
-- Required field
-- Must be unique across all stores
-- Trimmed of whitespace
+- Optional field
+- Must be unique across all stores (if provided)
+- Trimmed of whitespace (if provided)
 
 ## Security Features
 

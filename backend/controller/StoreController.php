@@ -328,74 +328,109 @@ public function getActiveCategoriesByStoreType($user)
             return ['status' => 'error', 'message' => 'Unauthorized access to store.'];
         }
         
-        // Validate required fields
-        $requiredFields = ['store_name', 'biz_address', 'biz_email', 'biz_phone', 'biz_reg_number'];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field]) || empty(trim($data[$field]))) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => "$field is required"];
+        // Check if at least one field is provided for update
+        $updatableFields = ['store_name', 'biz_address', 'biz_email', 'biz_phone', 'biz_reg_number'];
+        $hasFieldsToUpdate = false;
+        foreach ($updatableFields as $field) {
+            if (isset($data[$field]) && !empty(trim($data[$field]))) {
+                $hasFieldsToUpdate = true;
+                break;
             }
         }
         
-        // Validate email format
-        $email = trim($data['biz_email']);
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (!$hasFieldsToUpdate) {
             http_response_code(400);
-            return ['status' => 'error', 'message' => 'Invalid email format'];
+            return ['status' => 'error', 'message' => 'At least one field must be provided for update'];
         }
         
-        // Validate phone number format
-        $phone = $data['biz_phone'];
-        if (!preg_match('/^0?\d{10}$/', $phone)) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Invalid phone number format. Use 10 or 11 digits.'];
+        // Validate email format (only if email is provided)
+        $email = null;
+        if (isset($data['biz_email']) && !empty(trim($data['biz_email']))) {
+            $email = trim($data['biz_email']);
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Invalid email format'];
+            }
         }
         
-        // Format phone number to international format
-        $formattedPhone = '234' . ltrim($phone, '0');
-        
-        // Check if phone number is being changed
-        $phoneChanged = $store['biz_phone'] !== $formattedPhone;
-        
-        if ($phoneChanged) {
-            // Check if new phone number already exists
-            if ($this->store->storeFieldExists('biz_phone', $formattedPhone, $storeId)) {
-                http_response_code(409);
-                return ['status' => 'error', 'message' => 'Business phone number already exists'];
+        // Validate phone number format (only if phone is provided)
+        $formattedPhone = null;
+        if (isset($data['biz_phone']) && !empty(trim($data['biz_phone']))) {
+            $phone = $data['biz_phone'];
+            if (!preg_match('/^0?\d{10}$/', $phone)) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Invalid phone number format. Use 10 or 11 digits.'];
             }
             
-            // Check if OTP was verified for phone change
-            $otpModel = new \Model\Otp();
-            if (!$otpModel->isOtpVerified($formattedPhone, 'business_phone_update')) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Phone number OTP not verified. Please verify OTP before updating.'];
+            // Format phone number to international format
+            $formattedPhone = '234' . ltrim($phone, '0');
+        }
+        
+        // Check if phone number is being changed (only if phone is provided)
+        $phoneChanged = false;
+        if ($formattedPhone !== null) {
+            $phoneChanged = $store['biz_phone'] !== $formattedPhone;
+            
+            if ($phoneChanged) {
+                // Check if new phone number already exists
+                if ($this->store->storeFieldExists('biz_phone', $formattedPhone, $storeId)) {
+                    http_response_code(409);
+                    return ['status' => 'error', 'message' => 'Business phone number already exists'];
+                }
+                
+                // Check if OTP was verified for phone change
+                $otpModel = new \Model\Otp();
+                if (!$otpModel->isOtpVerified($formattedPhone, 'business_phone_update')) {
+                    http_response_code(400);
+                    return ['status' => 'error', 'message' => 'Phone number OTP not verified. Please verify OTP before updating.'];
+                }
             }
         }
         
-        // Check for other field uniqueness
-        if ($this->store->storeFieldExists('store_name', $data['store_name'], $storeId)) {
-            http_response_code(409);
-            return ['status' => 'error', 'message' => 'Store name already exists'];
+        // Check for field uniqueness (only for provided fields)
+        if (isset($data['store_name']) && !empty(trim($data['store_name']))) {
+            if ($this->store->storeFieldExists('store_name', $data['store_name'], $storeId)) {
+                http_response_code(409);
+                return ['status' => 'error', 'message' => 'Store name already exists'];
+            }
         }
         
-        if ($this->store->storeFieldExists('biz_email', $email, $storeId)) {
-            http_response_code(409);
-            return ['status' => 'error', 'message' => 'Business email already exists'];
+        if ($email !== null) {
+            if ($this->store->storeFieldExists('biz_email', $email, $storeId)) {
+                http_response_code(409);
+                return ['status' => 'error', 'message' => 'Business email already exists'];
+            }
         }
         
-        if ($this->store->storeFieldExists('biz_reg_number', $data['biz_reg_number'], $storeId)) {
-            http_response_code(409);
-            return ['status' => 'error', 'message' => 'Business registration number already exists'];
+        if (isset($data['biz_reg_number']) && !empty(trim($data['biz_reg_number']))) {
+            if ($this->store->storeFieldExists('biz_reg_number', $data['biz_reg_number'], $storeId)) {
+                http_response_code(409);
+                return ['status' => 'error', 'message' => 'Business registration number already exists'];
+            }
         }
         
-        // Prepare update data
-        $updateData = [
-            'store_name' => trim($data['store_name']),
-            'biz_address' => trim($data['biz_address']),
-            'biz_email' => $email,
-            'biz_phone' => $formattedPhone,
-            'biz_reg_number' => trim($data['biz_reg_number'])
-        ];
+        // Prepare update data (only include provided fields)
+        $updateData = [];
+        
+        if (isset($data['store_name']) && !empty(trim($data['store_name']))) {
+            $updateData['store_name'] = trim($data['store_name']);
+        }
+        
+        if (isset($data['biz_address']) && !empty(trim($data['biz_address']))) {
+            $updateData['biz_address'] = trim($data['biz_address']);
+        }
+        
+        if ($email !== null) {
+            $updateData['biz_email'] = $email;
+        }
+        
+        if ($formattedPhone !== null) {
+            $updateData['biz_phone'] = $formattedPhone;
+        }
+        
+        if (isset($data['biz_reg_number']) && !empty(trim($data['biz_reg_number']))) {
+            $updateData['biz_reg_number'] = trim($data['biz_reg_number']);
+        }
         
         // Update store profile
         $result = $this->store->updateStoreProfile($storeId, $updateData);
