@@ -26,9 +26,14 @@ echo "\n2. Checking environment configuration...\n";
 
 // Load .env file if it exists
 if (file_exists(__DIR__ . '/.env')) {
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-    $dotenv->load();
-    echo "   ✅ .env file found\n";
+    try {
+        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+        $dotenv->load();
+        echo "   ✅ .env file found and loaded\n";
+    } catch (\Exception $e) {
+        echo "   ❌ .env file found but has errors: " . $e->getMessage() . "\n";
+        echo "   Please fix the .env file format\n";
+    }
 } else {
     echo "   ⚠️  .env file not found\n";
     echo "   Create .env file with FCM configuration\n";

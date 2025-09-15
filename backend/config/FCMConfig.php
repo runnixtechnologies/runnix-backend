@@ -13,10 +13,15 @@ class FCMConfig
     
     private function __construct()
     {
-        // Load .env file from project root
+        // Load .env file from project root with error handling
         if (file_exists(__DIR__ . '/../../.env')) {
-            $dotenv = Dotenv::createImmutable(dirname(dirname(__DIR__)));
-            $dotenv->load();
+            try {
+                $dotenv = Dotenv::createImmutable(dirname(dirname(__DIR__)));
+                $dotenv->load();
+            } catch (\Exception $e) {
+                error_log("Failed to load .env file: " . $e->getMessage());
+                // Continue without .env file - use default values
+            }
         }
         
         $this->serverKey = $_ENV['FCM_SERVER_KEY'] ?? null;

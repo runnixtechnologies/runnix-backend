@@ -14,10 +14,15 @@ class JwtHandler {
     private $conn;
 
     public function __construct() {
-        // Load .env file
+        // Load .env file with error handling
         if (file_exists(__DIR__ . '/../.env')) {
-            $dotenv = Dotenv::createImmutable(dirname(__DIR__));
-            $dotenv->load();
+            try {
+                $dotenv = Dotenv::createImmutable(dirname(__DIR__));
+                $dotenv->load();
+            } catch (\Exception $e) {
+                error_log("Failed to load .env file in JwtHandler: " . $e->getMessage());
+                // Continue without .env file - use default values
+            }
         }
 
         $this->secret = $_ENV['JWT_SECRET'] ?? 'fallback_secret_key';
