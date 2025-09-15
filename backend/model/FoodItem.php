@@ -363,53 +363,154 @@ private function getFoodItemWithOptions($foodItemId)
     // Update Food Item
     public function update($data)
     {
-        // Check if another item with the same name exists in the store (excluding current item)
-        error_log("Checking for duplicate name: " . $data['name'] . " in store: " . $data['store_id'] . " (excluding item: " . $data['id'] . ")");
-        $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND name = :name AND id != :id AND deleted = 0");
-        $nameCheck->execute([
-            'store_id' => $data['store_id'],
-            'name' => $data['name'],
-            'id' => $data['id']
-        ]);
-        $duplicateCount = $nameCheck->fetchColumn();
-        error_log("Duplicate name check result: " . $duplicateCount . " items found");
-        
-        if ($duplicateCount > 0) {
-            error_log("Duplicate name detected - throwing exception");
-            throw new \Exception('Item with this name already exists in this store. Please choose a different name.');
+        try {
+            // Begin transaction
+            $this->conn->beginTransaction();
+
+            // Check if another item with the same name exists in the store (excluding current item)
+            error_log("Checking for duplicate name: " . $data['name'] . " in store: " . $data['store_id'] . " (excluding item: " . $data['id'] . ")");
+            $nameCheck = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE store_id = :store_id AND name = :name AND id != :id AND deleted = 0");
+            $nameCheck->execute([
+                'store_id' => $data['store_id'],
+                'name' => $data['name'],
+                'id' => $data['id']
+            ]);
+            $duplicateCount = $nameCheck->fetchColumn();
+            error_log("Duplicate name check result: " . $duplicateCount . " items found");
+            
+            if ($duplicateCount > 0) {
+                error_log("Duplicate name detected - throwing exception");
+                throw new \Exception('Item with this name already exists in this store. Please choose a different name.');
+            }
+
+            // Update basic food item fields
+            $query = "UPDATE food_items SET 
+                        name = :name,
+                        short_description = :short_description,
+                        price = :price,
+                        section_id = :section_id,
+                        status = :status,
+                        updated_at = NOW()";
+
+            if (!empty($data['photo'])) {
+                $query .= ", photo = :photo";
+            }
+
+            $query .= " WHERE id = :id";
+            $sectionId = $data['section_id'] ?? null;
+
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindParam(':id', $data['id']);
+            $stmt->bindParam(':name', $data['name']);
+            $stmt->bindParam(':short_description', $data['short_description']);
+            $stmt->bindParam(':price', $data['price']);
+            $stmt->bindParam(':section_id', $sectionId);
+            $stmt->bindParam(':status', $data['status']);
+
+            if (!empty($data['photo'])) {
+                $stmt->bindParam(':photo', $data['photo']);
+            }
+
+            $stmt->execute();
+
+            // Handle sides if provided
+            if (isset($data['sides']) && is_array($data['sides'])) {
+                error_log("Updating sides for food item: " . $data['id']);
+                $this->updateFoodItemSides($data['id'], $data['sides']);
+            }
+
+            // Handle packs if provided
+            if (isset($data['packs']) && is_array($data['packs'])) {
+                error_log("Updating packs for food item: " . $data['id']);
+                $this->updateFoodItemPacks($data['id'], $data['packs']);
+            }
+
+            // Handle sections if provided
+            if (isset($data['sections']) && is_array($data['sections'])) {
+                error_log("Updating sections for food item: " . $data['id']);
+                $this->updateFoodItemSections($data['id'], $data['sections']);
+            }
+
+            // Commit transaction
+            $this->conn->commit();
+            return true;
+
+        } catch (\Exception $e) {
+            // Rollback on error
+            $this->conn->rollback();
+            error_log("Update error: " . $e->getMessage());
+            throw $e;
         }
+    }
 
-        $query = "UPDATE food_items SET 
-                    name = :name,
-                    short_description = :short_description,
-                    price = :price,
-                    section_id = :section_id, -- added section_id here
-                    status = :status,
-                    updated_at = NOW()";
+    // Helper method to update food item sides
+    private function updateFoodItemSides($foodItemId, $sidesData)
+    {
+        // First, delete existing sides relationships
+        $deleteConfigSql = "DELETE FROM food_item_sides_config WHERE item_id = :item_id";
+        $deleteConfigStmt = $this->conn->prepare($deleteConfigSql);
+        $deleteConfigStmt->execute(['item_id' => $foodItemId]);
 
-        if (!empty($data['photo'])) {
-            $query .= ", photo = :photo";
+        $deleteSidesSql = "DELETE FROM food_item_sides WHERE item_id = :item_id";
+        $deleteSidesStmt = $this->conn->prepare($deleteSidesSql);
+        $deleteSidesStmt->execute(['item_id' => $foodItemId]);
+
+        // Check if it's the structured format (object with required, max_quantity, items)
+        if (isset($sidesData['required']) || isset($sidesData['max_quantity']) || isset($sidesData['items'])) {
+            // Structured format - create new config and relationships
+            $this->createFoodItemSidesWithConfig($foodItemId, $sidesData);
+        } else {
+            // Simple format - array of side IDs
+            $this->createFoodItemSidesFromArray($foodItemId, $sidesData);
         }
+    }
 
-        $query .= " WHERE id = :id";
-        $sectionId = $data['section_id'] ?? null;
+    // Helper method to update food item packs
+    private function updateFoodItemPacks($foodItemId, $packsData)
+    {
+        // First, delete existing packs relationships
+        $deleteConfigSql = "DELETE FROM food_item_packs_config WHERE item_id = :item_id";
+        $deleteConfigStmt = $this->conn->prepare($deleteConfigSql);
+        $deleteConfigStmt->execute(['item_id' => $foodItemId]);
 
-        $stmt = $this->conn->prepare($query);
+        $deletePacksSql = "DELETE FROM food_item_packs WHERE item_id = :item_id";
+        $deletePacksStmt = $this->conn->prepare($deletePacksSql);
+        $deletePacksStmt->execute(['item_id' => $foodItemId]);
 
-        $stmt->bindParam(':id', $data['id']);
-        $stmt->bindParam(':name', $data['name']);
-        $stmt->bindParam(':short_description', $data['short_description']);
-        $stmt->bindParam(':price', $data['price']);
-
-        $stmt->bindParam(':section_id', $sectionId);
-
-        $stmt->bindParam(':status', $data['status']);
-
-        if (!empty($data['photo'])) {
-            $stmt->bindParam(':photo', $data['photo']);
+        // Check if it's the structured format (object with required, max_quantity, items)
+        if (isset($packsData['required']) || isset($packsData['max_quantity']) || isset($packsData['items'])) {
+            // Structured format - create new config and relationships
+            $this->createFoodItemPacksWithConfig($foodItemId, $packsData);
+        } else {
+            // Simple format - array of pack IDs
+            $this->createFoodItemPacksFromArray($foodItemId, $packsData);
         }
+    }
 
-        return $stmt->execute();
+    // Helper method to update food item sections
+    private function updateFoodItemSections($foodItemId, $sectionsData)
+    {
+        // First, delete existing sections relationships
+        $deleteConfigSql = "DELETE FROM food_item_sections_config WHERE item_id = :item_id";
+        $deleteConfigStmt = $this->conn->prepare($deleteConfigSql);
+        $deleteConfigStmt->execute(['item_id' => $foodItemId]);
+
+        $deleteSectionsSql = "DELETE FROM food_item_sections WHERE item_id = :item_id";
+        $deleteSectionsStmt = $this->conn->prepare($deleteSectionsSql);
+        $deleteSectionsStmt->execute(['item_id' => $foodItemId]);
+
+        // Check if it's the new preferred format (array of section objects)
+        if (isset($sectionsData[0]) && is_array($sectionsData[0]) && isset($sectionsData[0]['section_id'])) {
+            // New preferred format - array of section objects
+            $this->createFoodItemSectionsWithItems($foodItemId, $sectionsData);
+        } elseif (isset($sectionsData['required']) || isset($sectionsData['max_quantity']) || isset($sectionsData['items'])) {
+            // Legacy format - single object with items array
+            $this->createFoodItemSectionsWithConfig($foodItemId, $sectionsData);
+        } else {
+            // Legacy format - array of objects with id
+            $this->createFoodItemSectionsFromArray($foodItemId, $sectionsData);
+        }
     }
 
 

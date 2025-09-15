@@ -778,7 +778,7 @@ class FoodItemController
         }
     }
 
-    // Prepare data for the basic update method
+    // Prepare data for the update method
     $updateData = [
         'id' => $data['id'],
         'store_id' => $existingItem['store_id'],
@@ -789,10 +789,21 @@ class FoodItemController
         'status' => $data['status'] ?? $existingItem['status'] ?? 'active',
         'photo' => $photo ?? $existingItem['photo']
     ];
+
+    // Add sides, packs, and sections if provided
+    if (isset($data['sides'])) {
+        $updateData['sides'] = $data['sides'];
+    }
+    if (isset($data['packs'])) {
+        $updateData['packs'] = $data['packs'];
+    }
+    if (isset($data['sections'])) {
+        $updateData['sections'] = $data['sections'];
+    }
     
     error_log("Prepared update data: " . json_encode($updateData));
     
-    // Use the basic update method
+    // Use the enhanced update method (now handles sides, packs, sections)
     error_log("Calling foodItem->update() with data: " . json_encode($updateData));
     
     try {
