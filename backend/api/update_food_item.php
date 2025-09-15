@@ -35,14 +35,24 @@ error_log("Processing request with Content-Type: " . $contentType);
 
 // Handle PUT requests properly
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-    error_log("Processing PUT request");
+    error_log("=== PROCESSING PUT REQUEST ===");
+    error_log("Content-Type: " . $contentType);
+    error_log("Content-Length: " . ($_SERVER['CONTENT_LENGTH'] ?? 'not set'));
+    
     if (stripos($contentType, 'application/json') !== false) {
+        error_log("PUT request with application/json");
         $rawInput = file_get_contents("php://input");
         error_log("Raw PUT input: " . $rawInput);
-        $data = json_decode($rawInput, true) ?? [];
-        error_log("Parsed JSON Data: " . json_encode($data));
+        $data = json_decode($rawInput, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON decode error: " . json_last_error_msg());
+            error_log("Raw input that failed to decode: " . $rawInput);
+            $data = [];
+        } else {
+            error_log("Parsed JSON Data: " . json_encode($data));
+        }
     } elseif (stripos($contentType, 'multipart/form-data') !== false) {
-        // For PUT with multipart/form-data, we need to use $_REQUEST or parse manually
         error_log("PUT request with multipart/form-data");
         
         // Check if data is available in $_REQUEST (works for some PHP configurations)
@@ -78,12 +88,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             }
         }
     } else {
+        error_log("PUT request with unknown content type, trying JSON fallback");
         // Try to parse as JSON for PUT requests
         $rawInput = file_get_contents("php://input");
         error_log("Raw PUT input (fallback): " . $rawInput);
-        $data = json_decode($rawInput, true) ?? [];
-        error_log("Parsed JSON Data (fallback): " . json_encode($data));
+        $data = json_decode($rawInput, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON decode error (fallback): " . json_last_error_msg());
+            $data = [];
+        } else {
+            error_log("Parsed JSON Data (fallback): " . json_encode($data));
+        }
     }
+    
+    error_log("=== END PUT PROCESSING ===");
 } else {
     // Handle POST requests as before
     error_log("Processing non-PUT request");
@@ -100,12 +119,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 }
 
 error_log("Final processed data: " . json_encode($data));
+error_log("Data type: " . gettype($data));
+error_log("Data count: " . (is_array($data) ? count($data) : 'not array'));
+error_log("Data keys: " . (is_array($data) ? implode(', ', array_keys($data)) : 'not array'));
+
+// Check if data is empty
+if (empty($data)) {
+    error_log("ERROR: Data is empty after processing!");
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'No data received in PUT request']);
+    exit;
+}
 
 try {
+    error_log("Attempting authentication...");
     $user = authenticateRequest();
-    error_log("User authenticated: " . json_encode($user));
+    error_log("User authenticated successfully: " . json_encode($user));
 } catch (Exception $e) {
     error_log("Authentication failed: " . $e->getMessage());
+    error_log("Authentication error trace: " . $e->getTraceAsString());
     http_response_code(401);
     echo json_encode(['status' => 'error', 'message' => 'Authentication failed']);
     exit;
@@ -127,8 +159,13 @@ if (!isset($data['id']) || !is_numeric($data['id']) || $data['id'] <= 0) {
 error_log("ID validation passed: " . $data['id']);
 
 try {
+    error_log("Creating FoodItemController...");
     $controller = new FoodItemController();
     error_log("Controller created successfully");
+    
+    error_log("Calling controller->update() with:");
+    error_log("  Data: " . json_encode($data));
+    error_log("  User: " . json_encode($user));
     
     $response = $controller->update($data, $user);
     error_log("Update response: " . json_encode($response));
