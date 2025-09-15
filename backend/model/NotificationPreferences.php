@@ -300,32 +300,11 @@ class NotificationPreferences
     public function resetToDefault($userId, $userType)
     {
         try {
+            // Reset only the channel-level preferences to default
             $sql = "UPDATE {$this->table} SET 
                         push_notifications_enabled = 1,
-                        push_order_notifications = 1,
-                        push_payment_notifications = 1,
-                        push_delivery_notifications = 1,
-                        push_promotional_notifications = 0,
-                        push_system_notifications = 1,
-                        push_support_notifications = 1,
                         sms_notifications_enabled = 1,
-                        sms_order_notifications = 1,
-                        sms_payment_notifications = 1,
-                        sms_delivery_notifications = 1,
-                        sms_promotional_notifications = 0,
-                        sms_system_notifications = 1,
-                        sms_support_notifications = 1,
                         email_notifications_enabled = 1,
-                        email_order_notifications = 1,
-                        email_payment_notifications = 1,
-                        email_delivery_notifications = 1,
-                        email_promotional_notifications = 0,
-                        email_system_notifications = 1,
-                        email_support_notifications = 1,
-                        quiet_hours_start = '22:00:00',
-                        quiet_hours_end = '08:00:00',
-                        quiet_hours_enabled = 0,
-                        timezone = 'Africa/Lagos',
                         updated_at = NOW()
                     WHERE user_id = :user_id AND user_type = :user_type";
             
@@ -337,7 +316,8 @@ class NotificationPreferences
             
             return [
                 'status' => 'success',
-                'message' => 'Notification preferences reset to default successfully'
+                'message' => 'Notification preferences reset to default successfully',
+                'reset_fields' => ['push_notifications_enabled', 'sms_notifications_enabled', 'email_notifications_enabled']
             ];
             
         } catch (PDOException $e) {

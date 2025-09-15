@@ -5,6 +5,7 @@ use Model\User;
 use Model\Otp;
 use Config\JwtHandler;
 use Model\Store;
+use Service\AutoNotificationService;
 
 class UserController
 {
@@ -12,12 +13,14 @@ class UserController
     private $userModel;
     private $otpModel;
     private $storeModel;
+    private $autoNotificationService;
 
     public function __construct()
     {
         $this->userModel = new User();
         $this->otpModel = new Otp();
-        $this->storeModel = new Store();  
+        $this->storeModel = new Store();
+        $this->autoNotificationService = new AutoNotificationService();
     }
     
     
@@ -725,6 +728,195 @@ public function collectStoreDetails($data)
     }
     $bizPhone = preg_replace('/^0/', '234', $originalPhone);
     
+    // Create store
+    $storeCreated = $storeModel->createStore(
+        $userId,
+        $data['store_name'],
+        $data['biz_address'],
+        $data['biz_email'],
+        $bizPhone,
+        $data['biz_reg_number'],
+        $data['store_type_id'],
+        $filename
+    );
+
+    if (!$storeCreated) {
+        if ($filename && file_exists($targetPath)) {
+            unlink($targetPath);
+        }
+        http_response_code(500);
+        return ["status" => "error", "message" => "Failed to create store"];
+    }
+
+    http_response_code(201);
+    return [
+        "status" => "success",
+        "message" => "Merchant setup completed",
+        "user_id" => $userId
+    ];
+}
+
+/**
+ * Verify merchant account (admin function)
+ */
+public function verifyMerchantAccount($data, $user)
+{
+    try {
+        // Check if user is admin
+        if ($user['role'] !== 'admin') {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Only admins can verify merchant accounts'];
+        }
+
+        // Validate required fields
+        if (!isset($data['merchant_id']) || !isset($data['verification_status'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'merchant_id and verification_status are required'];
+        }
+
+        $merchantId = $data['merchant_id'];
+        $verificationStatus = $data['verification_status'];
+        $adminNotes = $data['admin_notes'] ?? null;
+
+        // Update merchant verification status in database
+        $updateResult = $this->userModel->updateUserVerificationStatus($merchantId, $verificationStatus, $adminNotes);
+
+        if (!$updateResult) {
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to update verification status'];
+        }
+
+        // Send automatic notification
+        $notificationResult = $this->autoNotificationService->notifyAccountVerification(
+            $merchantId,
+            $verificationStatus,
+            $adminNotes
+        );
+
+        // Log notification result
+        if ($notificationResult['status'] === 'success') {
+            error_log("Account verification notification sent successfully for merchant: $merchantId");
+        } else {
+            error_log("Failed to send account verification notification: " . $notificationResult['message']);
+        }
+
+        http_response_code(200);
+        return [
+            'status' => 'success',
+            'message' => 'Merchant account verification updated successfully',
+            'verification_status' => $verificationStatus,
+            'notification_sent' => $notificationResult['status'] === 'success'
+        ];
+
+    } catch (\Exception $e) {
+        error_log("Verify merchant account error: " . $e->getMessage());
+        http_response_code(500);
+        return ['status' => 'error', 'message' => 'Internal server error'];
+    }
+}
+
+/**
+ * Test notification endpoint for Postman testing
+ */
+public function testNotification($data, $user)
+{
+    try {
+        // Validate required fields
+        if (!isset($data['merchant_id']) || !isset($data['notification_type'])) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'merchant_id and notification_type are required'];
+        }
+
+        $merchantId = $data['merchant_id'];
+        $notificationType = $data['notification_type'];
+
+        $result = [];
+
+        switch ($notificationType) {
+            case 'new_order':
+                $result = $this->autoNotificationService->notifyNewOrder(
+                    $data['order_id'] ?? 123,
+                    $merchantId,
+                    $data['order_number'] ?? 'ORD-TEST-001',
+                    $data['customer_name'] ?? 'Test Customer',
+                    $data['customer_phone'] ?? '08012345678',
+                    $data['order_total'] ?? '2500',
+                    $data['delivery_address'] ?? '123 Test Street, Lagos',
+                    $data['items_count'] ?? 3
+                );
+                break;
+
+            case 'payment_received':
+                $result = $this->autoNotificationService->notifyPaymentProcessed(
+                    $data['payment_id'] ?? 456,
+                    $merchantId,
+                    $data['amount'] ?? '2500',
+                    $data['payment_method'] ?? 'Card',
+                    $data['transaction_id'] ?? 'TXN-TEST-789',
+                    $data['order_number'] ?? 'ORD-TEST-001',
+                    'received'
+                );
+                break;
+
+            case 'account_verification':
+                $result = $this->autoNotificationService->notifyAccountVerification(
+                    $merchantId,
+                    $data['verification_status'] ?? 'approved',
+                    $data['admin_notes'] ?? 'Test verification'
+                );
+                break;
+
+            case 'customer_review':
+                $result = $this->autoNotificationService->notifyCustomerReview(
+                    $data['review_id'] ?? 789,
+                    $merchantId,
+                    $data['customer_name'] ?? 'Test Customer',
+                    $data['rating'] ?? 5,
+                    $data['review_text'] ?? 'Great food and fast delivery!',
+                    $data['order_number'] ?? 'ORD-TEST-001'
+                );
+                break;
+
+            case 'customer_message':
+                $result = $this->autoNotificationService->notifyCustomerMessage(
+                    $data['message_id'] ?? 101,
+                    $merchantId,
+                    $data['customer_name'] ?? 'Test Customer',
+                    $data['message_text'] ?? 'Can you make the food less spicy?',
+                    $data['order_id'] ?? 123
+                );
+                break;
+
+            case 'order_status_update':
+                $result = $this->autoNotificationService->notifyOrderStatusChange(
+                    $data['order_id'] ?? 123,
+                    $data['status'] ?? 'confirmed',
+                    $merchantId,
+                    $data['order_number'] ?? 'ORD-TEST-001',
+                    $data['customer_name'] ?? 'Test Customer'
+                );
+                break;
+
+            default:
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Invalid notification type'];
+        }
+
+        http_response_code(200);
+        return [
+            'status' => 'success',
+            'message' => 'Test notification sent successfully',
+            'notification_type' => $notificationType,
+            'merchant_id' => $merchantId,
+            'result' => $result
+        ];
+
+    } catch (\Exception $e) {
+        error_log("Test notification error: " . $e->getMessage());
+        http_response_code(500);
+        return ['status' => 'error', 'message' => 'Internal server error'];
+    }
+}
 
     
 

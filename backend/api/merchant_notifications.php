@@ -45,6 +45,22 @@ switch ($_SERVER['REQUEST_METHOD']) {
             case 'order_delivered':
                 $response = $controller->sendOrderDeliveredNotification($data, $user);
                 break;
+            case 'account_verification':
+                $response = $controller->sendAccountVerificationNotification($data, $user);
+                break;
+            case 'order_status_update':
+                $response = $controller->sendOrderStatusUpdateNotification($data, $user);
+                break;
+            case 'payment_failed':
+            case 'payment':
+                $response = $controller->sendPaymentNotification($data, $user);
+                break;
+            case 'customer_review':
+                $response = $controller->sendCustomerReviewNotification($data, $user);
+                break;
+            case 'customer_message':
+                $response = $controller->sendCustomerMessageNotification($data, $user);
+                break;
             case 'bulk':
                 $response = $controller->sendBulkNotification($data, $user);
                 break;
