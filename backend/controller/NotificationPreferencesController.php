@@ -30,10 +30,17 @@ class NotificationPreferencesController
                 return ['status' => 'error', 'message' => 'Failed to retrieve notification preferences'];
             }
             
+            // Return only channel-level preferences
+            $responseData = [
+                'push_notifications_enabled' => (bool)$preferences['push_notifications_enabled'],
+                'sms_notifications_enabled' => (bool)$preferences['sms_notifications_enabled'],
+                'email_notifications_enabled' => true // Always true, cannot be changed
+            ];
+            
             http_response_code(200);
             return [
                 'status' => 'success',
-                'data' => $preferences
+                'data' => $responseData
             ];
             
         } catch (\Exception $e) {
@@ -52,47 +59,22 @@ class NotificationPreferencesController
             $userId = $user['user_id'];
             $userType = $user['role'] ?? 'merchant';
             
-            // Validate required fields
-            if (empty($data)) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Preferences data is required'];
-            }
+            // Only allow channel-level preferences
+            $allowedFields = ['push_notifications_enabled', 'sms_notifications_enabled'];
+            $updateData = [];
             
-            // Validate boolean fields
-            $booleanFields = [
-                'push_notifications_enabled', 'push_order_notifications', 'push_payment_notifications',
-                'push_delivery_notifications', 'push_promotional_notifications', 'push_system_notifications', 'push_support_notifications',
-                'sms_notifications_enabled', 'sms_order_notifications', 'sms_payment_notifications',
-                'sms_delivery_notifications', 'sms_promotional_notifications', 'sms_system_notifications', 'sms_support_notifications',
-                'email_promotional_notifications', 'quiet_hours_enabled',
-                'sms_billing_enabled', 'sms_billing_wallet_enabled', 'sms_billing_paystack_enabled'
-            ];
-            
-            foreach ($booleanFields as $field) {
-                if (isset($data[$field]) && !is_bool($data[$field])) {
-                    // Convert string to boolean
-                    $data[$field] = filter_var($data[$field], FILTER_VALIDATE_BOOLEAN);
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $updateData[$field] = filter_var($data[$field], FILTER_VALIDATE_BOOLEAN);
                 }
             }
             
-            // Validate time fields
-            if (isset($data['quiet_hours_start']) && !$this->isValidTime($data['quiet_hours_start'])) {
+            if (empty($updateData)) {
                 http_response_code(400);
-                return ['status' => 'error', 'message' => 'Invalid quiet hours start time format'];
+                return ['status' => 'error', 'message' => 'No valid preferences to update'];
             }
             
-            if (isset($data['quiet_hours_end']) && !$this->isValidTime($data['quiet_hours_end'])) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Invalid quiet hours end time format'];
-            }
-            
-            // Validate timezone
-            if (isset($data['timezone']) && !$this->isValidTimezone($data['timezone'])) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Invalid timezone'];
-            }
-            
-            $result = $this->notificationPreferencesModel->updatePreferences($userId, $userType, $data);
+            $result = $this->notificationPreferencesModel->updatePreferences($userId, $userType, $updateData);
             
             if ($result['status'] === 'error') {
                 http_response_code(400);
