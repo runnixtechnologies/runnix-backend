@@ -5,6 +5,11 @@ use Model\User;
 use Model\Otp;
 use Config\JwtHandler;
 use Model\Store;
+
+// Manually include AutoNotificationService if autoloader doesn't work
+if (!class_exists('Service\\AutoNotificationService')) {
+    require_once __DIR__ . '/../service/AutoNotificationService.php';
+}
 use Service\AutoNotificationService;
 
 class UserController
@@ -20,7 +25,14 @@ class UserController
         $this->userModel = new User();
         $this->otpModel = new Otp();
         $this->storeModel = new Store();
-        $this->autoNotificationService = new AutoNotificationService();
+        
+        // Try to load AutoNotificationService, handle gracefully if not available
+        try {
+            $this->autoNotificationService = new AutoNotificationService();
+        } catch (Exception $e) {
+            error_log("AutoNotificationService not available: " . $e->getMessage());
+            $this->autoNotificationService = null;
+        }
     }
     
     
@@ -786,18 +798,23 @@ public function verifyMerchantAccount($data, $user)
             return ['status' => 'error', 'message' => 'Failed to update verification status'];
         }
 
-        // Send automatic notification
-        $notificationResult = $this->autoNotificationService->notifyAccountVerification(
-            $merchantId,
-            $verificationStatus,
-            $adminNotes
-        );
+        // Send automatic notification (if service is available)
+        $notificationResult = null;
+        if ($this->autoNotificationService !== null) {
+            $notificationResult = $this->autoNotificationService->notifyAccountVerification(
+                $merchantId,
+                $verificationStatus,
+                $adminNotes
+            );
+        }
 
         // Log notification result
-        if ($notificationResult['status'] === 'success') {
+        if ($notificationResult !== null && $notificationResult['status'] === 'success') {
             error_log("Account verification notification sent successfully for merchant: $merchantId");
-        } else {
+        } else if ($notificationResult !== null) {
             error_log("Failed to send account verification notification: " . $notificationResult['message']);
+        } else {
+            error_log("AutoNotificationService not available - notification skipped for merchant: $merchantId");
         }
 
         http_response_code(200);
@@ -834,67 +851,91 @@ public function testNotification($data, $user)
 
         switch ($notificationType) {
             case 'new_order':
-                $result = $this->autoNotificationService->notifyNewOrder(
-                    $data['order_id'] ?? 123,
-                    $merchantId,
-                    $data['order_number'] ?? 'ORD-TEST-001',
-                    $data['customer_name'] ?? 'Test Customer',
-                    $data['customer_phone'] ?? '08012345678',
-                    $data['order_total'] ?? '2500',
-                    $data['delivery_address'] ?? '123 Test Street, Lagos',
-                    $data['items_count'] ?? 3
-                );
+                if ($this->autoNotificationService !== null) {
+                    $result = $this->autoNotificationService->notifyNewOrder(
+                        $data['order_id'] ?? 123,
+                        $merchantId,
+                        $data['order_number'] ?? 'ORD-TEST-001',
+                        $data['customer_name'] ?? 'Test Customer',
+                        $data['customer_phone'] ?? '08012345678',
+                        $data['order_total'] ?? '2500',
+                        $data['delivery_address'] ?? '123 Test Street, Lagos',
+                        $data['items_count'] ?? 3
+                    );
+                } else {
+                    $result = ['status' => 'error', 'message' => 'AutoNotificationService not available'];
+                }
                 break;
 
             case 'payment_received':
-                $result = $this->autoNotificationService->notifyPaymentProcessed(
-                    $data['payment_id'] ?? 456,
-                    $merchantId,
-                    $data['amount'] ?? '2500',
-                    $data['payment_method'] ?? 'Card',
-                    $data['transaction_id'] ?? 'TXN-TEST-789',
-                    $data['order_number'] ?? 'ORD-TEST-001',
-                    'received'
-                );
+                if ($this->autoNotificationService !== null) {
+                    $result = $this->autoNotificationService->notifyPaymentProcessed(
+                        $data['payment_id'] ?? 456,
+                        $merchantId,
+                        $data['amount'] ?? '2500',
+                        $data['payment_method'] ?? 'Card',
+                        $data['transaction_id'] ?? 'TXN-TEST-789',
+                        $data['order_number'] ?? 'ORD-TEST-001',
+                        'received'
+                    );
+                } else {
+                    $result = ['status' => 'error', 'message' => 'AutoNotificationService not available'];
+                }
                 break;
 
             case 'account_verification':
-                $result = $this->autoNotificationService->notifyAccountVerification(
-                    $merchantId,
-                    $data['verification_status'] ?? 'approved',
-                    $data['admin_notes'] ?? 'Test verification'
-                );
+                if ($this->autoNotificationService !== null) {
+                    $result = $this->autoNotificationService->notifyAccountVerification(
+                        $merchantId,
+                        $data['verification_status'] ?? 'approved',
+                        $data['admin_notes'] ?? 'Test verification'
+                    );
+                } else {
+                    $result = ['status' => 'error', 'message' => 'AutoNotificationService not available'];
+                }
                 break;
 
             case 'customer_review':
-                $result = $this->autoNotificationService->notifyCustomerReview(
-                    $data['review_id'] ?? 789,
-                    $merchantId,
-                    $data['customer_name'] ?? 'Test Customer',
-                    $data['rating'] ?? 5,
-                    $data['review_text'] ?? 'Great food and fast delivery!',
-                    $data['order_number'] ?? 'ORD-TEST-001'
-                );
+                if ($this->autoNotificationService !== null) {
+                    $result = $this->autoNotificationService->notifyCustomerReview(
+                        $data['review_id'] ?? 789,
+                        $merchantId,
+                        $data['customer_name'] ?? 'Test Customer',
+                        $data['rating'] ?? 5,
+                        $data['review_text'] ?? 'Great food and fast delivery!',
+                        $data['order_number'] ?? 'ORD-TEST-001'
+                    );
+                } else {
+                    $result = ['status' => 'error', 'message' => 'AutoNotificationService not available'];
+                }
                 break;
 
             case 'customer_message':
-                $result = $this->autoNotificationService->notifyCustomerMessage(
-                    $data['message_id'] ?? 101,
-                    $merchantId,
-                    $data['customer_name'] ?? 'Test Customer',
-                    $data['message_text'] ?? 'Can you make the food less spicy?',
-                    $data['order_id'] ?? 123
-                );
+                if ($this->autoNotificationService !== null) {
+                    $result = $this->autoNotificationService->notifyCustomerMessage(
+                        $data['message_id'] ?? 101,
+                        $merchantId,
+                        $data['customer_name'] ?? 'Test Customer',
+                        $data['message_text'] ?? 'Can you make the food less spicy?',
+                        $data['order_id'] ?? 123
+                    );
+                } else {
+                    $result = ['status' => 'error', 'message' => 'AutoNotificationService not available'];
+                }
                 break;
 
             case 'order_status_update':
-                $result = $this->autoNotificationService->notifyOrderStatusChange(
-                    $data['order_id'] ?? 123,
-                    $data['status'] ?? 'confirmed',
-                    $merchantId,
-                    $data['order_number'] ?? 'ORD-TEST-001',
-                    $data['customer_name'] ?? 'Test Customer'
-                );
+                if ($this->autoNotificationService !== null) {
+                    $result = $this->autoNotificationService->notifyOrderStatusChange(
+                        $data['order_id'] ?? 123,
+                        $data['status'] ?? 'confirmed',
+                        $merchantId,
+                        $data['order_number'] ?? 'ORD-TEST-001',
+                        $data['customer_name'] ?? 'Test Customer'
+                    );
+                } else {
+                    $result = ['status' => 'error', 'message' => 'AutoNotificationService not available'];
+                }
                 break;
 
             default:

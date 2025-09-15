@@ -9,7 +9,8 @@
             "Controller\\": "backend/controller/",
             "Model\\": "backend/model/",
             "Config\\": "backend/config/",
-            "Middleware\\": "backend/middleware/"
+            "Middleware\\": "backend/middleware/",
+            "Service\\": "backend/service/"
         }
     }
 }
