@@ -918,45 +918,6 @@ public function testNotification($data, $user)
     }
 }
 
-    
-
-    // Validate biz_logo (must be jpg/png and <= 150KB)
-    if (!empty($data['biz_logo'])) {
-        $logo = $data['biz_logo'];
-        $allowedExtensions = ['jpg', 'jpeg', 'png'];
-        //$fileExtension = strtolower(pathinfo($logo['name'], PATHINFO_EXTENSION));
-        $fileExtension = strtolower(pathinfo($logo, PATHINFO_EXTENSION));
-
-        if (!in_array($fileExtension, $allowedExtensions)) {
-            http_response_code(400);
-            return ["status" => "error", "message" => "Logo must be a JPG or PNG file"];
-        }
-
-      
-    }
-
-    // Return collected data with transformation (phone number)
-    $responseData = [
-        "store_name" => $data['store_name'],
-        "biz_email" => $data['biz_email'],
-        "biz_address" => $data['biz_address'],
-        "biz_phone" => $bizPhone,
-        "biz_reg_number" => $data['biz_reg_number']
-    ];
-    
-
-    if (!empty($data['biz_logo'])) {
-        $responseData['biz_logo'] = $data['biz_logo']; // Assuming it's a file object, or handle the upload
-    }
-
-    http_response_code(200);
-    return [
-        "status" => "success",
-        "message" => "Store details collected successfully",
-        "data" => $responseData
-    ];
-}
-
     public function resetPassword($phone, $newPassword)
     {
     
