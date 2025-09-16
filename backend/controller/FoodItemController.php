@@ -53,7 +53,8 @@ class FoodItemController
             return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
         }
 
-        $uploadDir = __DIR__ . '/../../uploads/food-items/';
+        // Use absolute path from document root
+        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/food-items/';
         
         // Enhanced directory creation with error handling
         if (!is_dir($uploadDir)) {
@@ -80,8 +81,11 @@ class FoodItemController
         
         error_log("Attempting to upload file:");
         error_log("- Source: " . $_FILES['photo']['tmp_name']);
+        error_log("- Upload directory: " . $uploadDir);
         error_log("- Destination: " . $uploadPath);
         error_log("- File size: " . $_FILES['photo']['size'] . " bytes");
+        error_log("- Document root: " . $_SERVER['DOCUMENT_ROOT']);
+        error_log("- Real path: " . realpath($uploadDir));
 
         if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
             error_log("move_uploaded_file failed");
@@ -604,7 +608,8 @@ class FoodItemController
             return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
         }
 
-        $uploadDir = __DIR__ . '/../../uploads/food-items/';
+        // Use absolute path from document root
+        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/food-items/';
         
         // Enhanced directory creation with error handling
         if (!is_dir($uploadDir)) {
@@ -631,8 +636,11 @@ class FoodItemController
         
         error_log("Attempting to upload file:");
         error_log("- Source: " . $_FILES['photo']['tmp_name']);
+        error_log("- Upload directory: " . $uploadDir);
         error_log("- Destination: " . $uploadPath);
         error_log("- File size: " . $_FILES['photo']['size'] . " bytes");
+        error_log("- Document root: " . $_SERVER['DOCUMENT_ROOT']);
+        error_log("- Real path: " . realpath($uploadDir));
 
         if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
             error_log("move_uploaded_file failed");
