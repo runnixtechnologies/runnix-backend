@@ -53,19 +53,44 @@ class FoodItemController
             return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
         }
 
-        $uploadDir = __DIR__ . '/../../uploads/food-items/';
+        $uploadDir = __DIR__ . '/../uploads/food-items/';
+        
+        // Enhanced directory creation with error handling
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
+            error_log("Creating upload directory: " . $uploadDir);
+            $createResult = mkdir($uploadDir, 0777, true);
+            if (!$createResult) {
+                error_log("Failed to create upload directory: " . $uploadDir);
+                error_log("Last error: " . json_encode(error_get_last()));
+                http_response_code(500);
+                return ["status" => "error", "message" => "Failed to create upload directory."];
+            }
+        }
+        
+        // Check if directory is writable
+        if (!is_writable($uploadDir)) {
+            error_log("Upload directory is not writable: " . $uploadDir);
+            http_response_code(500);
+            return ["status" => "error", "message" => "Upload directory is not writable."];
         }
 
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $filename = uniqid('item_', true) . '.' . $ext;
         $uploadPath = $uploadDir . $filename;
+        
+        error_log("Attempting to upload file:");
+        error_log("- Source: " . $_FILES['photo']['tmp_name']);
+        error_log("- Destination: " . $uploadPath);
+        error_log("- File size: " . $_FILES['photo']['size'] . " bytes");
 
         if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
+            error_log("move_uploaded_file failed");
+            error_log("Last error: " . json_encode(error_get_last()));
             http_response_code(500);
-            return ["status" => "error", "message" => "Failed to upload image."];
+            return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
         }
+        
+        error_log("File uploaded successfully: " . $uploadPath);
 
        $photo = 'https://api.runnix.africa/uploads/food-items/' . $filename;
     }
@@ -579,19 +604,44 @@ class FoodItemController
             return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
         }
 
-        $uploadDir = __DIR__ . '/../../uploads/food-items/';
+        $uploadDir = __DIR__ . '/../uploads/food-items/';
+        
+        // Enhanced directory creation with error handling
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
+            error_log("Creating upload directory: " . $uploadDir);
+            $createResult = mkdir($uploadDir, 0777, true);
+            if (!$createResult) {
+                error_log("Failed to create upload directory: " . $uploadDir);
+                error_log("Last error: " . json_encode(error_get_last()));
+                http_response_code(500);
+                return ["status" => "error", "message" => "Failed to create upload directory."];
+            }
+        }
+        
+        // Check if directory is writable
+        if (!is_writable($uploadDir)) {
+            error_log("Upload directory is not writable: " . $uploadDir);
+            http_response_code(500);
+            return ["status" => "error", "message" => "Upload directory is not writable."];
         }
 
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $filename = uniqid('item_', true) . '.' . $ext;
         $uploadPath = $uploadDir . $filename;
+        
+        error_log("Attempting to upload file:");
+        error_log("- Source: " . $_FILES['photo']['tmp_name']);
+        error_log("- Destination: " . $uploadPath);
+        error_log("- File size: " . $_FILES['photo']['size'] . " bytes");
 
         if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
+            error_log("move_uploaded_file failed");
+            error_log("Last error: " . json_encode(error_get_last()));
             http_response_code(500);
-            return ["status" => "error", "message" => "Failed to upload image."];
+            return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
         }
+        
+        error_log("File uploaded successfully: " . $uploadPath);
 
         $photo = 'https://api.runnix.africa/uploads/food-items/' . $filename;
     }
