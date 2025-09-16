@@ -53,7 +53,7 @@ class FoodItemController
             return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
         }
 
-        $uploadDir = __DIR__ . '/../uploads/food-items/';
+        $uploadDir = __DIR__ . '/../../uploads/food-items/';
         
         // Enhanced directory creation with error handling
         if (!is_dir($uploadDir)) {
@@ -604,7 +604,7 @@ class FoodItemController
             return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
         }
 
-        $uploadDir = __DIR__ . '/../uploads/food-items/';
+        $uploadDir = __DIR__ . '/../../uploads/food-items/';
         
         // Enhanced directory creation with error handling
         if (!is_dir($uploadDir)) {

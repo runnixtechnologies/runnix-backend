@@ -55,68 +55,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     } elseif (stripos($contentType, 'multipart/form-data') !== false) {
         error_log("PUT request with multipart/form-data");
         
-        // For PUT with multipart/form-data, PHP doesn't populate $_POST automatically
-        // We need to parse the raw input manually
-        $rawInput = file_get_contents("php://input");
-        error_log("Raw PUT input for form-data: " . substr($rawInput, 0, 500) . "...");
-        
-        // Enhanced multipart parsing
-        $data = [];
-        $files = [];
-        
-        if (preg_match('/boundary=([^\s;]+)/', $contentType, $matches)) {
-            $boundary = '--' . $matches[1];
-            error_log("Detected boundary: " . $boundary);
-            
-            $parts = explode($boundary, $rawInput);
-            error_log("Number of parts: " . count($parts));
-            
-            foreach ($parts as $i => $part) {
-                if (empty(trim($part)) || $part === '--') continue;
-                
-                error_log("Processing part $i: " . substr($part, 0, 100) . "...");
-                
-                // Parse form field
-                if (preg_match('/name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
-                    $fieldName = trim($matches[1]);
-                    $fieldValue = trim($matches[2]);
-                    $data[$fieldName] = $fieldValue;
-                    error_log("Found field: $fieldName = $fieldValue");
-                }
-                
-                // Parse file field
-                if (preg_match('/name="([^"]+)"; filename="([^"]*)"\s*\r?\nContent-Type:\s*([^\r\n]+)\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
-                    $fieldName = trim($matches[1]);
-                    $fileName = trim($matches[2]);
-                    $fileType = trim($matches[3]);
-                    $fileContent = $matches[4];
-                    
-                    // Create temporary file for uploaded content
-                    $tempFile = tempnam(sys_get_temp_dir(), 'put_upload_');
-                    file_put_contents($tempFile, $fileContent);
-                    
-                    $files[$fieldName] = [
-                        'name' => $fileName,
-                        'type' => $fileType,
-                        'tmp_name' => $tempFile,
-                        'error' => UPLOAD_ERR_OK,
-                        'size' => strlen($fileContent)
-                    ];
-                    
-                    error_log("Found file: $fieldName = $fileName ($fileType)");
-                }
-            }
-            
-            // Add files to $_FILES superglobal for compatibility
-            if (!empty($files)) {
-                $_FILES = array_merge($_FILES, $files);
-                error_log("Added files to \$_FILES: " . json_encode(array_keys($files)));
-            }
-            
-            error_log("Parsed form-data: " . json_encode($data));
+        // For PUT with multipart/form-data, try a simpler approach
+        // First, try to use $_POST and $_FILES if they're populated
+        if (!empty($_POST) || !empty($_FILES)) {
+            error_log("Using existing \$_POST and \$_FILES data");
+            $data = $_POST;
+            error_log("POST data: " . json_encode($data));
+            error_log("FILES data: " . json_encode($_FILES));
         } else {
-            error_log("Could not detect boundary in Content-Type: " . $contentType);
+            error_log("No \$_POST or \$_FILES data, attempting manual parsing");
+            
+            // Manual multipart parsing as fallback
+            $rawInput = file_get_contents("php://input");
+            error_log("Raw PUT input for form-data: " . substr($rawInput, 0, 500) . "...");
+            
             $data = [];
+            $files = [];
+            
+            if (preg_match('/boundary=([^\s;]+)/', $contentType, $matches)) {
+                $boundary = '--' . $matches[1];
+                error_log("Detected boundary: " . $boundary);
+                
+                $parts = explode($boundary, $rawInput);
+                error_log("Number of parts: " . count($parts));
+                
+                foreach ($parts as $i => $part) {
+                    if (empty(trim($part)) || $part === '--') continue;
+                    
+                    error_log("Processing part $i: " . substr($part, 0, 100) . "...");
+                    
+                    // Parse form field
+                    if (preg_match('/name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
+                        $fieldName = trim($matches[1]);
+                        $fieldValue = trim($matches[2]);
+                        $data[$fieldName] = $fieldValue;
+                        error_log("Found field: $fieldName = $fieldValue");
+                    }
+                    
+                    // Parse file field
+                    if (preg_match('/name="([^"]+)"; filename="([^"]*)"\s*\r?\nContent-Type:\s*([^\r\n]+)\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
+                        $fieldName = trim($matches[1]);
+                        $fileName = trim($matches[2]);
+                        $fileType = trim($matches[3]);
+                        $fileContent = $matches[4];
+                        
+                        // Create temporary file for uploaded content
+                        $tempFile = tempnam(sys_get_temp_dir(), 'put_upload_');
+                        file_put_contents($tempFile, $fileContent);
+                        
+                        $files[$fieldName] = [
+                            'name' => $fileName,
+                            'type' => $fileType,
+                            'tmp_name' => $tempFile,
+                            'error' => UPLOAD_ERR_OK,
+                            'size' => strlen($fileContent)
+                        ];
+                        
+                        error_log("Found file: $fieldName = $fileName ($fileType)");
+                    }
+                }
+                
+                // Add files to $_FILES superglobal for compatibility
+                if (!empty($files)) {
+                    $_FILES = array_merge($_FILES, $files);
+                    error_log("Added files to \$_FILES: " . json_encode(array_keys($files)));
+                }
+                
+                error_log("Parsed form-data: " . json_encode($data));
+            } else {
+                error_log("Could not detect boundary in Content-Type: " . $contentType);
+                $data = [];
+            }
         }
     } else {
         error_log("PUT request with unknown content type, trying JSON fallback");
