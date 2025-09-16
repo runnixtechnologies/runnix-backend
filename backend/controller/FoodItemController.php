@@ -86,12 +86,28 @@ class FoodItemController
         error_log("- File size: " . $_FILES['photo']['size'] . " bytes");
         error_log("- Document root: " . $_SERVER['DOCUMENT_ROOT']);
         error_log("- Real path: " . realpath($uploadDir));
+        error_log("- Is manually parsed: " . (strpos($_FILES['photo']['tmp_name'], 'put_upload_') !== false ? 'YES' : 'NO'));
 
-        if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
-            error_log("move_uploaded_file failed");
-            error_log("Last error: " . json_encode(error_get_last()));
-            http_response_code(500);
-            return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
+        // Check if this is a manually parsed file (from PUT multipart parsing)
+        $isManuallyParsed = (strpos($_FILES['photo']['tmp_name'], 'put_upload_') !== false);
+        
+        if ($isManuallyParsed) {
+            error_log("Detected manually parsed file, using copy instead of move_uploaded_file");
+            if (!copy($_FILES['photo']['tmp_name'], $uploadPath)) {
+                error_log("copy failed");
+                error_log("Last error: " . json_encode(error_get_last()));
+                http_response_code(500);
+                return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
+            }
+            // Clean up the temporary file
+            unlink($_FILES['photo']['tmp_name']);
+        } else {
+            if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
+                error_log("move_uploaded_file failed");
+                error_log("Last error: " . json_encode(error_get_last()));
+                http_response_code(500);
+                return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
+            }
         }
         
         error_log("File uploaded successfully: " . $uploadPath);
@@ -641,12 +657,28 @@ class FoodItemController
         error_log("- File size: " . $_FILES['photo']['size'] . " bytes");
         error_log("- Document root: " . $_SERVER['DOCUMENT_ROOT']);
         error_log("- Real path: " . realpath($uploadDir));
+        error_log("- Is manually parsed: " . (strpos($_FILES['photo']['tmp_name'], 'put_upload_') !== false ? 'YES' : 'NO'));
 
-        if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
-            error_log("move_uploaded_file failed");
-            error_log("Last error: " . json_encode(error_get_last()));
-            http_response_code(500);
-            return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
+        // Check if this is a manually parsed file (from PUT multipart parsing)
+        $isManuallyParsed = (strpos($_FILES['photo']['tmp_name'], 'put_upload_') !== false);
+        
+        if ($isManuallyParsed) {
+            error_log("Detected manually parsed file, using copy instead of move_uploaded_file");
+            if (!copy($_FILES['photo']['tmp_name'], $uploadPath)) {
+                error_log("copy failed");
+                error_log("Last error: " . json_encode(error_get_last()));
+                http_response_code(500);
+                return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
+            }
+            // Clean up the temporary file
+            unlink($_FILES['photo']['tmp_name']);
+        } else {
+            if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
+                error_log("move_uploaded_file failed");
+                error_log("Last error: " . json_encode(error_get_last()));
+                http_response_code(500);
+                return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
+            }
         }
         
         error_log("File uploaded successfully: " . $uploadPath);

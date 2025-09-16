@@ -227,6 +227,18 @@ try {
     error_log("Update response: " . json_encode($response));
     
     echo json_encode($response);
+    
+    // Clean up any temporary files created during multipart parsing
+    if (isset($_FILES) && !empty($_FILES)) {
+        foreach ($_FILES as $file) {
+            if (isset($file['tmp_name']) && strpos($file['tmp_name'], 'put_upload_') !== false) {
+                if (file_exists($file['tmp_name'])) {
+                    unlink($file['tmp_name']);
+                    error_log("Cleaned up temporary file: " . $file['tmp_name']);
+                }
+            }
+        }
+    }
 } catch (Exception $e) {
     // Enhanced error logging for debugging
     error_log("=== UPDATE FOOD ITEM ENDPOINT ERROR ===");
