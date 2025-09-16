@@ -393,9 +393,8 @@ private function getFoodItemWithOptions($foodItemId)
                     status = :status,
                     updated_at = NOW()";
 
-        if (!empty($data['photo'])) {
-            $query .= ", photo = :photo";
-        }
+        // Always include photo field in update
+        $query .= ", photo = :photo";
 
         $query .= " WHERE id = :id";
             $categoryId = $data['category_id'] ?? null;
@@ -411,9 +410,8 @@ private function getFoodItemWithOptions($foodItemId)
         $stmt->bindParam(':section_id', $sectionId);
         $stmt->bindParam(':status', $data['status']);
 
-        if (!empty($data['photo'])) {
-            $stmt->bindParam(':photo', $data['photo']);
-        }
+        // Always bind photo parameter
+        $stmt->bindParam(':photo', $data['photo']);
 
             $stmt->execute();
 

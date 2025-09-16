@@ -596,10 +596,8 @@ class FoodItemController
         $photo = 'https://api.runnix.africa/uploads/food-items/' . $filename;
     }
 
-    // If new photo is uploaded, update the photo field
-    if ($photo) {
-        $data['photo'] = $photo;
-    }
+    // Always set photo field - either new photo or null to keep existing
+    $data['photo'] = $photo;
 
     // Validate basic fields if provided
     if (isset($data['name']) && empty(trim($data['name']))) {
