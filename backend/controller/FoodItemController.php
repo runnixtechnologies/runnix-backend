@@ -606,6 +606,17 @@ class FoodItemController
 
     // Handle photo upload if new photo is provided
     $photo = null;
+    error_log("=== PHOTO UPLOAD DEBUG ===");
+    error_log("FILES array: " . json_encode($_FILES));
+    error_log("Photo file exists: " . (isset($_FILES['photo']) ? 'YES' : 'NO'));
+    if (isset($_FILES['photo'])) {
+        error_log("Photo file error: " . $_FILES['photo']['error']);
+        error_log("Photo file name: " . $_FILES['photo']['name']);
+        error_log("Photo file size: " . $_FILES['photo']['size']);
+        error_log("Photo file type: " . $_FILES['photo']['type']);
+        error_log("Photo file tmp_name: " . $_FILES['photo']['tmp_name']);
+    }
+    
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $allowedTypes = [
             'image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'
@@ -684,10 +695,21 @@ class FoodItemController
         error_log("File uploaded successfully: " . $uploadPath);
 
         $photo = 'https://api.runnix.africa/uploads/food-items/' . $filename;
+        error_log("Photo URL generated: " . $photo);
+    } else {
+        error_log("No photo uploaded or upload error occurred");
     }
 
-    // Always set photo field - either new photo or null to keep existing
-    $data['photo'] = $photo;
+    // Always set photo field - either new photo or existing photo
+    if ($photo !== null) {
+        // New photo uploaded
+        $data['photo'] = $photo;
+        error_log("New photo uploaded: " . $photo);
+    } else {
+        // No new photo, keep existing photo
+        $data['photo'] = $existingItem['photo'];
+        error_log("No new photo uploaded, keeping existing: " . $existingItem['photo']);
+    }
 
     // Parse JSON strings to arrays if needed
     if (isset($data['sides']) && is_string($data['sides'])) {
