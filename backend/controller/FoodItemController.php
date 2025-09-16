@@ -689,6 +689,23 @@ class FoodItemController
     // Always set photo field - either new photo or null to keep existing
     $data['photo'] = $photo;
 
+    // Parse JSON strings to arrays if needed
+    if (isset($data['sides']) && is_string($data['sides'])) {
+        error_log("Parsing sides JSON: " . $data['sides']);
+        $data['sides'] = json_decode($data['sides'], true);
+        error_log("Parsed sides: " . json_encode($data['sides']));
+    }
+    if (isset($data['packs']) && is_string($data['packs'])) {
+        error_log("Parsing packs JSON: " . $data['packs']);
+        $data['packs'] = json_decode($data['packs'], true);
+        error_log("Parsed packs: " . json_encode($data['packs']));
+    }
+    if (isset($data['sections']) && is_string($data['sections'])) {
+        error_log("Parsing sections JSON: " . $data['sections']);
+        $data['sections'] = json_decode($data['sections'], true);
+        error_log("Parsed sections: " . json_encode($data['sections']));
+    }
+
     // Validate basic fields if provided
     if (isset($data['name']) && empty(trim($data['name']))) {
         http_response_code(400);
