@@ -692,18 +692,39 @@ class FoodItemController
     // Parse JSON strings to arrays if needed
     if (isset($data['sides']) && is_string($data['sides'])) {
         error_log("Parsing sides JSON: " . $data['sides']);
-        $data['sides'] = json_decode($data['sides'], true);
-        error_log("Parsed sides: " . json_encode($data['sides']));
+        $parsedSides = json_decode($data['sides'], true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $data['sides'] = $parsedSides;
+            error_log("Parsed sides: " . json_encode($data['sides']));
+        } else {
+            error_log("JSON decode error for sides: " . json_last_error_msg());
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid JSON format for sides field'];
+        }
     }
     if (isset($data['packs']) && is_string($data['packs'])) {
         error_log("Parsing packs JSON: " . $data['packs']);
-        $data['packs'] = json_decode($data['packs'], true);
-        error_log("Parsed packs: " . json_encode($data['packs']));
+        $parsedPacks = json_decode($data['packs'], true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $data['packs'] = $parsedPacks;
+            error_log("Parsed packs: " . json_encode($data['packs']));
+        } else {
+            error_log("JSON decode error for packs: " . json_last_error_msg());
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid JSON format for packs field'];
+        }
     }
     if (isset($data['sections']) && is_string($data['sections'])) {
         error_log("Parsing sections JSON: " . $data['sections']);
-        $data['sections'] = json_decode($data['sections'], true);
-        error_log("Parsed sections: " . json_encode($data['sections']));
+        $parsedSections = json_decode($data['sections'], true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $data['sections'] = $parsedSections;
+            error_log("Parsed sections: " . json_encode($data['sections']));
+        } else {
+            error_log("JSON decode error for sections: " . json_last_error_msg());
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid JSON format for sections field'];
+        }
     }
 
     // Validate basic fields if provided
@@ -913,6 +934,7 @@ class FoodItemController
     error_log("Calling foodItem->update() with data: " . json_encode($updateData));
     
     try {
+        error_log("Calling foodItem->update() with data: " . json_encode($updateData));
         $result = $this->foodItem->update($updateData);
         error_log("Update result: " . json_encode($result));
         
@@ -923,7 +945,7 @@ class FoodItemController
             http_response_code(500); // Internal Server Error
             return ['status' => 'error', 'message' => 'Failed to update food item'];
         }
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         // Enhanced error logging for debugging
         error_log("=== FOOD ITEM UPDATE ERROR ===");
         error_log("Error Message: " . $e->getMessage());

@@ -541,14 +541,24 @@ private function getFoodItemWithOptions($foodItemId)
             error_log("Food Item ID: " . $foodItemId);
             error_log("Sections Data: " . json_encode($sectionsData));
             
-            // First, delete existing sections relationships
-            $deleteConfigSql = "DELETE FROM food_item_sections_config WHERE item_id = :item_id";
-            $deleteConfigStmt = $this->conn->prepare($deleteConfigSql);
-            $deleteConfigStmt->execute(['item_id' => $foodItemId]);
+            // First, delete existing sections relationships in the correct order
+            // Delete section items first (due to foreign key constraints)
+            $deleteSectionItemsSql = "DELETE FROM food_item_section_items WHERE item_id = :item_id";
+            $deleteSectionItemsStmt = $this->conn->prepare($deleteSectionItemsSql);
+            $deleteSectionItemsStmt->execute(['item_id' => $foodItemId]);
+            error_log("Deleted existing section items for food item: " . $foodItemId);
 
+            // Delete section relationships
             $deleteSectionsSql = "DELETE FROM food_item_sections WHERE item_id = :item_id";
             $deleteSectionsStmt = $this->conn->prepare($deleteSectionsSql);
             $deleteSectionsStmt->execute(['item_id' => $foodItemId]);
+            error_log("Deleted existing sections for food item: " . $foodItemId);
+
+            // Delete section config
+            $deleteConfigSql = "DELETE FROM food_item_sections_config WHERE item_id = :item_id";
+            $deleteConfigStmt = $this->conn->prepare($deleteConfigSql);
+            $deleteConfigStmt->execute(['item_id' => $foodItemId]);
+            error_log("Deleted existing section config for food item: " . $foodItemId);
 
             // Check if it's the new preferred format (array of section objects)
             if (isset($sectionsData[0]) && is_array($sectionsData[0]) && isset($sectionsData[0]['section_id'])) {
@@ -2189,11 +2199,24 @@ private function createFoodItemSectionsWithItems($foodItemId, $sectionsArray)
                     $itemId = $itemId['id'];
                 }
 
-                $sectionItemStmt->execute([
-                    'item_id' => $foodItemId,
-                    'section_item_id' => $itemId,
-                    'extra_price' => $extraPrice
-                ]);
+                try {
+                    $sectionItemStmt->execute([
+                        'item_id' => $foodItemId,
+                        'section_item_id' => $itemId,
+                        'extra_price' => $extraPrice
+                    ]);
+                    error_log("Successfully inserted section item: food_item_id={$foodItemId}, section_item_id={$itemId}");
+                } catch (\Exception $e) {
+                    error_log("Error inserting section item: food_item_id={$foodItemId}, section_item_id={$itemId}, error: " . $e->getMessage());
+                    // If it's a duplicate key error, we can continue (item already exists)
+                    if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                        error_log("Duplicate section item detected, continuing...");
+                        continue;
+                    } else {
+                        // Re-throw if it's a different error
+                        throw $e;
+                    }
+                }
             }
         }
     }
