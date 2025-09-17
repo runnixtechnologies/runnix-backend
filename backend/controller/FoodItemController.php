@@ -42,10 +42,47 @@ class FoodItemController
 
         $fileType = $_FILES['photo']['type'];
         $fileSize = $_FILES['photo']['size'];
+        $fileName = $_FILES['photo']['name'];
+
+        // Enhanced debugging for image format issues
+        error_log("=== IMAGE UPLOAD DEBUG (CREATE) ===");
+        error_log("File name: " . $fileName);
+        error_log("File type (MIME): " . $fileType);
+        error_log("File size: " . $fileSize . " bytes");
+        error_log("Allowed types: " . implode(', ', $allowedTypes));
+        error_log("Is file type allowed: " . (in_array($fileType, $allowedTypes) ? 'YES' : 'NO'));
 
         if (!in_array($fileType, $allowedTypes)) {
-            http_response_code(415);
-            return ["status" => "error", "message" => "Unsupported image format."];
+            error_log("=== UNSUPPORTED IMAGE FORMAT ERROR (CREATE) ===");
+            error_log("Received MIME type: " . $fileType);
+            error_log("Expected MIME types: " . implode(', ', $allowedTypes));
+            error_log("File name: " . $fileName);
+            
+            // Try to detect MIME type from file extension as fallback
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            error_log("File extension: " . $fileExtension);
+            
+            $extensionToMime = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png'
+            ];
+            
+            if (isset($extensionToMime[$fileExtension])) {
+                $detectedMime = $extensionToMime[$fileExtension];
+                error_log("Detected MIME type from extension: " . $detectedMime);
+                
+                if (in_array($detectedMime, $allowedTypes)) {
+                    error_log("Using detected MIME type instead of reported type");
+                    $fileType = $detectedMime;
+                } else {
+                    http_response_code(415);
+                    return ["status" => "error", "message" => "Unsupported image format. Received: " . $fileType . ", File: " . $fileName];
+                }
+            } else {
+                http_response_code(415);
+                return ["status" => "error", "message" => "Unsupported image format. Received: " . $fileType . ", File: " . $fileName];
+            }
         }
 
         if ($fileSize > 3 * 1024 * 1024) { // 3MB
@@ -624,10 +661,47 @@ class FoodItemController
 
         $fileType = $_FILES['photo']['type'];
         $fileSize = $_FILES['photo']['size'];
+        $fileName = $_FILES['photo']['name'];
+
+        // Enhanced debugging for image format issues
+        error_log("=== IMAGE UPLOAD DEBUG (UPDATE) ===");
+        error_log("File name: " . $fileName);
+        error_log("File type (MIME): " . $fileType);
+        error_log("File size: " . $fileSize . " bytes");
+        error_log("Allowed types: " . implode(', ', $allowedTypes));
+        error_log("Is file type allowed: " . (in_array($fileType, $allowedTypes) ? 'YES' : 'NO'));
 
         if (!in_array($fileType, $allowedTypes)) {
-            http_response_code(415);
-            return ["status" => "error", "message" => "Unsupported image format."];
+            error_log("=== UNSUPPORTED IMAGE FORMAT ERROR (UPDATE) ===");
+            error_log("Received MIME type: " . $fileType);
+            error_log("Expected MIME types: " . implode(', ', $allowedTypes));
+            error_log("File name: " . $fileName);
+            
+            // Try to detect MIME type from file extension as fallback
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            error_log("File extension: " . $fileExtension);
+            
+            $extensionToMime = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png'
+            ];
+            
+            if (isset($extensionToMime[$fileExtension])) {
+                $detectedMime = $extensionToMime[$fileExtension];
+                error_log("Detected MIME type from extension: " . $detectedMime);
+                
+                if (in_array($detectedMime, $allowedTypes)) {
+                    error_log("Using detected MIME type instead of reported type");
+                    $fileType = $detectedMime;
+                } else {
+                    http_response_code(415);
+                    return ["status" => "error", "message" => "Unsupported image format. Received: " . $fileType . ", File: " . $fileName];
+                }
+            } else {
+                http_response_code(415);
+                return ["status" => "error", "message" => "Unsupported image format. Received: " . $fileType . ", File: " . $fileName];
+            }
         }
 
         if ($fileSize > 3 * 1024 * 1024) { // 3MB
