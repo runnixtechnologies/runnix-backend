@@ -338,6 +338,11 @@ public function getActiveCategoriesByStoreType($user)
             }
         }
         
+        // Check if biz_photo is being uploaded
+        if (isset($_FILES['biz_photo']) && $_FILES['biz_photo']['error'] === UPLOAD_ERR_OK) {
+            $hasFieldsToUpdate = true;
+        }
+        
         if (!$hasFieldsToUpdate) {
             http_response_code(400);
             return ['status' => 'error', 'message' => 'At least one field must be provided for update'];
@@ -430,6 +435,106 @@ public function getActiveCategoriesByStoreType($user)
         
         if (isset($data['biz_reg_number']) && !empty(trim($data['biz_reg_number']))) {
             $updateData['biz_reg_number'] = trim($data['biz_reg_number']);
+        }
+        
+        // Handle biz_photo upload (optional)
+        if (isset($_FILES['biz_photo']) && $_FILES['biz_photo']['error'] === UPLOAD_ERR_OK) {
+            $allowedTypes = [
+                'image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'
+            ];
+            $fileType = $_FILES['biz_photo']['type'];
+            $fileSize = $_FILES['biz_photo']['size'];
+
+            if (!in_array($fileType, $allowedTypes)) {
+                http_response_code(415);
+                return ["status" => "error", "message" => "Unsupported image format."];
+            }
+
+            if ($fileSize > 3 * 1024 * 1024) { // 3MB
+                http_response_code(413);
+                return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
+            }
+
+            // Use absolute path from document root
+            $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/logos/';
+            
+            // Alternative path if document root doesn't work
+            if (!is_dir($uploadDir)) {
+                $uploadDir = dirname(__DIR__) . '/uploads/logos/';
+                error_log("Using alternative upload directory: " . $uploadDir);
+            }
+            
+            // Enhanced directory creation with error handling
+            if (!is_dir($uploadDir)) {
+                error_log("Creating upload directory: " . $uploadDir);
+                $createResult = mkdir($uploadDir, 0777, true);
+                if (!$createResult) {
+                    error_log("Failed to create upload directory: " . $uploadDir);
+                    error_log("Last error: " . json_encode(error_get_last()));
+                    http_response_code(500);
+                    return ["status" => "error", "message" => "Failed to create upload directory."];
+                }
+            }
+            
+            // Check if directory is writable
+            if (!is_writable($uploadDir)) {
+                error_log("Upload directory is not writable: " . $uploadDir);
+                http_response_code(500);
+                return ["status" => "error", "message" => "Upload directory is not writable."];
+            }
+
+            $ext = pathinfo($_FILES['biz_photo']['name'], PATHINFO_EXTENSION);
+            $filename = uniqid('biz_photo_', true) . '.' . $ext;
+            $uploadPath = $uploadDir . $filename;
+            
+            error_log("Attempting to upload biz_photo:");
+            error_log("- Source: " . $_FILES['biz_photo']['tmp_name']);
+            error_log("- Upload directory: " . $uploadDir);
+            error_log("- Destination: " . $uploadPath);
+            error_log("- File size: " . $_FILES['biz_photo']['size'] . " bytes");
+            error_log("- Is manually parsed: " . (strpos($_FILES['biz_photo']['tmp_name'], 'put_upload_') !== false ? 'YES' : 'NO'));
+
+            // Check if this is a manually parsed file (from PUT multipart parsing)
+            $isManuallyParsed = (strpos($_FILES['biz_photo']['tmp_name'], 'put_upload_') !== false);
+            
+            if ($isManuallyParsed) {
+                error_log("Detected manually parsed file, using copy instead of move_uploaded_file");
+                if (!copy($_FILES['biz_photo']['tmp_name'], $uploadPath)) {
+                    error_log("copy failed");
+                    error_log("Last error: " . json_encode(error_get_last()));
+                    http_response_code(500);
+                    return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
+                }
+                // Clean up the temporary file
+                unlink($_FILES['biz_photo']['tmp_name']);
+            } else {
+                if (!move_uploaded_file($_FILES['biz_photo']['tmp_name'], $uploadPath)) {
+                    error_log("move_uploaded_file failed");
+                    error_log("Last error: " . json_encode(error_get_last()));
+                    http_response_code(500);
+                    return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
+                }
+            }
+            
+            error_log("File uploaded successfully: " . $uploadPath);
+
+            // Delete old image if it exists
+            if (!empty($store['biz_photo'])) {
+                $oldPath = $uploadDir . basename($store['biz_photo']);
+                if (file_exists($oldPath)) {
+                    if (unlink($oldPath)) {
+                        error_log("Successfully deleted old biz_photo: " . $oldPath);
+                    } else {
+                        error_log("Failed to delete old biz_photo: " . $oldPath);
+                    }
+                } else {
+                    error_log("Old biz_photo file not found: " . $oldPath);
+                }
+            }
+
+            $bizPhotoUrl = 'https://api.runnix.africa/uploads/logos/' . $filename;
+            $updateData['biz_photo'] = $bizPhotoUrl;
+            error_log("Biz photo URL generated: " . $bizPhotoUrl);
         }
         
         // Update store profile
