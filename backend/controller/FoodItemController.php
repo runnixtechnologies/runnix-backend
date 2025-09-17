@@ -647,7 +647,7 @@ class FoodItemController
                 if ($fileSize === $existingFileSize && $newFileHash === $existingFileHash) {
                     error_log("Uploaded image is identical to existing image, skipping upload");
                     // Keep the existing photo URL
-                    $data['photo'] = $existingItem['photo'];
+                    $photo = $existingItem['photo'];
                     error_log("Keeping existing photo: " . $existingItem['photo']);
                     // Skip the rest of the upload process
                     goto skip_image_upload;
@@ -971,7 +971,7 @@ class FoodItemController
         'category_id' => $data['category_id'] ?? $existingItem['category_id'], // Include category_id
         'section_id' => $data['section_id'] ?? $existingItem['section_id'],
         'status' => $data['status'] ?? $existingItem['status'] ?? 'active',
-        'photo' => $photo ?? $existingItem['photo']
+        'photo' => $data['photo'] ?? $existingItem['photo']
     ];
 
     // Add sides, packs, and sections if provided
