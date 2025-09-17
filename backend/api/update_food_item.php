@@ -88,34 +88,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                     
                     error_log("Processing part $i: " . substr($part, 0, 100) . "...");
                     
-                    // Parse form field
-                    if (preg_match('/name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
-                        $fieldName = trim($matches[1]);
-                        $fieldValue = trim($matches[2]);
-                        $data[$fieldName] = $fieldValue;
-                        error_log("Found field: $fieldName = $fieldValue");
+                    // Split header and content
+                    $headerEndPos = strpos($part, "\r\n\r\n");
+                    if ($headerEndPos === false) {
+                        $headerEndPos = strpos($part, "\n\n");
                     }
                     
-                    // Parse file field
-                    if (preg_match('/name="([^"]+)"; filename="([^"]*)"\s*\r?\nContent-Type:\s*([^\r\n]+)\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
-                        $fieldName = trim($matches[1]);
-                        $fileName = trim($matches[2]);
-                        $fileType = trim($matches[3]);
-                        $fileContent = $matches[4];
+                    if ($headerEndPos !== false) {
+                        $header = substr($part, 0, $headerEndPos);
+                        $content = substr($part, $headerEndPos + 4); // Skip \r\n\r\n or \n\n
                         
-                        // Create temporary file for uploaded content
-                        $tempFile = tempnam(sys_get_temp_dir(), 'put_upload_');
-                        file_put_contents($tempFile, $fileContent);
+                        error_log("Header: " . $header);
+                        error_log("Content length: " . strlen($content));
                         
-                        $files[$fieldName] = [
-                            'name' => $fileName,
-                            'type' => $fileType,
-                            'tmp_name' => $tempFile,
-                            'error' => UPLOAD_ERR_OK,
-                            'size' => strlen($fileContent)
-                        ];
-                        
-                        error_log("Found file: $fieldName = $fileName ($fileType)");
+                        // Check if this is a file field
+                        if (preg_match('/name="([^"]+)"; filename="([^"]*)"/', $header, $fileMatches)) {
+                            $fieldName = trim($fileMatches[1]);
+                            $fileName = trim($fileMatches[2]);
+                            
+                            // Extract content type
+                            $fileType = 'application/octet-stream'; // default
+                            if (preg_match('/Content-Type:\s*([^\r\n]+)/', $header, $typeMatches)) {
+                                $fileType = trim($typeMatches[1]);
+                            }
+                            
+                            // Create temporary file for uploaded content
+                            $tempFile = tempnam(sys_get_temp_dir(), 'put_upload_');
+                            $writeResult = file_put_contents($tempFile, $content);
+                            
+                            if ($writeResult !== false) {
+                                $files[$fieldName] = [
+                                    'name' => $fileName,
+                                    'type' => $fileType,
+                                    'tmp_name' => $tempFile,
+                                    'error' => UPLOAD_ERR_OK,
+                                    'size' => strlen($content)
+                                ];
+                                
+                                error_log("Found file: $fieldName = $fileName ($fileType, " . strlen($content) . " bytes)");
+                            } else {
+                                error_log("Failed to write temporary file for: $fieldName");
+                            }
+                        }
+                        // Check if this is a regular form field
+                        elseif (preg_match('/name="([^"]+)"/', $header, $fieldMatches)) {
+                            $fieldName = trim($fieldMatches[1]);
+                            $fieldValue = trim($content);
+                            $data[$fieldName] = $fieldValue;
+                            error_log("Found field: $fieldName = $fieldValue");
+                        }
                     }
                 }
                 
