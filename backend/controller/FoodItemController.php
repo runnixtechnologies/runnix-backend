@@ -635,6 +635,26 @@ class FoodItemController
             return ["status" => "error", "message" => "Image exceeds max size of 3MB."];
         }
 
+        // Check if the uploaded image is the same as the existing one
+        if (!empty($existingItem['photo'])) {
+            $existingImagePath = $_SERVER['DOCUMENT_ROOT'] . '/uploads/food-items/' . basename($existingItem['photo']);
+            if (file_exists($existingImagePath)) {
+                // Compare file sizes and content hashes to detect if it's the same image
+                $existingFileSize = filesize($existingImagePath);
+                $existingFileHash = md5_file($existingImagePath);
+                $newFileHash = md5_file($_FILES['photo']['tmp_name']);
+                
+                if ($fileSize === $existingFileSize && $newFileHash === $existingFileHash) {
+                    error_log("Uploaded image is identical to existing image, skipping upload");
+                    // Keep the existing photo URL
+                    $data['photo'] = $existingItem['photo'];
+                    error_log("Keeping existing photo: " . $existingItem['photo']);
+                    // Skip the rest of the upload process
+                    goto skip_image_upload;
+                }
+            }
+        }
+
         // Use absolute path from document root
         $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/food-items/';
         
@@ -694,6 +714,20 @@ class FoodItemController
         
         error_log("File uploaded successfully: " . $uploadPath);
 
+        // Delete old image if it exists
+        if (!empty($existingItem['photo'])) {
+            $oldPath = $uploadDir . basename($existingItem['photo']);
+            if (file_exists($oldPath)) {
+                if (unlink($oldPath)) {
+                    error_log("Successfully deleted old image: " . $oldPath);
+                } else {
+                    error_log("Failed to delete old image: " . $oldPath);
+                }
+            } else {
+                error_log("Old image file not found: " . $oldPath);
+            }
+        }
+
         $photo = 'https://api.runnix.africa/uploads/food-items/' . $filename;
         error_log("Photo URL generated: " . $photo);
     } else {
@@ -701,6 +735,7 @@ class FoodItemController
     }
 
     // Always set photo field - either new photo or existing photo
+    skip_image_upload:
     if ($photo !== null) {
         // New photo uploaded
         $data['photo'] = $photo;

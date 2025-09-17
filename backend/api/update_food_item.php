@@ -229,15 +229,20 @@ try {
     echo json_encode($response);
     
     // Clean up any temporary files created during multipart parsing
-    if (isset($_FILES) && !empty($_FILES)) {
-        foreach ($_FILES as $file) {
-            if (isset($file['tmp_name']) && strpos($file['tmp_name'], 'put_upload_') !== false) {
-                if (file_exists($file['tmp_name'])) {
-                    unlink($file['tmp_name']);
-                    error_log("Cleaned up temporary file: " . $file['tmp_name']);
+    // Only clean up if the update was successful
+    if (isset($response) && isset($response['status']) && $response['status'] === 'success') {
+        if (isset($_FILES) && !empty($_FILES)) {
+            foreach ($_FILES as $file) {
+                if (isset($file['tmp_name']) && strpos($file['tmp_name'], 'put_upload_') !== false) {
+                    if (file_exists($file['tmp_name'])) {
+                        unlink($file['tmp_name']);
+                        error_log("Cleaned up temporary file after successful update: " . $file['tmp_name']);
+                    }
                 }
             }
         }
+    } else {
+        error_log("Update failed, keeping temporary files for debugging");
     }
 } catch (Exception $e) {
     // Enhanced error logging for debugging
