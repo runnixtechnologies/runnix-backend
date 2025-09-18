@@ -23,15 +23,116 @@ class User
     private function generateReferralCode($email) {
         return substr(md5($email . time()), 0, 8);
     }
+
+    /**
+     * Generate a unique 8-character support pin
+     * Format: 4 letters + 4 numbers (e.g., ABCD1234)
+     */
+    private function generateSupportPin() {
+        $letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $numbers = '0123456789';
+        
+        $pin = '';
+        
+        // Generate 4 random letters
+        for ($i = 0; $i < 4; $i++) {
+            $pin .= $letters[rand(0, strlen($letters) - 1)];
+        }
+        
+        // Generate 4 random numbers
+        for ($i = 0; $i < 4; $i++) {
+            $pin .= $numbers[rand(0, strlen($numbers) - 1)];
+        }
+        
+        return $pin;
+    }
+
+    /**
+     * Generate a unique support pin that doesn't already exist
+     */
+    private function generateUniqueSupportPin() {
+        do {
+            $pin = $this->generateSupportPin();
+        } while ($this->isSupportPinExists($pin));
+        
+        return $pin;
+    }
+
+    /**
+     * Check if a support pin already exists
+     */
+    public function isSupportPinExists($supportPin) {
+        try {
+            $stmt = $this->conn->prepare("SELECT id FROM {$this->table} WHERE support_pin = :support_pin LIMIT 1");
+            $stmt->bindParam(':support_pin', $supportPin);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC) !== false;
+        } catch (\PDOException $e) {
+            error_log("Error checking support pin existence: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get user by support pin
+     */
+    public function getUserBySupportPin($supportPin) {
+        try {
+            $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE support_pin = :support_pin AND deleted_at IS NULL LIMIT 1");
+            $stmt->bindParam(':support_pin', $supportPin);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            error_log("Error getting user by support pin: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Verify support pin for a user
+     */
+    public function verifySupportPin($userId, $supportPin) {
+        try {
+            $stmt = $this->conn->prepare("SELECT id FROM {$this->table} WHERE id = :user_id AND support_pin = :support_pin AND deleted_at IS NULL LIMIT 1");
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->bindParam(':support_pin', $supportPin);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC) !== false;
+        } catch (\PDOException $e) {
+            error_log("Error verifying support pin: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Regenerate support pin for a user
+     */
+    public function regenerateSupportPin($userId) {
+        try {
+            $newPin = $this->generateUniqueSupportPin();
+            $stmt = $this->conn->prepare("UPDATE {$this->table} SET support_pin = :support_pin, updated_at = NOW() WHERE id = :user_id");
+            $stmt->bindParam(':support_pin', $newPin);
+            $stmt->bindParam(':user_id', $userId);
+            
+            if ($stmt->execute()) {
+                return $newPin;
+            }
+            return false;
+        } catch (\PDOException $e) {
+            error_log("Error regenerating support pin: " . $e->getMessage());
+            return false;
+        }
+    }
     
     public function createUser($email, $phone, $password, $role, $referrer_id = null)
 {
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
     $referral_code = $this->generateReferralCode($email ?? $phone);
+    $support_pin = $this->generateUniqueSupportPin();
 
     $sql = "INSERT INTO {$this->table} 
-        (email, phone, password, role, referred_by, referral_code, is_verified, status, created_at)
-        VALUES (:email, :phone, :password, :role, :referred_by, :referral_code, 1, 1, NOW())";
+        (email, phone, password, role, referred_by, referral_code, support_pin, is_verified, status, created_at)
+        VALUES (:email, :phone, :password, :role, :referred_by, :referral_code, :support_pin, 1, 1, NOW())";
 
     $stmt = $this->conn->prepare($sql);
     $stmt->bindParam(':email', $email);
@@ -39,6 +140,7 @@ class User
     $stmt->bindParam(':password', $hashedPassword);
     $stmt->bindParam(':role', $role);
     $stmt->bindParam(':referral_code', $referral_code);
+    $stmt->bindParam(':support_pin', $support_pin);
     $stmt->bindValue(':referred_by', $referrer_id, is_null($referrer_id) ? PDO::PARAM_NULL : PDO::PARAM_INT);
 
     if ($stmt->execute()) {
@@ -194,12 +296,16 @@ public function getUserByEmail($email)
         return $user;
     }
 
+    // Generate support pin for Google user
+    $support_pin = $this->generateUniqueSupportPin();
+
     // Create empty user with no password or phone yet
-    $sql = "INSERT INTO {$this->table} (email, is_verified, status, created_at)
-            VALUES (:email, 1, 'pending', NOW())";
+    $sql = "INSERT INTO {$this->table} (email, support_pin, is_verified, status, created_at)
+            VALUES (:email, :support_pin, 1, 'pending', NOW())";
 
     $stmt = $this->conn->prepare($sql);
     $stmt->bindParam(":email", $email);
+    $stmt->bindParam(":support_pin", $support_pin);
     $stmt->execute();
 
     $userId = $this->conn->lastInsertId();

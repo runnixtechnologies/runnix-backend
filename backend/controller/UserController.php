@@ -1039,6 +1039,7 @@ public function getStatus($user) {
                 'email' => $userData['email'],
                 'address' => $profileData['address'] ?? '',
                 'profile_picture' => $profileData['profile_picture'] ?? null,
+                'support_pin' => $userData['support_pin'] ?? null,
                 'is_verified' => (bool)$userData['is_verified'],
                 'status' => $userData['status'],
                 'created_at' => $userData['created_at'],
