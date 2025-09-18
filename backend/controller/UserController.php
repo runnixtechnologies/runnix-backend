@@ -1095,64 +1095,23 @@ public function getStatus($user) {
         }
         }
         
-            // Validate email format if provided
+            // Email and phone updates are not allowed for security reasons
+            // Users must contact support to update these sensitive fields
             if (!empty($data['email'])) {
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            http_response_code(400);
-            return ['status' => 'error', 'message' => 'Invalid email format'];
-        }
-        
-        // Check if email is already taken by another user
-        $existingUser = $this->userModel->getUserByEmail($data['email']);
-        if ($existingUser && $existingUser['id'] != $userId) {
-            http_response_code(409);
-            return ['status' => 'error', 'message' => 'Email is already taken by another user'];
-                }
+                http_response_code(403);
+                return ['status' => 'error', 'message' => 'Email updates are not allowed. Please contact support for email changes.'];
             }
             
-            // Validate phone format if provided
             if (!empty($data['phone'])) {
-                $phone = preg_replace('/\D/', '', $data['phone']);
-                if (strlen($phone) < 10 || strlen($phone) > 15) {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Invalid phone number format'];
-                }
-                
-                // Format phone to international format
-                if (strlen($phone) === 11 && substr($phone, 0, 1) === '0') {
-                    $phone = '234' . substr($phone, 1);
-                } elseif (strlen($phone) === 10) {
-                    $phone = '234' . $phone;
-                }
-                
-                // Check if phone is already taken by another user
-                $existingUser = $this->userModel->getUserByPhone($phone);
-                if ($existingUser && $existingUser['id'] != $userId) {
-                    http_response_code(409);
-                    return ['status' => 'error', 'message' => 'Phone number is already taken by another user'];
-                }
+                http_response_code(403);
+                return ['status' => 'error', 'message' => 'Phone number updates are not allowed. Please contact support for phone number changes.'];
             }
             
             // Begin transaction
             $this->userModel->beginTransaction();
             
             try {
-                // Update user table fields (email, phone)
-                if (!empty($data['email'])) {
-                    $emailUpdated = $this->userModel->updateUserEmail($userId, $data['email']);
-                    if (!$emailUpdated) {
-                        throw new Exception('Failed to update email');
-                    }
-                }
-                
-                if (!empty($data['phone'])) {
-                    $phoneUpdated = $this->userModel->updateUserPhone($userId, $phone);
-                    if (!$phoneUpdated) {
-                        throw new Exception('Failed to update phone');
-                    }
-                }
-                
-                // Update or create user profile
+                // Update or create user profile (only first_name and last_name allowed)
         $profileData = [
             'user_id' => $userId,
                     'first_name' => trim($data['first_name']),
@@ -1211,10 +1170,47 @@ public function getStatus($user) {
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         $fileType = $_FILES['profile_picture']['type'];
         $fileSize = $_FILES['profile_picture']['size'];
+        $fileName = $_FILES['profile_picture']['name'];
+
+        // Enhanced debugging for image format issues
+        error_log("=== PROFILE_PICTURE UPLOAD DEBUG ===");
+        error_log("File name: " . $fileName);
+        error_log("File type (MIME): " . $fileType);
+        error_log("File size: " . $fileSize . " bytes");
+        error_log("Allowed types: " . implode(', ', $allowedTypes));
+        error_log("Is file type allowed: " . (in_array($fileType, $allowedTypes) ? 'YES' : 'NO'));
         
         if (!in_array($fileType, $allowedTypes)) {
-            http_response_code(415);
-            return ['status' => 'error', 'message' => 'Unsupported image format. Use JPEG or PNG'];
+            error_log("=== UNSUPPORTED IMAGE FORMAT ERROR (PROFILE_PICTURE) ===");
+            error_log("Received MIME type: " . $fileType);
+            error_log("Expected MIME types: " . implode(', ', $allowedTypes));
+            error_log("File name: " . $fileName);
+            
+            // Try to detect MIME type from file extension as fallback
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            error_log("File extension: " . $fileExtension);
+            
+            $extensionToMime = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png'
+            ];
+            
+            if (isset($extensionToMime[$fileExtension])) {
+                $detectedMime = $extensionToMime[$fileExtension];
+                error_log("Detected MIME type from extension: " . $detectedMime);
+                
+                if (in_array($detectedMime, $allowedTypes)) {
+                    error_log("Using detected MIME type instead of reported type");
+                    $fileType = $detectedMime;
+                } else {
+                    http_response_code(415);
+                    return ['status' => 'error', 'message' => 'Unsupported image format. Received: ' . $fileType . ', File: ' . $fileName];
+                }
+            } else {
+                http_response_code(415);
+                return ['status' => 'error', 'message' => 'Unsupported image format. Received: ' . $fileType . ', File: ' . $fileName];
+            }
         }
         
         if ($fileSize > 2 * 1024 * 1024) { // 2MB

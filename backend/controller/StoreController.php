@@ -329,13 +329,29 @@ public function getActiveCategoriesByStoreType($user)
         }
         
         // Check if at least one field is provided for update
-        $updatableFields = ['store_name', 'biz_address', 'biz_email', 'biz_phone', 'biz_reg_number'];
+        $updatableFields = ['store_name', 'biz_address'];
         $hasFieldsToUpdate = false;
         foreach ($updatableFields as $field) {
             if (isset($data[$field]) && !empty(trim($data[$field]))) {
                 $hasFieldsToUpdate = true;
                 break;
             }
+        }
+        
+        // Check for sensitive fields that are not allowed for security reasons
+        if (!empty($data['biz_email'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Business email updates are not allowed. Please contact support for email changes.'];
+        }
+        
+        if (!empty($data['biz_phone'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Business phone updates are not allowed. Please contact support for phone number changes.'];
+        }
+        
+        if (!empty($data['biz_reg_number'])) {
+            http_response_code(403);
+            return ['status' => 'error', 'message' => 'Business registration number updates are not allowed. Please contact support for registration number changes.'];
         }
         
         // Check if biz_photo is being uploaded
@@ -348,49 +364,7 @@ public function getActiveCategoriesByStoreType($user)
             return ['status' => 'error', 'message' => 'At least one field must be provided for update'];
         }
         
-        // Validate email format (only if email is provided)
-        $email = null;
-        if (isset($data['biz_email']) && !empty(trim($data['biz_email']))) {
-            $email = trim($data['biz_email']);
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Invalid email format'];
-            }
-        }
-        
-        // Validate phone number format (only if phone is provided)
-        $formattedPhone = null;
-        if (isset($data['biz_phone']) && !empty(trim($data['biz_phone']))) {
-            $phone = $data['biz_phone'];
-            if (!preg_match('/^0?\d{10}$/', $phone)) {
-                http_response_code(400);
-                return ['status' => 'error', 'message' => 'Invalid phone number format. Use 10 or 11 digits.'];
-            }
-            
-            // Format phone number to international format
-            $formattedPhone = '234' . ltrim($phone, '0');
-        }
-        
-        // Check if phone number is being changed (only if phone is provided)
-        $phoneChanged = false;
-        if ($formattedPhone !== null) {
-            $phoneChanged = $store['biz_phone'] !== $formattedPhone;
-            
-            if ($phoneChanged) {
-                // Check if new phone number already exists
-                if ($this->store->storeFieldExists('biz_phone', $formattedPhone, $storeId)) {
-                    http_response_code(409);
-                    return ['status' => 'error', 'message' => 'Business phone number already exists'];
-                }
-                
-                // Check if OTP was verified for phone change
-                $otpModel = new \Model\Otp();
-                if (!$otpModel->isOtpVerified($formattedPhone, 'business_phone_update')) {
-                    http_response_code(400);
-                    return ['status' => 'error', 'message' => 'Phone number OTP not verified. Please verify OTP before updating.'];
-                }
-            }
-        }
+        // Email, phone, and registration number validation removed for security reasons
         
         // Check for field uniqueness (only for provided fields)
         if (isset($data['store_name']) && !empty(trim($data['store_name']))) {
@@ -400,19 +374,7 @@ public function getActiveCategoriesByStoreType($user)
             }
         }
         
-        if ($email !== null) {
-            if ($this->store->storeFieldExists('biz_email', $email, $storeId)) {
-                http_response_code(409);
-                return ['status' => 'error', 'message' => 'Business email already exists'];
-            }
-        }
-        
-        if (isset($data['biz_reg_number']) && !empty(trim($data['biz_reg_number']))) {
-            if ($this->store->storeFieldExists('biz_reg_number', $data['biz_reg_number'], $storeId)) {
-                http_response_code(409);
-                return ['status' => 'error', 'message' => 'Business registration number already exists'];
-            }
-        }
+        // Email, phone, and registration number uniqueness checks removed for security reasons
         
         // Prepare update data (only include provided fields)
         $updateData = [];
@@ -425,17 +387,7 @@ public function getActiveCategoriesByStoreType($user)
             $updateData['biz_address'] = trim($data['biz_address']);
         }
         
-        if ($email !== null) {
-            $updateData['biz_email'] = $email;
-        }
-        
-        if ($formattedPhone !== null) {
-            $updateData['biz_phone'] = $formattedPhone;
-        }
-        
-        if (isset($data['biz_reg_number']) && !empty(trim($data['biz_reg_number']))) {
-            $updateData['biz_reg_number'] = trim($data['biz_reg_number']);
-        }
+        // Email, phone, and registration number updates removed for security reasons
         
         // Handle biz_photo upload (optional)
         if (isset($_FILES['biz_photo']) && $_FILES['biz_photo']['error'] === UPLOAD_ERR_OK) {
@@ -444,10 +396,47 @@ public function getActiveCategoriesByStoreType($user)
             ];
             $fileType = $_FILES['biz_photo']['type'];
             $fileSize = $_FILES['biz_photo']['size'];
+            $fileName = $_FILES['biz_photo']['name'];
+
+            // Enhanced debugging for image format issues
+            error_log("=== BIZ_PHOTO UPLOAD DEBUG ===");
+            error_log("File name: " . $fileName);
+            error_log("File type (MIME): " . $fileType);
+            error_log("File size: " . $fileSize . " bytes");
+            error_log("Allowed types: " . implode(', ', $allowedTypes));
+            error_log("Is file type allowed: " . (in_array($fileType, $allowedTypes) ? 'YES' : 'NO'));
 
             if (!in_array($fileType, $allowedTypes)) {
-                http_response_code(415);
-                return ["status" => "error", "message" => "Unsupported image format."];
+                error_log("=== UNSUPPORTED IMAGE FORMAT ERROR (BIZ_PHOTO) ===");
+                error_log("Received MIME type: " . $fileType);
+                error_log("Expected MIME types: " . implode(', ', $allowedTypes));
+                error_log("File name: " . $fileName);
+                
+                // Try to detect MIME type from file extension as fallback
+                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                error_log("File extension: " . $fileExtension);
+                
+                $extensionToMime = [
+                    'jpg' => 'image/jpeg',
+                    'jpeg' => 'image/jpeg',
+                    'png' => 'image/png'
+                ];
+                
+                if (isset($extensionToMime[$fileExtension])) {
+                    $detectedMime = $extensionToMime[$fileExtension];
+                    error_log("Detected MIME type from extension: " . $detectedMime);
+                    
+                    if (in_array($detectedMime, $allowedTypes)) {
+                        error_log("Using detected MIME type instead of reported type");
+                        $fileType = $detectedMime;
+                    } else {
+                        http_response_code(415);
+                        return ["status" => "error", "message" => "Unsupported image format. Received: " . $fileType . ", File: " . $fileName];
+                    }
+                } else {
+                    http_response_code(415);
+                    return ["status" => "error", "message" => "Unsupported image format. Received: " . $fileType . ", File: " . $fileName];
+                }
             }
 
             if ($fileSize > 3 * 1024 * 1024) { // 3MB

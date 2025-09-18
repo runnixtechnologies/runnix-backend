@@ -117,11 +117,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                             $writeResult = file_put_contents($tempFile, $content);
                             
                             if ($writeResult !== false) {
-                                $files[$fieldName] = [
-                                    'name' => $fileName,
-                                    'type' => $fileType,
-                                    'tmp_name' => $tempFile,
-                                    'error' => UPLOAD_ERR_OK,
+                        $files[$fieldName] = [
+                            'name' => $fileName,
+                            'type' => $fileType,
+                            'tmp_name' => $tempFile,
+                            'error' => UPLOAD_ERR_OK,
                                     'size' => strlen($content)
                                 ];
                                 
