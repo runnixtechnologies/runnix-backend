@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
         $limit = min(50, max(1, (int)$limit));
         $offset = ($page - 1) * $limit;
         
-        $db = new Database();
+        $db = new \Config\Database();
         $conn = $db->getConnection();
         
         // Build query
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
             exit;
         }
         
-        $db = new Database();
+        $db = new \Config\Database();
         $conn = $db->getConnection();
         
         // Mark notifications as read

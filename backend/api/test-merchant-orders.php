@@ -33,7 +33,7 @@ try {
     
     // Test database connection and get merchant's stores
     require_once '../config/Database.php';
-    $db = new Database();
+    $db = new \Config\Database();
     $conn = $db->getConnection();
     
     // Get merchant's stores

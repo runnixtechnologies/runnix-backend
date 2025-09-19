@@ -31,7 +31,7 @@ try {
     
     // Test 2: Check database connection
     try {
-        $db = new Database();
+        $db = new \Config\Database();
         $conn = $db->getConnection();
         $debug[] = "✅ Database connection successful";
     } catch (Exception $e) {

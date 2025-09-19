@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
             exit;
         }
         
-        $db = new Database();
+        $db = new \Config\Database();
         $conn = $db->getConnection();
         
         // Get order details
