@@ -71,7 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         echo json_encode($response);
         
     } catch (Exception $e) {
-        error_log('Update order status error: ' . $e->getMessage());
+        $errorMessage = 'Update order status error: ' . $e->getMessage() . ' | Stack trace: ' . $e->getTraceAsString();
+        error_log($errorMessage, 3, __DIR__ . '/php-error.log');
         http_response_code(500);
         echo json_encode([
             "status" => "error",

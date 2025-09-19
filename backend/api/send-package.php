@@ -108,7 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
     } catch (Exception $e) {
-        error_log('Send package error: ' . $e->getMessage());
+        $errorMessage = 'Send package error: ' . $e->getMessage() . ' | Stack trace: ' . $e->getTraceAsString();
+        error_log($errorMessage, 3, __DIR__ . '/php-error.log');
         http_response_code(500);
         echo json_encode([
             "status" => "error",

@@ -103,7 +103,8 @@ try {
     ]);
     
 } catch (Exception $e) {
-    error_log('Database connection test error: ' . $e->getMessage());
+    $errorMessage = 'Database connection test error: ' . $e->getMessage() . ' | Stack trace: ' . $e->getTraceAsString();
+    error_log($errorMessage, 3, __DIR__ . '/php-error.log');
     http_response_code(500);
     echo json_encode([
         "status" => "error",

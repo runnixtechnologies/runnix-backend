@@ -196,7 +196,8 @@ class Order
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
             
         } catch (Exception $e) {
-            error_log("getMerchantOrders error: " . $e->getMessage());
+            $errorMessage = "getMerchantOrders error: " . $e->getMessage() . " | Stack trace: " . $e->getTraceAsString();
+            error_log($errorMessage, 3, __DIR__ . '/php-error.log');
             return []; // Return empty array if there's an error
         }
     }
@@ -482,7 +483,8 @@ class Order
             return $result['count'] ?? 0;
             
         } catch (Exception $e) {
-            error_log("getMerchantOrdersCount error: " . $e->getMessage());
+            $errorMessage = "getMerchantOrdersCount error: " . $e->getMessage() . " | Stack trace: " . $e->getTraceAsString();
+            error_log($errorMessage, 3, __DIR__ . '/php-error.log');
             return 0; // Return 0 if there's an error
         }
     }

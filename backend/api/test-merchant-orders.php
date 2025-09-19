@@ -89,8 +89,8 @@ try {
     ]);
     
 } catch (Exception $e) {
-    error_log('Test merchant orders error: ' . $e->getMessage());
-    error_log('Stack trace: ' . $e->getTraceAsString());
+    $errorMessage = 'Test merchant orders error: ' . $e->getMessage() . ' | Stack trace: ' . $e->getTraceAsString();
+    error_log($errorMessage, 3, __DIR__ . '/php-error.log');
     http_response_code(500);
     echo json_encode([
         "status" => "error",
