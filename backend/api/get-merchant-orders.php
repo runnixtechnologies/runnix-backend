@@ -37,6 +37,11 @@ if ($user['role'] !== 'merchant') {
 
 if ($_SERVER['REQUEST_METHOD'] == 'GET') {
     try {
+        // Check if OrderController class exists
+        if (!class_exists('Controller\OrderController')) {
+            throw new Exception('OrderController class not found');
+        }
+        
         $orderController = new OrderController();
         
         // Get query parameters
@@ -69,10 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
         
     } catch (Exception $e) {
         error_log('Get merchant orders error: ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
         http_response_code(500);
         echo json_encode([
             "status" => "error",
-            "message" => "An error occurred while retrieving orders."
+            "message" => "An error occurred while retrieving orders: " . $e->getMessage()
         ]);
     }
 } else {

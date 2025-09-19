@@ -164,35 +164,41 @@ class Order
      */
     public function getMerchantOrders($merchantId, $status = null, $page = 1, $limit = 20)
     {
-        $offset = ($page - 1) * $limit;
-        
-        $sql = "SELECT o.*, 
-                       COUNT(oi.id) as item_count,
-                       GROUP_CONCAT(COALESCE(oi.item_name, 'Unknown Item') SEPARATOR ', ') as items_summary
-                FROM {$this->table} o
-                LEFT JOIN {$this->itemsTable} oi ON o.id = oi.order_id
-                WHERE o.merchant_id = :merchant_id";
-        
-        $params = [':merchant_id' => $merchantId];
-        
-        if ($status) {
-            $sql .= " AND o.status = :status";
-            $params[':status'] = $status;
+        try {
+            $offset = ($page - 1) * $limit;
+            
+            $sql = "SELECT o.*, 
+                           COUNT(oi.id) as item_count,
+                           GROUP_CONCAT(COALESCE(oi.item_name, 'Unknown Item') SEPARATOR ', ') as items_summary
+                    FROM {$this->table} o
+                    LEFT JOIN {$this->itemsTable} oi ON o.id = oi.order_id
+                    WHERE o.merchant_id = :merchant_id";
+            
+            $params = [':merchant_id' => $merchantId];
+            
+            if ($status) {
+                $sql .= " AND o.status = :status";
+                $params[':status'] = $status;
+            }
+            
+            $sql .= " GROUP BY o.id 
+                      ORDER BY o.created_at DESC 
+                      LIMIT :limit OFFSET :offset";
+            
+            $stmt = $this->conn->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            error_log("getMerchantOrders error: " . $e->getMessage());
+            return []; // Return empty array if there's an error
         }
-        
-        $sql .= " GROUP BY o.id 
-                  ORDER BY o.created_at DESC 
-                  LIMIT :limit OFFSET :offset";
-        
-        $stmt = $this->conn->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -457,22 +463,28 @@ class Order
      */
     public function getMerchantOrdersCount($merchantId, $status = null)
     {
-        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE merchant_id = :merchant_id";
-        $params = [':merchant_id' => $merchantId];
-        
-        if ($status) {
-            $sql .= " AND status = :status";
-            $params[':status'] = $status;
+        try {
+            $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE merchant_id = :merchant_id";
+            $params = [':merchant_id' => $merchantId];
+            
+            if ($status) {
+                $sql .= " AND status = :status";
+                $params[':status'] = $status;
+            }
+            
+            $stmt = $this->conn->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result['count'] ?? 0;
+            
+        } catch (Exception $e) {
+            error_log("getMerchantOrdersCount error: " . $e->getMessage());
+            return 0; // Return 0 if there's an error
         }
-        
-        $stmt = $this->conn->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->execute();
-        
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['count'];
     }
 
     /**
