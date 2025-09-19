@@ -13,6 +13,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $debug = [];
 
+// Add use statements at the top level
+use Controller\OrderController;
+use Model\User;
+use function Middleware\authenticateRequest;
+
 try {
     $debug[] = "✅ PHP is working";
     
@@ -23,11 +28,6 @@ try {
     } catch (Exception $e) {
         $debug[] = "❌ Database.php failed: " . $e->getMessage();
     }
-    
-    // Add use statements
-    use Controller\OrderController;
-    use Model\User;
-    use function Middleware\authenticateRequest;
     
     // Test 2: Check database connection
     try {
