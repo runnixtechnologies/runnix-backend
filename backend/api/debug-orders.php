@@ -24,9 +24,14 @@ try {
         $debug[] = "❌ Database.php failed: " . $e->getMessage();
     }
     
+    // Add use statements
+    use Controller\OrderController;
+    use Model\User;
+    use function Middleware\authenticateRequest;
+    
     // Test 2: Check database connection
     try {
-        $db = new \Config\Database();
+        $db = new Database();
         $conn = $db->getConnection();
         $debug[] = "✅ Database connection successful";
     } catch (Exception $e) {
@@ -77,6 +82,20 @@ try {
         $debug[] = "❌ Order.php failed: " . $e->getMessage();
     }
     
+    // Test 4.5: Check if User model exists
+    try {
+        require_once '../model/User.php';
+        $debug[] = "✅ User.php included successfully";
+        
+        if (class_exists('Model\User')) {
+            $debug[] = "✅ User class exists";
+        } else {
+            $debug[] = "❌ User class not found";
+        }
+    } catch (Exception $e) {
+        $debug[] = "❌ User.php failed: " . $e->getMessage();
+    }
+    
     // Test 5: Check if OrderController exists
     try {
         require_once '../controller/OrderController.php';
@@ -105,7 +124,15 @@ try {
         $debug[] = "❌ authMiddleware.php failed: " . $e->getMessage();
     }
     
-    // Test 7: Check if we can instantiate OrderController
+    // Test 7: Check if we can instantiate User model
+    try {
+        $userModel = new User();
+        $debug[] = "✅ User model instantiated successfully";
+    } catch (Exception $e) {
+        $debug[] = "❌ User model instantiation failed: " . $e->getMessage();
+    }
+    
+    // Test 8: Check if we can instantiate OrderController
     try {
         $orderController = new OrderController();
         $debug[] = "✅ OrderController instantiated successfully";
@@ -113,7 +140,7 @@ try {
         $debug[] = "❌ OrderController instantiation failed: " . $e->getMessage();
     }
     
-    // Test 8: Check PHP error reporting
+    // Test 9: Check PHP error reporting
     $debug[] = "PHP Error Reporting: " . error_reporting();
     $debug[] = "PHP Display Errors: " . ini_get('display_errors');
     $debug[] = "PHP Log Errors: " . ini_get('log_errors');

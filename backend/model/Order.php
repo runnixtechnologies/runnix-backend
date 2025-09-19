@@ -16,7 +16,7 @@ class Order
 
     public function __construct()
     {
-        $this->conn = (new \Config\Database())->getConnection();
+        $this->conn = (new Database())->getConnection();
     }
 
     /**
