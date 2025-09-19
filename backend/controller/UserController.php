@@ -642,10 +642,10 @@ public function softDeleteAccount($data, $user)
 {
     $userModel = new User();
     
-    // Validate required fields
-    if (empty($data['confirmation']) || $data['confirmation'] !== 'yes') {
+    // Validate required fields - only reason is needed
+    if (empty($data['reason'])) {
         http_response_code(400);
-        return ["status" => "error", "message" => "Account deletion requires confirmation. Please confirm by sending 'confirmation': 'yes'"];
+        return ["status" => "error", "message" => "Reason is required for account deletion"];
     }
     
     $userId = $user['user_id'];
