@@ -1,26 +1,21 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-// Handle preflight request for OPTIONS method (CORS preflight check)
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header("Access-Control-Allow-Origin: *");
-    header("Access-Control-Allow-Methods: GET, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization");
-    http_response_code(200);
-    exit;
-}
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// Include necessary files
-require_once '../config/Database.php';
+// Force error logging to a specific file for debugging
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../php-error.log');
+
+require_once '../../vendor/autoload.php';
+require_once '../config/cors.php';
 require_once '../middleware/authMiddleware.php';
-require_once '../controller/OrderController.php';
-
-header('Content-Type: application/json');
 
 use Controller\OrderController;
 use function Middleware\authenticateRequest;
+
+header('Content-Type: application/json');
 
 // Authenticate user
 $user = authenticateRequest();
