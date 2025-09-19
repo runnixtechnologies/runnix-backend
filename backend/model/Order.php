@@ -210,17 +210,13 @@ class Order
         // Get main order info
         $sql = "SELECT o.*, 
                        s.store_name,
-                       c.first_name as customer_first_name,
-                       c.last_name as customer_last_name,
                        c.phone as customer_phone,
                        c.email as customer_email,
-                       r.first_name as rider_first_name,
-                       r.last_name as rider_last_name,
                        r.phone as rider_phone
                 FROM {$this->table} o
                 LEFT JOIN stores s ON o.store_id = s.id
-                LEFT JOIN user_profiles c ON o.customer_id = c.user_id
-                LEFT JOIN user_profiles r ON o.rider_id = r.user_id
+                LEFT JOIN users c ON o.customer_id = c.id
+                LEFT JOIN users r ON o.rider_id = r.id
                 WHERE o.id = :order_id";
         
         $stmt = $this->conn->prepare($sql);
@@ -356,9 +352,9 @@ class Order
     public function getOrderStatusHistory($orderId)
     {
         $sql = "SELECT osh.*, 
-                       up.first_name, up.last_name
+                       up.email as changed_by_email
                 FROM {$this->statusHistoryTable} osh
-                LEFT JOIN user_profiles up ON osh.changed_by = up.user_id
+                LEFT JOIN users up ON osh.changed_by = up.id
                 WHERE osh.order_id = :order_id
                 ORDER BY osh.created_at ASC";
         
@@ -515,9 +511,9 @@ class Order
     public function getDeliveryTracking($orderId)
     {
         $sql = "SELECT dt.*, 
-                       up.first_name, up.last_name, up.phone
+                       up.email as rider_email, up.phone as rider_phone
                 FROM {$this->trackingTable} dt
-                LEFT JOIN user_profiles up ON dt.rider_id = up.user_id
+                LEFT JOIN users up ON dt.rider_id = up.id
                 WHERE dt.order_id = :order_id
                 ORDER BY dt.created_at DESC";
         
