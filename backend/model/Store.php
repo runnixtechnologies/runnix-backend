@@ -248,6 +248,11 @@ class Store
                 $params['biz_reg_number'] = $data['biz_reg_number'];
             }
             
+            if (isset($data['biz_logo'])) {
+                $updateFields[] = "biz_logo = :biz_logo";
+                $params['biz_logo'] = $data['biz_logo'];
+            }
+            
             if (empty($updateFields)) {
                 $this->conn->rollBack();
                 return false;

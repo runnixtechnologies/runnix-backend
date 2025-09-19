@@ -354,8 +354,8 @@ public function getActiveCategoriesByStoreType($user)
             return ['status' => 'error', 'message' => 'Business registration number updates are not allowed. Please contact support for registration number changes.'];
         }
         
-        // Check if biz_photo is being uploaded
-        if (isset($_FILES['biz_photo']) && $_FILES['biz_photo']['error'] === UPLOAD_ERR_OK) {
+        // Check if biz_logo is being uploaded
+        if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
             $hasFieldsToUpdate = true;
         }
         
@@ -389,17 +389,17 @@ public function getActiveCategoriesByStoreType($user)
         
         // Email, phone, and registration number updates removed for security reasons
         
-        // Handle biz_photo upload (optional)
-        if (isset($_FILES['biz_photo']) && $_FILES['biz_photo']['error'] === UPLOAD_ERR_OK) {
+        // Handle biz_logo upload (optional)
+        if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
             $allowedTypes = [
                 'image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'
             ];
-            $fileType = $_FILES['biz_photo']['type'];
-            $fileSize = $_FILES['biz_photo']['size'];
-            $fileName = $_FILES['biz_photo']['name'];
+            $fileType = $_FILES['biz_logo']['type'];
+            $fileSize = $_FILES['biz_logo']['size'];
+            $fileName = $_FILES['biz_logo']['name'];
 
             // Enhanced debugging for image format issues
-            error_log("=== BIZ_PHOTO UPLOAD DEBUG ===");
+            error_log("=== BIZ_LOGO UPLOAD DEBUG ===");
             error_log("File name: " . $fileName);
             error_log("File type (MIME): " . $fileType);
             error_log("File size: " . $fileSize . " bytes");
@@ -407,7 +407,7 @@ public function getActiveCategoriesByStoreType($user)
             error_log("Is file type allowed: " . (in_array($fileType, $allowedTypes) ? 'YES' : 'NO'));
 
             if (!in_array($fileType, $allowedTypes)) {
-                error_log("=== UNSUPPORTED IMAGE FORMAT ERROR (BIZ_PHOTO) ===");
+                error_log("=== UNSUPPORTED IMAGE FORMAT ERROR (BIZ_LOGO) ===");
                 error_log("Received MIME type: " . $fileType);
                 error_log("Expected MIME types: " . implode(', ', $allowedTypes));
                 error_log("File name: " . $fileName);
@@ -472,32 +472,32 @@ public function getActiveCategoriesByStoreType($user)
                 return ["status" => "error", "message" => "Upload directory is not writable."];
             }
 
-            $ext = pathinfo($_FILES['biz_photo']['name'], PATHINFO_EXTENSION);
-            $filename = uniqid('biz_photo_', true) . '.' . $ext;
+            $ext = pathinfo($_FILES['biz_logo']['name'], PATHINFO_EXTENSION);
+            $filename = uniqid('biz_logo_', true) . '.' . $ext;
             $uploadPath = $uploadDir . $filename;
             
-            error_log("Attempting to upload biz_photo:");
-            error_log("- Source: " . $_FILES['biz_photo']['tmp_name']);
+            error_log("Attempting to upload biz_logo:");
+            error_log("- Source: " . $_FILES['biz_logo']['tmp_name']);
             error_log("- Upload directory: " . $uploadDir);
             error_log("- Destination: " . $uploadPath);
-            error_log("- File size: " . $_FILES['biz_photo']['size'] . " bytes");
-            error_log("- Is manually parsed: " . (strpos($_FILES['biz_photo']['tmp_name'], 'put_upload_') !== false ? 'YES' : 'NO'));
+            error_log("- File size: " . $_FILES['biz_logo']['size'] . " bytes");
+            error_log("- Is manually parsed: " . (strpos($_FILES['biz_logo']['tmp_name'], 'put_upload_') !== false ? 'YES' : 'NO'));
 
             // Check if this is a manually parsed file (from PUT multipart parsing)
-            $isManuallyParsed = (strpos($_FILES['biz_photo']['tmp_name'], 'put_upload_') !== false);
+            $isManuallyParsed = (strpos($_FILES['biz_logo']['tmp_name'], 'put_upload_') !== false);
             
             if ($isManuallyParsed) {
                 error_log("Detected manually parsed file, using copy instead of move_uploaded_file");
-                if (!copy($_FILES['biz_photo']['tmp_name'], $uploadPath)) {
+                if (!copy($_FILES['biz_logo']['tmp_name'], $uploadPath)) {
                     error_log("copy failed");
                     error_log("Last error: " . json_encode(error_get_last()));
                     http_response_code(500);
                     return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
                 }
                 // Clean up the temporary file
-                unlink($_FILES['biz_photo']['tmp_name']);
+                unlink($_FILES['biz_logo']['tmp_name']);
             } else {
-                if (!move_uploaded_file($_FILES['biz_photo']['tmp_name'], $uploadPath)) {
+                if (!move_uploaded_file($_FILES['biz_logo']['tmp_name'], $uploadPath)) {
                     error_log("move_uploaded_file failed");
                     error_log("Last error: " . json_encode(error_get_last()));
                     http_response_code(500);
@@ -508,22 +508,22 @@ public function getActiveCategoriesByStoreType($user)
             error_log("File uploaded successfully: " . $uploadPath);
 
             // Delete old image if it exists
-            if (!empty($store['biz_photo'])) {
-                $oldPath = $uploadDir . basename($store['biz_photo']);
+            if (!empty($store['biz_logo'])) {
+                $oldPath = $uploadDir . basename($store['biz_logo']);
                 if (file_exists($oldPath)) {
                     if (unlink($oldPath)) {
-                        error_log("Successfully deleted old biz_photo: " . $oldPath);
+                        error_log("Successfully deleted old biz_logo: " . $oldPath);
                     } else {
-                        error_log("Failed to delete old biz_photo: " . $oldPath);
+                        error_log("Failed to delete old biz_logo: " . $oldPath);
                     }
                 } else {
-                    error_log("Old biz_photo file not found: " . $oldPath);
+                    error_log("Old biz_logo file not found: " . $oldPath);
                 }
             }
 
-            $bizPhotoUrl = 'https://api.runnix.africa/uploads/logos/' . $filename;
-            $updateData['biz_photo'] = $bizPhotoUrl;
-            error_log("Biz photo URL generated: " . $bizPhotoUrl);
+            $bizLogoUrl = 'https://api.runnix.africa/uploads/logos/' . $filename;
+            $updateData['biz_logo'] = $bizLogoUrl;
+            error_log("Biz logo URL generated: " . $bizLogoUrl);
         }
         
         // Update store profile
