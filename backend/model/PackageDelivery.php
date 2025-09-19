@@ -11,7 +11,7 @@ class PackageDelivery
 
     public function __construct()
     {
-        $this->conn = (new Database())->getConnection();
+        $this->conn = (new \Config\Database())->getConnection();
     }
 
     /**
