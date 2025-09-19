@@ -354,8 +354,9 @@ public function getActiveCategoriesByStoreType($user)
             return ['status' => 'error', 'message' => 'Business registration number updates are not allowed. Please contact support for registration number changes.'];
         }
         
-        // Check if biz_logo is being uploaded
-        if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
+        // Check if biz_logo or biz_photo is being uploaded
+        if ((isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) ||
+            (isset($_FILES['biz_photo']) && $_FILES['biz_photo']['error'] === UPLOAD_ERR_OK)) {
             $hasFieldsToUpdate = true;
         }
         
@@ -389,14 +390,21 @@ public function getActiveCategoriesByStoreType($user)
         
         // Email, phone, and registration number updates removed for security reasons
         
-        // Handle biz_logo upload (optional)
+        // Handle biz_logo or biz_photo upload (optional)
+        $logoFile = null;
         if (isset($_FILES['biz_logo']) && $_FILES['biz_logo']['error'] === UPLOAD_ERR_OK) {
+            $logoFile = $_FILES['biz_logo'];
+        } elseif (isset($_FILES['biz_photo']) && $_FILES['biz_photo']['error'] === UPLOAD_ERR_OK) {
+            $logoFile = $_FILES['biz_photo'];
+        }
+        
+        if ($logoFile) {
             $allowedTypes = [
                 'image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png'
             ];
-            $fileType = $_FILES['biz_logo']['type'];
-            $fileSize = $_FILES['biz_logo']['size'];
-            $fileName = $_FILES['biz_logo']['name'];
+            $fileType = $logoFile['type'];
+            $fileSize = $logoFile['size'];
+            $fileName = $logoFile['name'];
 
             // Enhanced debugging for image format issues
             error_log("=== BIZ_LOGO UPLOAD DEBUG ===");
@@ -472,32 +480,32 @@ public function getActiveCategoriesByStoreType($user)
                 return ["status" => "error", "message" => "Upload directory is not writable."];
             }
 
-            $ext = pathinfo($_FILES['biz_logo']['name'], PATHINFO_EXTENSION);
+            $ext = pathinfo($logoFile['name'], PATHINFO_EXTENSION);
             $filename = uniqid('biz_logo_', true) . '.' . $ext;
             $uploadPath = $uploadDir . $filename;
             
             error_log("Attempting to upload biz_logo:");
-            error_log("- Source: " . $_FILES['biz_logo']['tmp_name']);
+            error_log("- Source: " . $logoFile['tmp_name']);
             error_log("- Upload directory: " . $uploadDir);
             error_log("- Destination: " . $uploadPath);
-            error_log("- File size: " . $_FILES['biz_logo']['size'] . " bytes");
-            error_log("- Is manually parsed: " . (strpos($_FILES['biz_logo']['tmp_name'], 'put_upload_') !== false ? 'YES' : 'NO'));
+            error_log("- File size: " . $logoFile['size'] . " bytes");
+            error_log("- Is manually parsed: " . (strpos($logoFile['tmp_name'], 'put_upload_') !== false ? 'YES' : 'NO'));
 
             // Check if this is a manually parsed file (from PUT multipart parsing)
-            $isManuallyParsed = (strpos($_FILES['biz_logo']['tmp_name'], 'put_upload_') !== false);
+            $isManuallyParsed = (strpos($logoFile['tmp_name'], 'put_upload_') !== false);
             
             if ($isManuallyParsed) {
                 error_log("Detected manually parsed file, using copy instead of move_uploaded_file");
-                if (!copy($_FILES['biz_logo']['tmp_name'], $uploadPath)) {
+                if (!copy($logoFile['tmp_name'], $uploadPath)) {
                     error_log("copy failed");
                     error_log("Last error: " . json_encode(error_get_last()));
                     http_response_code(500);
                     return ["status" => "error", "message" => "Failed to upload image. Check server logs for details."];
                 }
                 // Clean up the temporary file
-                unlink($_FILES['biz_logo']['tmp_name']);
+                unlink($logoFile['tmp_name']);
             } else {
-                if (!move_uploaded_file($_FILES['biz_logo']['tmp_name'], $uploadPath)) {
+                if (!move_uploaded_file($logoFile['tmp_name'], $uploadPath)) {
                     error_log("move_uploaded_file failed");
                     error_log("Last error: " . json_encode(error_get_last()));
                     http_response_code(500);
