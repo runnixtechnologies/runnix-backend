@@ -31,15 +31,7 @@ try {
 // Read the JSON input
 $data = json_decode(file_get_contents("php://input"), true);
 
-// Validate that confirmation is provided
-if (empty($data['confirmation'])) {
-    http_response_code(400);
-    echo json_encode([
-        "status" => "error", 
-        "message" => "Confirmation is required. Please confirm account deletion by sending 'confirmation': 'yes'"
-    ]);
-    exit;
-}
+// Confirmation is now optional - users can delete without confirmation
 
 // Log the deletion attempt for audit purposes
 $email = $user['email'] ?? 'N/A';

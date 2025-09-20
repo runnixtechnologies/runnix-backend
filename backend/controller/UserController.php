@@ -642,14 +642,8 @@ public function softDeleteAccount($data, $user)
 {
     $userModel = new User();
     
-    // Validate required fields - only reason is needed
-    if (empty($data['reason'])) {
-        http_response_code(400);
-        return ["status" => "error", "message" => "Reason is required for account deletion"];
-    }
-    
     $userId = $user['user_id'];
-    $reason = $data['reason'] ?? null;
+    $reason = $data['reason'] ?? null; // Reason is now optional
     
     // Check if user exists and is not already soft deleted
     $existingUser = $userModel->getUserById($userId);
@@ -669,7 +663,8 @@ public function softDeleteAccount($data, $user)
     
     if ($success) {
         // Log the deletion for audit purposes
-        error_log("User account soft deleted - User ID: {$userId}, Reason: {$reason}, Deleted at: " . date('Y-m-d H:i:s'));
+        $reasonText = $reason ? $reason : 'No reason provided';
+        error_log("User account soft deleted - User ID: {$userId}, Reason: {$reasonText}, Deleted at: " . date('Y-m-d H:i:s'));
         
         http_response_code(200);
         return [

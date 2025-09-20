@@ -42,7 +42,6 @@ ADD COLUMN reactivation_deadline TIMESTAMP NULL DEFAULT NULL COMMENT 'Deadline f
 - **Request Body**:
 ```json
 {
-  "confirmation": "yes",
   "reason": "No longer using the service" // Optional
 }
 ```
@@ -126,11 +125,9 @@ ADD COLUMN reactivation_deadline TIMESTAMP NULL DEFAULT NULL COMMENT 'Deadline f
 
 ### **Account Deletion Flow:**
 1. User clicks "Delete Account" button
-2. System shows confirmation prompt: "Are you sure you want to delete your account?"
-3. User clicks "Yes" → Frontend sends `confirmation: "yes"` to API
-4. System soft deletes account and returns success message (60-day reactivation window)
-5. User is logged out and cannot access the system
-6. Account data is preserved but hidden from other users
+2. System immediately soft deletes account and returns success message (60-day reactivation window)
+3. User is logged out and cannot access the system
+4. Account data is preserved but hidden from other users
 
 ### **Account Reactivation Flow:**
 1. User contacts support requesting account reactivation
