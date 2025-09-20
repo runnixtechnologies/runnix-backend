@@ -1091,16 +1091,14 @@ public function getStatus($user) {
         }
         }
         
-            // Email and phone updates are not allowed for security reasons
-            // Users must contact support to update these sensitive fields
-            if (!empty($data['email'])) {
-                http_response_code(403);
-                return ['status' => 'error', 'message' => 'Email updates are not allowed. Please contact support for email changes.'];
+            // Handle phone number update with OTP verification
+            if (!empty($data['phone'])) {
+                return $this->handlePhoneUpdate($data, $userId);
             }
             
-            if (!empty($data['phone'])) {
-                http_response_code(403);
-                return ['status' => 'error', 'message' => 'Phone number updates are not allowed. Please contact support for phone number changes.'];
+            // Handle email update with OTP verification
+            if (!empty($data['email'])) {
+                return $this->handleEmailUpdate($data, $userId);
             }
             
             // Begin transaction
@@ -1150,6 +1148,189 @@ public function getStatus($user) {
             error_log("updateProfile error: " . $e->getMessage());
             http_response_code(500);
             return ['status' => 'error', 'message' => 'Failed to update profile: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Handle phone number update with OTP verification
+     */
+    private function handlePhoneUpdate($data, $userId)
+    {
+        $newPhone = $data['phone'];
+        $otp = $data['otp'] ?? null;
+        
+        // Format phone number
+        $formattedPhone = '234' . ltrim($newPhone, '0');
+        
+        // Check if phone is already taken by another user
+        $existingUser = $this->userModel->getUserByPhone($formattedPhone);
+        if ($existingUser && $existingUser['id'] != $userId) {
+            http_response_code(409);
+            return ['status' => 'error', 'message' => 'Phone number is already taken by another user'];
+        }
+        
+        // If no OTP provided, send OTP to current phone number
+        if (empty($otp)) {
+            // Get current user data to send OTP to current phone
+            $currentUser = $this->userModel->getUserById($userId);
+            if (!$currentUser) {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => 'User not found'];
+            }
+            
+            $currentPhone = $currentUser['phone'];
+            
+            // Generate and send OTP to current phone number
+            $otpGenerated = $this->otpModel->generateOtp($currentPhone, 'phone_change');
+            
+            if ($otpGenerated) {
+                http_response_code(200);
+                return [
+                    'status' => 'success',
+                    'message' => 'OTP sent to your current phone number. Please enter the OTP to confirm phone number change.',
+                    'requires_otp' => true,
+                    'new_phone' => $formattedPhone
+                ];
+            } else {
+                http_response_code(500);
+                return ['status' => 'error', 'message' => 'Failed to send OTP'];
+            }
+        }
+        
+        // Verify OTP from current phone number
+        $currentUser = $this->userModel->getUserById($userId);
+        $currentPhone = $currentUser['phone'];
+        
+        $isOtpVerified = $this->otpModel->verifyOtp($currentPhone, $otp, 'phone_change');
+        
+        if (!$isOtpVerified) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid OTP. Please enter the correct OTP sent to your current phone number.'];
+        }
+        
+        // Update phone number
+        $this->userModel->beginTransaction();
+        try {
+            $updateResult = $this->userModel->updatePhoneNumber($userId, $formattedPhone);
+            
+            if ($updateResult) {
+                $this->userModel->commit();
+                
+                // Update profile data as well
+                $this->updateBasicProfile($data, $userId);
+                
+                http_response_code(200);
+                return [
+                    'status' => 'success',
+                    'message' => 'Phone number updated successfully',
+                    'data' => ['phone' => $formattedPhone]
+                ];
+            } else {
+                $this->userModel->rollback();
+                http_response_code(500);
+                return ['status' => 'error', 'message' => 'Failed to update phone number'];
+            }
+        } catch (Exception $e) {
+            $this->userModel->rollback();
+            throw $e;
+        }
+    }
+    
+    /**
+     * Handle email update with OTP verification
+     */
+    private function handleEmailUpdate($data, $userId)
+    {
+        $newEmail = strtolower(trim($data['email']));
+        $otp = $data['otp'] ?? null;
+        
+        // Validate email format
+        if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid email format'];
+        }
+        
+        // Check if email is already taken by another user
+        $existingUser = $this->userModel->getUserByEmail($newEmail);
+        if ($existingUser && $existingUser['id'] != $userId) {
+            http_response_code(409);
+            return ['status' => 'error', 'message' => 'Email is already taken by another user'];
+        }
+        
+        // If no OTP provided, send OTP to new email address
+        if (empty($otp)) {
+            // Generate and send OTP to new email address
+            $otpGenerated = $this->otpModel->generateOtp($newEmail, 'email_change');
+            
+            if ($otpGenerated) {
+                http_response_code(200);
+                return [
+                    'status' => 'success',
+                    'message' => 'OTP sent to the new email address. Please enter the OTP to confirm email change.',
+                    'requires_otp' => true,
+                    'new_email' => $newEmail
+                ];
+            } else {
+                http_response_code(500);
+                return ['status' => 'error', 'message' => 'Failed to send OTP'];
+            }
+        }
+        
+        // Verify OTP from new email address
+        $isOtpVerified = $this->otpModel->verifyOtp($newEmail, $otp, 'email_change');
+        
+        if (!$isOtpVerified) {
+            http_response_code(400);
+            return ['status' => 'error', 'message' => 'Invalid OTP. Please enter the correct OTP sent to the new email address.'];
+        }
+        
+        // Update email address
+        $this->userModel->beginTransaction();
+        try {
+            $updateResult = $this->userModel->updateEmailAddress($userId, $newEmail);
+            
+            if ($updateResult) {
+                $this->userModel->commit();
+                
+                // Update profile data as well
+                $this->updateBasicProfile($data, $userId);
+                
+                http_response_code(200);
+                return [
+                    'status' => 'success',
+                    'message' => 'Email address updated successfully',
+                    'data' => ['email' => $newEmail]
+                ];
+            } else {
+                $this->userModel->rollback();
+                http_response_code(500);
+                return ['status' => 'error', 'message' => 'Failed to update email address'];
+            }
+        } catch (Exception $e) {
+            $this->userModel->rollback();
+            throw $e;
+        }
+    }
+    
+    /**
+     * Update basic profile information (first_name, last_name)
+     */
+    private function updateBasicProfile($data, $userId)
+    {
+        $profileData = [
+            'user_id' => $userId,
+            'first_name' => trim($data['first_name']),
+            'last_name' => trim($data['last_name'])
+        ];
+        
+        $profileUpdated = $this->userModel->updateUserProfile($profileData);
+        if (!$profileUpdated) {
+            // If profile doesn't exist, create it
+            $this->userModel->createUserProfile(
+                $userId,
+                $profileData['first_name'],
+                $profileData['last_name']
+            );
         }
     }
     

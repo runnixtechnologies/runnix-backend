@@ -631,6 +631,36 @@ public function getUserStatus($userId) {
             return false;
         }
     }
+    
+    public function updatePhoneNumber($userId, $phone)
+    {
+        try {
+            $sql = "UPDATE users SET phone = :phone, updated_at = NOW() WHERE id = :user_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                'phone' => $phone,
+                'user_id' => $userId
+            ]);
+        } catch (PDOException $e) {
+            error_log("updatePhoneNumber error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function updateEmailAddress($userId, $email)
+    {
+        try {
+            $sql = "UPDATE users SET email = :email, updated_at = NOW() WHERE id = :user_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                'email' => $email,
+                'user_id' => $userId
+            ]);
+        } catch (PDOException $e) {
+            error_log("updateEmailAddress error: " . $e->getMessage());
+            return false;
+        }
+    }
 
     public function beginTransaction()
     {
