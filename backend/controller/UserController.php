@@ -1154,10 +1154,10 @@ public function getStatus($user) {
     /**
      * Handle phone number update with OTP verification
      */
-    private function handlePhoneUpdate($data, $userId)
+    private function handlePhoneUpdate($data, $userId, $otp = null)
     {
         $newPhone = $data['phone'];
-        $otp = $data['otp'] ?? null;
+        $otp = $otp ?? $data['otp'] ?? null;
         
         // Format phone number
         $formattedPhone = '234' . ltrim($newPhone, '0');
@@ -1188,8 +1188,15 @@ public function getStatus($user) {
                 return [
                     'status' => 'success',
                     'message' => 'OTP sent to your current phone number. Please enter the OTP to confirm phone number change.',
-                    'requires_otp' => true,
-                    'new_phone' => $formattedPhone
+                    'requires_otp_verification' => true,
+                    'verification_type' => 'phone',
+                    'redirect_to_verification' => true,
+                    'new_phone' => $formattedPhone,
+                    'data' => [
+                        'first_name' => trim($data['first_name']),
+                        'last_name' => trim($data['last_name']),
+                        'phone' => $formattedPhone
+                    ]
                 ];
             } else {
                 http_response_code(500);
@@ -1239,10 +1246,10 @@ public function getStatus($user) {
     /**
      * Handle email update with OTP verification
      */
-    private function handleEmailUpdate($data, $userId)
+    private function handleEmailUpdate($data, $userId, $otp = null)
     {
         $newEmail = strtolower(trim($data['email']));
-        $otp = $data['otp'] ?? null;
+        $otp = $otp ?? $data['otp'] ?? null;
         
         // Validate email format
         if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
@@ -1257,18 +1264,34 @@ public function getStatus($user) {
             return ['status' => 'error', 'message' => 'Email is already taken by another user'];
         }
         
-        // If no OTP provided, send OTP to new email address
+        // If no OTP provided, send OTP to current email address
         if (empty($otp)) {
-            // Generate and send OTP to new email address
-            $otpGenerated = $this->otpModel->generateOtp($newEmail, 'email_change');
+            // Get current user data to send OTP to current email
+            $currentUser = $this->userModel->getUserById($userId);
+            if (!$currentUser) {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => 'User not found'];
+            }
+            
+            $currentEmail = $currentUser['email'];
+            
+            // Generate and send OTP to current email address
+            $otpGenerated = $this->otpModel->generateOtp($currentEmail, 'email_change');
             
             if ($otpGenerated) {
                 http_response_code(200);
                 return [
                     'status' => 'success',
-                    'message' => 'OTP sent to the new email address. Please enter the OTP to confirm email change.',
-                    'requires_otp' => true,
-                    'new_email' => $newEmail
+                    'message' => 'OTP sent to your current email address. Please enter the OTP to confirm email change.',
+                    'requires_otp_verification' => true,
+                    'verification_type' => 'email',
+                    'redirect_to_verification' => true,
+                    'new_email' => $newEmail,
+                    'data' => [
+                        'first_name' => trim($data['first_name']),
+                        'last_name' => trim($data['last_name']),
+                        'email' => $newEmail
+                    ]
                 ];
             } else {
                 http_response_code(500);
@@ -1276,12 +1299,15 @@ public function getStatus($user) {
             }
         }
         
-        // Verify OTP from new email address
-        $isOtpVerified = $this->otpModel->verifyOtp($newEmail, $otp, 'email_change');
+        // Verify OTP from current email address
+        $currentUser = $this->userModel->getUserById($userId);
+        $currentEmail = $currentUser['email'];
+        
+        $isOtpVerified = $this->otpModel->verifyOtp($currentEmail, $otp, 'email_change');
         
         if (!$isOtpVerified) {
             http_response_code(400);
-            return ['status' => 'error', 'message' => 'Invalid OTP. Please enter the correct OTP sent to the new email address.'];
+            return ['status' => 'error', 'message' => 'Invalid OTP. Please enter the correct OTP sent to your current email address.'];
         }
         
         // Update email address
@@ -1331,6 +1357,32 @@ public function getStatus($user) {
                 $profileData['first_name'],
                 $profileData['last_name']
             );
+        }
+    }
+    
+    /**
+     * Verify profile update with OTP
+     */
+    public function verifyProfileUpdate($data, $user)
+    {
+        $userId = $user['user_id'];
+        $otp = $data['otp'];
+        $verificationType = $data['verification_type'];
+        $profileData = $data['profile_data'];
+        
+        try {
+            if ($verificationType === 'phone') {
+                return $this->handlePhoneUpdate($profileData, $userId, $otp);
+            } elseif ($verificationType === 'email') {
+                return $this->handleEmailUpdate($profileData, $userId, $otp);
+            } else {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Invalid verification type'];
+            }
+        } catch (Exception $e) {
+            error_log("verifyProfileUpdate error: " . $e->getMessage());
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to verify profile update: ' . $e->getMessage()];
         }
     }
     
