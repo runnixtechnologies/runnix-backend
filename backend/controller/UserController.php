@@ -1091,13 +1091,25 @@ public function getStatus($user) {
         }
         }
         
+            // Check if user is trying to change both phone and email simultaneously
+            $hasPhoneChange = !empty($data['phone']);
+            $hasEmailChange = !empty($data['email']);
+            
+            if ($hasPhoneChange && $hasEmailChange) {
+                http_response_code(400);
+                return [
+                    'status' => 'error', 
+                    'message' => 'Cannot change both phone number and email simultaneously. Please change one at a time for security reasons.'
+                ];
+            }
+            
             // Handle phone number update with OTP verification
-            if (!empty($data['phone'])) {
+            if ($hasPhoneChange) {
                 return $this->handlePhoneUpdate($data, $userId);
             }
             
             // Handle email update with OTP verification
-            if (!empty($data['email'])) {
+            if ($hasEmailChange) {
                 return $this->handleEmailUpdate($data, $userId);
             }
             
@@ -1371,6 +1383,18 @@ public function getStatus($user) {
         $profileData = $data['profile_data'];
         
         try {
+            // Check if user is trying to change both phone and email simultaneously
+            $hasPhoneChange = !empty($profileData['phone']);
+            $hasEmailChange = !empty($profileData['email']);
+            
+            if ($hasPhoneChange && $hasEmailChange) {
+                http_response_code(400);
+                return [
+                    'status' => 'error', 
+                    'message' => 'Cannot change both phone number and email simultaneously. Please change one at a time for security reasons.'
+                ];
+            }
+            
             if ($verificationType === 'phone') {
                 return $this->handlePhoneUpdate($profileData, $userId, $otp);
             } elseif ($verificationType === 'email') {
