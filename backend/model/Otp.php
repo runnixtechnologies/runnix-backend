@@ -32,6 +32,45 @@ class Otp
     }
 
 
+    /**
+     * Convenience method to generate and store an OTP for a phone or email identifier.
+     * Returns true on success, false on failure.
+     */
+    public function generateOtp($identifier, $purpose = 'signup', $userId = null)
+    {
+        try {
+            $otpCode = (string)random_int(100000, 999999);
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+            $phone = null;
+            $email = null;
+            if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+                $email = strtolower(trim($identifier));
+            } else {
+                // assume phone; normalize by stripping non-digits
+                $digitsOnly = preg_replace('/\D+/', '', $identifier);
+                $phone = $digitsOnly;
+            }
+
+            $created = $this->createOtp($userId, $phone, $email, $otpCode, $purpose, $expiresAt);
+
+            if (!$created) {
+                return false;
+            }
+
+            // Actual delivery (SMS/Email) should be handled by higher-level service.
+            // We log for observability.
+            $channel = $email ? 'email' : 'phone';
+            error_log("OTP generated for {$channel} ({$identifier}) purpose={$purpose} expires={$expiresAt}");
+
+            return true;
+        } catch (\Throwable $e) {
+            error_log('generateOtp error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+
   public function verifyOtp($identifier, $otp = null, $purpose = 'signup', $onlyVerified = false): bool
 {
     $sql = "SELECT * FROM {$this->table} WHERE purpose = :purpose";
