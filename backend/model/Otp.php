@@ -111,6 +111,11 @@ class Otp
     $stmt->execute();
 
     $record = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Debug logging - show what was found
+    $logFile = __DIR__ . '/../php-error.log';
+    error_log("OTP query result: " . json_encode($record), 3, $logFile);
+    error_log("SQL query: {$sql}", 3, $logFile);
 
     if ($record && !$onlyVerified) {
         // Mark OTP as verified if not already
