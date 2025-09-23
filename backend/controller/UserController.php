@@ -1193,9 +1193,10 @@ public function getStatus($user) {
             $currentPhone = $currentUser['phone'];
             
             // Generate and send OTP to current phone number
-            $otpGenerated = $this->otpModel->generateOtp($currentPhone, 'phone_change');
+            $otpController = new OtpController();
+            $sendResult = $otpController->sendPhoneOtp($currentPhone, 'phone_change', null, $userId);
             
-            if ($otpGenerated) {
+            if (isset($sendResult['status']) && $sendResult['status'] === 'success') {
                 http_response_code(200);
                 return [
                     'status' => 'success',
@@ -1287,10 +1288,11 @@ public function getStatus($user) {
             
             $currentEmail = $currentUser['email'];
             
-            // Generate and send OTP to current email address
-            $otpGenerated = $this->otpModel->generateOtp($currentEmail, 'email_change');
+        // Generate and send OTP to current email address
+        $otpController = new OtpController();
+        $sendResult = $otpController->sendOtp(null, 'email_change', $currentEmail, $userId);
             
-            if ($otpGenerated) {
+        if (isset($sendResult['status']) && $sendResult['status'] === 'success') {
                 http_response_code(200);
                 return [
                     'status' => 'success',
