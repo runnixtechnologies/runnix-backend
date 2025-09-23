@@ -28,11 +28,23 @@ try {
     exit;
 }
 
-// Read the JSON input
-$data = json_decode(file_get_contents("php://input"), true);
+// Read input (supports JSON and form-data)
+$rawInput = file_get_contents("php://input");
+$data = json_decode($rawInput, true);
+if ($data === null || !is_array($data)) {
+    // Fallback to form-data
+    $data = $_POST ?? [];
+}
+
+// If still empty, return helpful message
+if (!is_array($data) || empty($data)) {
+    http_response_code(400);
+    echo json_encode(["status" => "error", "message" => "Invalid or empty request body. Ensure Content-Type: application/json and valid JSON payload."]);
+    exit;
+}
 
 // Validate required fields
-if (empty($data['otp'])) {
+if (!isset($data['otp']) || $data['otp'] === '' || $data['otp'] === null) {
     http_response_code(400);
     echo json_encode(["status" => "error", "message" => "OTP is required"]);
     exit;
