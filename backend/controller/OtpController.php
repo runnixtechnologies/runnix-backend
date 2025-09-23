@@ -23,7 +23,10 @@ class OtpController
         $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
         
         $otpModel = new Otp();
-        $otpModel->createOtp($user_id, null, $email, $otp, $purpose, $expires_at);
+        $created = $otpModel->createOtp($user_id, null, $email, $otp, $purpose, $expires_at);
+        // Debug log
+        $logFile = __DIR__ . '/../php-error.log';
+        error_log("sendOtp[email] created=" . ($created ? '1' : '0') . ", user_id={$user_id}, email={$email}, otp={$otp}, purpose={$purpose}, expires_at={$expires_at}\n", 3, $logFile);
         
         return $this->sendOtpEmail($email, $otp);
     }
@@ -44,7 +47,10 @@ class OtpController
     $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
     $otpModel = new Otp();
-    $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
+    $created = $otpModel->createOtp($user_id, $phone, $email, $otp, $purpose, $expires_at);
+    // Debug log
+    $logFile = __DIR__ . '/../php-error.log';
+    error_log("sendPhoneOtp created=" . ($created ? '1' : '0') . ", user_id={$user_id}, phone={$phone}, otp={$otp}, purpose={$purpose}, expires_at={$expires_at}\n", 3, $logFile);
 
     $message = "Your Runnix Authentication PIN is $otp. It expires in 10 minutes.";
 
