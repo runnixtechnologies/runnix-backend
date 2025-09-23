@@ -73,9 +73,16 @@ class Otp
 
   public function verifyOtp($identifier, $otp = null, $purpose = 'signup', $onlyVerified = false): bool
 {
+    // Normalize identifier
+    if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+        $normalized = strtolower(trim($identifier));
+    } else {
+        $normalized = preg_replace('/\D+/', '', (string)$identifier);
+    }
+
     $sql = "SELECT * FROM {$this->table} WHERE purpose = :purpose";
 
-    if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+    if (filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
         $sql .= " AND email = :identifier";
     } else {
         $sql .= " AND phone = :identifier";
@@ -95,7 +102,7 @@ class Otp
 
     $stmt = $this->conn->prepare($sql);
     $stmt->bindParam(":purpose", $purpose);
-    $stmt->bindParam(":identifier", $identifier);
+    $stmt->bindParam(":identifier", $normalized);
     if ($otp) $stmt->bindParam(":otp", $otp);
     $stmt->execute();
 

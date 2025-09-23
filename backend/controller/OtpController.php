@@ -16,6 +16,8 @@ class OtpController
     }
 
     if ($email) {
+        // Normalize email
+        $email = strtolower(trim($email));
         // Generate OTP here since you directly send email OTP
         $otp = rand(100000, 999999);
         $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
@@ -33,6 +35,11 @@ class OtpController
 
    public function sendPhoneOtp($phone, $purpose = 'signup', $email = null, $user_id = null)
 {
+    // Normalize phone: digits only
+    $digitsOnly = preg_replace('/\D+/', '', (string)$phone);
+    // Keep as-is, assume upstream formatting already done (e.g., 234...)
+    $phone = $digitsOnly;
+
     $otp = rand(100000, 999999);
     $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
