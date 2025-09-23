@@ -30,6 +30,7 @@ try {
 
 // Read input (supports JSON and form-data)
 $rawInput = file_get_contents("php://input");
+error_log("verify_profile_update: CT=" . ($_SERVER['CONTENT_TYPE'] ?? 'n/a') . "; len=" . strlen((string)$rawInput));
 $data = json_decode($rawInput, true);
 if ($data === null || !is_array($data)) {
     // Fallback to form-data
@@ -62,14 +63,31 @@ if (!in_array($data['verification_type'], ['phone', 'email'])) {
     exit;
 }
 
-// Validate profile data is provided
-if (empty($data['profile_data'])) {
+// Accept nested profile_data or top-level fields
+$profileData = $data['profile_data'] ?? null;
+if (!$profileData || !is_array($profileData)) {
+    $profileData = [
+        'first_name' => $data['first_name'] ?? null,
+        'last_name' => $data['last_name'] ?? null,
+        'phone' => $data['phone'] ?? null,
+        'email' => $data['email'] ?? null,
+    ];
+}
+
+// Basic presence check for the field matching verification_type
+if ($data['verification_type'] === 'phone' && empty($profileData['phone'])) {
     http_response_code(400);
-    echo json_encode(["status" => "error", "message" => "Profile data is required"]);
+    echo json_encode(["status" => "error", "message" => "Phone is required in profile_data for phone verification"]);
+    exit;
+}
+if ($data['verification_type'] === 'email' && empty($profileData['email'])) {
+    http_response_code(400);
+    echo json_encode(["status" => "error", "message" => "Email is required in profile_data for email verification"]);
     exit;
 }
 
 $userController = new UserController();
+$data['profile_data'] = $profileData;
 $response = $userController->verifyProfileUpdate($data, $user);
 
 echo json_encode($response);
