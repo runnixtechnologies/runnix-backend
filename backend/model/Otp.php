@@ -80,6 +80,10 @@ class Otp
         $normalized = preg_replace('/\D+/', '', (string)$identifier);
     }
 
+    // Debug logging to specific file
+    $logFile = __DIR__ . '/../php-error.log';
+    error_log("OTP verify debug - Original: {$identifier}, Normalized: {$normalized}, OTP: {$otp}, Purpose: {$purpose}", 3, $logFile);
+
     $sql = "SELECT * FROM {$this->table} WHERE purpose = :purpose";
 
     if (filter_var($normalized, FILTER_VALIDATE_EMAIL)) {

@@ -1317,9 +1317,15 @@ public function getStatus($user) {
         $currentUser = $this->userModel->getUserById($userId);
         $currentEmail = $currentUser['email'];
         
+        // Debug logging to specific file
+        $logFile = __DIR__ . '/../php-error.log';
+        error_log("Email verification debug - Current email: {$currentEmail}, OTP: {$otp}, Purpose: email_change", 3, $logFile);
+        
         $isOtpVerified = $this->otpModel->verifyOtp($currentEmail, $otp, 'email_change');
         
         if (!$isOtpVerified) {
+            // Additional debug - check what OTPs exist for this email
+            error_log("OTP verification failed for email: {$currentEmail}", 3, $logFile);
             http_response_code(400);
             return ['status' => 'error', 'message' => 'Invalid OTP. Please enter the correct OTP sent to your current email address.'];
         }
