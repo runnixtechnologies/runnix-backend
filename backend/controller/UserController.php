@@ -1174,6 +1174,25 @@ public function getStatus($user) {
         // Format phone number
         $formattedPhone = '234' . ltrim($newPhone, '0');
         
+        // Get current user data to check if phone actually changed
+        $currentUser = $this->userModel->getUserById($userId);
+        if (!$currentUser) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'User not found'];
+        }
+        
+        $currentPhone = $currentUser['phone'];
+        
+        // Check if the phone number is actually different
+        if ($formattedPhone === $currentPhone) {
+            http_response_code(200);
+            return [
+                'status' => 'success',
+                'message' => 'Phone number is the same as current. No changes needed.',
+                'data' => ['phone' => $formattedPhone]
+            ];
+        }
+        
         // Check if phone is already taken by another user
         $existingUser = $this->userModel->getUserByPhone($formattedPhone);
         if ($existingUser && $existingUser['id'] != $userId) {
@@ -1183,14 +1202,6 @@ public function getStatus($user) {
         
         // If no OTP provided, send OTP to current phone number
         if (empty($otp)) {
-            // Get current user data to send OTP to current phone
-            $currentUser = $this->userModel->getUserById($userId);
-            if (!$currentUser) {
-                http_response_code(404);
-                return ['status' => 'error', 'message' => 'User not found'];
-            }
-            
-            $currentPhone = $currentUser['phone'];
             
             // Generate and send OTP to current phone number
             $otpController = new OtpController();
@@ -1270,6 +1281,25 @@ public function getStatus($user) {
             return ['status' => 'error', 'message' => 'Invalid email format'];
         }
         
+        // Get current user data to check if email actually changed
+        $currentUser = $this->userModel->getUserById($userId);
+        if (!$currentUser) {
+            http_response_code(404);
+            return ['status' => 'error', 'message' => 'User not found'];
+        }
+        
+        $currentEmail = $currentUser['email'];
+        
+        // Check if the email is actually different
+        if ($newEmail === $currentEmail) {
+            http_response_code(200);
+            return [
+                'status' => 'success',
+                'message' => 'Email is the same as current. No changes needed.',
+                'data' => ['email' => $newEmail]
+            ];
+        }
+        
         // Check if email is already taken by another user
         $existingUser = $this->userModel->getUserByEmail($newEmail);
         if ($existingUser && $existingUser['id'] != $userId) {
@@ -1279,14 +1309,6 @@ public function getStatus($user) {
         
         // If no OTP provided, send OTP to current email address
         if (empty($otp)) {
-            // Get current user data to send OTP to current email
-            $currentUser = $this->userModel->getUserById($userId);
-            if (!$currentUser) {
-                http_response_code(404);
-                return ['status' => 'error', 'message' => 'User not found'];
-            }
-            
-            $currentEmail = $currentUser['email'];
             
         // Generate and send OTP to current email address
         $otpController = new OtpController();
