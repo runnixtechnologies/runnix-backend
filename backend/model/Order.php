@@ -18,6 +18,11 @@ class Order
     {
         $this->conn = (new Database())->getConnection();
     }
+    
+    public function getConnection()
+    {
+        return $this->conn;
+    }
 
     /**
      * Generate unique order number

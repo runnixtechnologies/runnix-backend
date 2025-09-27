@@ -324,33 +324,35 @@ class OrderController
     {
         $timeAgo = $this->getTimeAgo($order['created_at']);
         
+        // Determine if this is a food store
+        $isFoodStore = $this->isFoodStore($order['store_id']);
+        
         return [
-            'id' => $order['id'],
             'order_number' => $order['order_number'],
             'status' => $order['status'],
+            'date_time' => $order['created_at'],
+            'customer' => [
+                'name' => trim($order['customer_first_name'] . ' ' . $order['customer_last_name']),
+                'phone' => $order['customer_phone'],
+                'email' => $order['customer_email'],
+                'delivery_address' => $order['delivery_address']
+            ],
+            'items' => $this->formatOrderItems($order['items'], $isFoodStore),
+            'note_for_restaurant' => $order['customer_note'] ?? null,
+            'store_name' => $order['store_name'],
             'total_amount' => $order['total_amount'],
             'delivery_fee' => $order['delivery_fee'],
             'tax_amount' => $order['tax_amount'],
             'final_amount' => $order['final_amount'],
             'payment_status' => $order['payment_status'],
             'payment_method' => $order['payment_method'],
-            'delivery_address' => $order['delivery_address'],
             'delivery_instructions' => $order['delivery_instructions'],
-            'customer_note' => $order['customer_note'],
             'merchant_note' => $order['merchant_note'],
-            'store_name' => $order['store_name'],
-            'customer' => [
-                'name' => trim($order['customer_first_name'] . ' ' . $order['customer_last_name']),
-                'phone' => $order['customer_phone'],
-                'email' => $order['customer_email']
-            ],
             'rider' => $order['rider_id'] ? [
                 'name' => trim($order['rider_first_name'] . ' ' . $order['rider_last_name']),
                 'phone' => $order['rider_phone']
             ] : null,
-            'items' => $order['items'],
             'status_history' => $order['status_history'],
-            'created_at' => $order['created_at'],
             'time_ago' => $timeAgo,
             'timestamps' => [
                 'accepted_at' => $order['accepted_at'],
@@ -360,6 +362,78 @@ class OrderController
                 'cancelled_at' => $order['cancelled_at']
             ]
         ];
+    }
+
+    /**
+     * Check if store is a food store
+     */
+    private function isFoodStore($storeId)
+    {
+        try {
+            $sql = "SELECT st.name as store_type_name 
+                    FROM stores s 
+                    LEFT JOIN store_types st ON s.store_type_id = st.id 
+                    WHERE s.id = :store_id";
+            
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->bindParam(':store_id', $storeId);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Check if store type name contains "food" or "restaurant"
+            $storeTypeName = strtolower($result['store_type_name'] ?? '');
+            return strpos($storeTypeName, 'food') !== false || strpos($storeTypeName, 'restaurant') !== false;
+        } catch (Exception $e) {
+            error_log("Error checking store type: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Format order items based on store type
+     */
+    private function formatOrderItems($items, $isFoodStore)
+    {
+        $formattedItems = [];
+        
+        foreach ($items as $item) {
+            $formattedItem = [
+                'item_photo' => $item['photo'] ?? null,
+                'item_name' => $item['name'],
+                'item_price' => (float)$item['price'],
+                'item_quantity' => (int)$item['quantity'],
+                'item_total_price' => (float)$item['price'] * (int)$item['quantity']
+            ];
+            
+            if ($isFoodStore) {
+                // Format selections for food stores
+                $formattedItem['item_selections'] = $this->formatItemSelections($item['selections'] ?? []);
+            }
+            
+            $formattedItems[] = $formattedItem;
+        }
+        
+        return $formattedItems;
+    }
+    
+    /**
+     * Format item selections for food stores
+     */
+    private function formatItemSelections($selections)
+    {
+        $formattedSelections = [];
+        
+        foreach ($selections as $selection) {
+            $formattedSelections[] = [
+                'selection_type' => $selection['type'], // pack, side, or section_item
+                'selection_name' => $selection['name'],
+                'selection_price' => (float)$selection['price'],
+                'selection_quantity' => (int)$selection['quantity'],
+                'selection_total_price' => (float)$selection['price'] * (int)$selection['quantity']
+            ];
+        }
+        
+        return $formattedSelections;
     }
 
     /**
