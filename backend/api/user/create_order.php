@@ -6,13 +6,12 @@ require_once '../../../vendor/autoload.php';
 require_once '../../config/cors.php';
 
 use Controller\OrderController;
-use Middleware\AuthMiddleware;
+use function Middleware\authenticateRequest;
 
 header('Content-Type: application/json');
 
 // Check authentication
-$auth = new AuthMiddleware();
-$user = $auth->authenticate();
+$user = authenticateRequest();
 
 if (!$user) {
     http_response_code(401);
