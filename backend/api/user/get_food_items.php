@@ -41,6 +41,6 @@ if (!in_array($sort, $allowedSorts)) {
 
 // Call controller
 $controller = new FoodItemController();
-$response = $controller->getFoodItemsForCustomer($storeId, $categoryId, $search, $sort);
+$response = $controller->getFoodItemsForCustomer($user, $storeId, $categoryId, $search, $sort);
 
 echo json_encode($response);

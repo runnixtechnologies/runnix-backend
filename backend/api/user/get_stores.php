@@ -46,6 +46,6 @@ if ($sort === 'closest') {
 
 // Call controller
 $controller = new StoreController();
-$response = $controller->getStoresForCustomer($storeTypeId, $search, $userLocation, $sort, $page, $limit);
+$response = $controller->getStoresForCustomer($user, $storeTypeId, $search, $sort, $page, $limit);
 
 echo json_encode($response);

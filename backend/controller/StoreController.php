@@ -559,7 +559,8 @@ public function getActiveCategoriesByStoreType($user)
             $userId = $user['user_id'];
             
             // Get user location for distance calculation
-            $userLocation = $this->getUserLocation($userId);
+            $userModel = new \Model\User();
+            $userLocation = $userModel->getUserLocation($userId);
             
             // Get stores with filtering
             $stores = $this->store->getStoresForCustomer($storeTypeId, $search, $userLocation, $sort, $page, $limit);
