@@ -162,6 +162,128 @@ class Store
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+    
+    /**
+     * Get stores for customer with filtering and sorting
+     */
+    public function getStoresForCustomer($storeTypeId = null, $search = null, $userLocation = null, $sort = 'popular', $page = 1, $limit = 20)
+    {
+        try {
+            $offset = ($page - 1) * $limit;
+            
+            $sql = "SELECT s.*, st.name AS store_type_name, 
+                           COALESCE(AVG(r.rating), 0) AS rating,
+                           COUNT(r.id) AS review_count,
+                           ss.is_online
+                    FROM stores s 
+                    LEFT JOIN store_types st ON s.store_type_id = st.id 
+                    LEFT JOIN reviews r ON s.id = r.store_id
+                    LEFT JOIN store_status ss ON s.id = ss.store_id
+                    WHERE s.status = 'active'";
+            
+            $params = [];
+            
+            // Filter by store type
+            if ($storeTypeId) {
+                $sql .= " AND s.store_type_id = :store_type_id";
+                $params[':store_type_id'] = $storeTypeId;
+            }
+            
+            // Search filter
+            if ($search) {
+                $sql .= " AND (s.store_name LIKE :search OR s.biz_address LIKE :search)";
+                $params[':search'] = "%$search%";
+            }
+            
+            $sql .= " GROUP BY s.id";
+            
+            // Add distance calculation if user location is available
+            if ($userLocation && isset($userLocation['latitude']) && isset($userLocation['longitude'])) {
+                $sql = "SELECT *, 
+                               (6371 * acos(cos(radians(:user_lat)) * cos(radians(s.latitude)) * 
+                                cos(radians(s.longitude) - radians(:user_lng)) + 
+                                sin(radians(:user_lat)) * sin(radians(s.latitude)))) AS distance
+                        FROM ($sql) s";
+                $params[':user_lat'] = $userLocation['latitude'];
+                $params[':user_lng'] = $userLocation['longitude'];
+            }
+            
+            // Sorting
+            switch ($sort) {
+                case 'newest':
+                    $sql .= " ORDER BY s.created_at DESC";
+                    break;
+                case 'closest':
+                    if ($userLocation) {
+                        $sql .= " ORDER BY distance ASC";
+                    } else {
+                        $sql .= " ORDER BY s.created_at DESC";
+                    }
+                    break;
+                case 'popular':
+                default:
+                    $sql .= " ORDER BY rating DESC, review_count DESC";
+                    break;
+            }
+            
+            $sql .= " LIMIT :limit OFFSET :offset";
+            $params[':limit'] = $limit;
+            $params[':offset'] = $offset;
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (\PDOException $e) {
+            error_log("Error getting stores for customer: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get total count of stores for customer
+     */
+    public function getStoresForCustomerCount($storeTypeId = null, $search = null)
+    {
+        try {
+            $sql = "SELECT COUNT(DISTINCT s.id) as total
+                    FROM stores s 
+                    WHERE s.status = 'active'";
+            
+            $params = [];
+            
+            // Filter by store type
+            if ($storeTypeId) {
+                $sql .= " AND s.store_type_id = :store_type_id";
+                $params[':store_type_id'] = $storeTypeId;
+            }
+            
+            // Search filter
+            if ($search) {
+                $sql .= " AND (s.store_name LIKE :search OR s.biz_address LIKE :search)";
+                $params[':search'] = "%$search%";
+            }
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return (int)$result['total'];
+            
+        } catch (\PDOException $e) {
+            error_log("Error getting stores count for customer: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    /**
+     * Get connection for external use
+     */
+    public function getConnection()
+    {
+        return $this->conn;
+    }
 
     public function getAllStores()
     {

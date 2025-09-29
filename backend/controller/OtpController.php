@@ -169,7 +169,11 @@ private function sendOtpEmail($email, $otp)
             return ["status" => "error", "message" => "Invalid or expired OTP"];
         }
 
-        $otpModel->markOtpAsVerified($otpData['id']);
+        // Get the OTP record to mark as verified
+        $otpRecord = $otpModel->getOtpRecord($phone, $purpose);
+        if ($otpRecord) {
+            $otpModel->markOtpAsVerified($otpRecord['id']);
+        }
         return ["status" => "success", "message" => "OTP verified successfully"];
     }
 }

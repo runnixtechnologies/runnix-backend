@@ -958,9 +958,9 @@ public function testNotification($data, $user)
     {
     
         // Check if OTP was verified for this phone and purpose
-        if (!$this->otpModel->OtpVerified($phone, 'password_reset')) {
-    http_response_code(401);
-    return ["status" => "error", "message" => "OTP not verified for this phone"];
+        if (!$this->otpModel->isOtpVerified($phone, 'password_reset')) {
+            http_response_code(401);
+            return ["status" => "error", "message" => "OTP not verified for this phone"];
         }
 
         // Call model method to update the password
@@ -1773,6 +1773,61 @@ public function getStatus($user) {
             
             http_response_code(500);
             return ['status' => 'error', 'message' => 'Failed to delete account'];
+        }
+    }
+
+    /**
+     * Save user location
+     */
+    public function saveUserLocation($user, $data)
+    {
+        try {
+            $userId = $user['user_id'];
+            $latitude = $data['latitude'];
+            $longitude = $data['longitude'];
+            $address = $data['address'] ?? null;
+            $city = $data['city'] ?? null;
+            $state = $data['state'] ?? null;
+            
+            // Validate coordinates
+            if (!is_numeric($latitude) || !is_numeric($longitude)) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Invalid coordinates'];
+            }
+            
+            // Check if user location already exists
+            $existingLocation = $this->userModel->getUserLocation($userId);
+            
+            if ($existingLocation) {
+                // Update existing location
+                $success = $this->userModel->updateUserLocation($userId, $latitude, $longitude, $address, $city, $state);
+            } else {
+                // Create new location
+                $success = $this->userModel->createUserLocation($userId, $latitude, $longitude, $address, $city, $state);
+            }
+            
+            if ($success) {
+                http_response_code(200);
+                return [
+                    'status' => 'success',
+                    'message' => 'Location saved successfully',
+                    'data' => [
+                        'latitude' => $latitude,
+                        'longitude' => $longitude,
+                        'address' => $address,
+                        'city' => $city,
+                        'state' => $state
+                    ]
+                ];
+            } else {
+                http_response_code(500);
+                return ['status' => 'error', 'message' => 'Failed to save location'];
+            }
+            
+        } catch (Exception $e) {
+            error_log("Save user location error: " . $e->getMessage());
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to save location'];
         }
     }
 

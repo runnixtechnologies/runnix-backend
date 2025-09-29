@@ -437,6 +437,213 @@ class OrderController
     }
 
     /**
+     * Create customer order
+     */
+    public function createCustomerOrder($user, $data)
+    {
+        try {
+            $customerId = $user['user_id'];
+            $storeId = $data['store_id'];
+            $items = $data['items'];
+            $deliveryAddress = $data['delivery_address'];
+            $deliveryInstructions = $data['delivery_instructions'] ?? null;
+            $customerNote = $data['customer_note'] ?? null;
+            $paymentMethod = $data['payment_method'] ?? 'cash_on_delivery';
+            
+            // Validate required fields
+            if (empty($items) || !is_array($items)) {
+                http_response_code(400);
+                return ['status' => 'error', 'message' => 'Items are required'];
+            }
+            
+            // Validate store exists
+            $store = $this->orderModel->getStoreById($storeId);
+            if (!$store) {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => 'Store not found'];
+            }
+            
+            // Calculate order totals
+            $orderTotals = $this->calculateOrderTotals($items, $storeId);
+            
+            // Create order
+            $orderData = [
+                'customer_id' => $customerId,
+                'store_id' => $storeId,
+                'merchant_id' => $store['user_id'],
+                'total_amount' => $orderTotals['subtotal'],
+                'delivery_fee' => $orderTotals['delivery_fee'],
+                'tax_amount' => $orderTotals['tax'],
+                'final_amount' => $orderTotals['total'],
+                'payment_status' => 'pending',
+                'payment_method' => $paymentMethod,
+                'delivery_address' => $deliveryAddress,
+                'delivery_instructions' => $deliveryInstructions,
+                'customer_note' => $customerNote,
+                'status' => 'pending'
+            ];
+            
+            $orderId = $this->orderModel->createOrder($orderData);
+            
+            if (!$orderId) {
+                http_response_code(500);
+                return ['status' => 'error', 'message' => 'Failed to create order'];
+            }
+            
+            // Add order items
+            foreach ($items as $item) {
+                $this->addOrderItem($orderId, $item);
+            }
+            
+            // Get created order details
+            $order = $this->orderModel->getOrderById($orderId);
+            
+            http_response_code(201);
+            return [
+                'status' => 'success',
+                'message' => 'Order created successfully',
+                'data' => [
+                    'order_id' => $orderId,
+                    'order_number' => $order['order_number'],
+                    'status' => $order['status'],
+                    'total_amount' => $order['total_amount'],
+                    'final_amount' => $order['final_amount'],
+                    'payment_status' => $order['payment_status'],
+                    'created_at' => $order['created_at']
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Create customer order error: " . $e->getMessage());
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to create order'];
+        }
+    }
+    
+    /**
+     * Calculate order totals
+     */
+    private function calculateOrderTotals($items, $storeId)
+    {
+        $subtotal = 0;
+        
+        foreach ($items as $item) {
+            $itemPrice = $this->getItemPrice($item['item_id']);
+            $itemTotal = $itemPrice * $item['quantity'];
+            
+            // Add selections total
+            if (isset($item['selections']) && is_array($item['selections'])) {
+                foreach ($item['selections'] as $selection) {
+                    $itemTotal += $selection['price'] * $selection['quantity'];
+                }
+            }
+            
+            $subtotal += $itemTotal;
+        }
+        
+        // Calculate delivery fee (fixed for now)
+        $deliveryFee = 500;
+        
+        // Calculate tax (5% of subtotal)
+        $tax = $subtotal * 0.05;
+        
+        // Calculate total
+        $total = $subtotal + $deliveryFee + $tax;
+        
+        return [
+            'subtotal' => $subtotal,
+            'delivery_fee' => $deliveryFee,
+            'tax' => $tax,
+            'total' => $total
+        ];
+    }
+    
+    /**
+     * Get item price
+     */
+    private function getItemPrice($itemId)
+    {
+        try {
+            $sql = "SELECT price FROM food_items WHERE id = :item_id AND status = 'active'";
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->bindParam(':item_id', $itemId);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ? (float)$result['price'] : 0;
+        } catch (Exception $e) {
+            error_log("Get item price error: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    /**
+     * Add order item with selections
+     */
+    private function addOrderItem($orderId, $item)
+    {
+        try {
+            $itemPrice = $this->getItemPrice($item['item_id']);
+            $itemTotal = $itemPrice * $item['quantity'];
+            
+            // Add selections total
+            if (isset($item['selections']) && is_array($item['selections'])) {
+                foreach ($item['selections'] as $selection) {
+                    $itemTotal += $selection['price'] * $selection['quantity'];
+                }
+            }
+            
+            // Insert order item
+            $sql = "INSERT INTO order_items (order_id, item_id, quantity, price, total_price, created_at) 
+                    VALUES (:order_id, :item_id, :quantity, :price, :total_price, NOW())";
+            
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->execute([
+                ':order_id' => $orderId,
+                ':item_id' => $item['item_id'],
+                ':quantity' => $item['quantity'],
+                ':price' => $itemPrice,
+                ':total_price' => $itemTotal
+            ]);
+            
+            $orderItemId = $this->orderModel->getConnection()->lastInsertId();
+            
+            // Add selections
+            if (isset($item['selections']) && is_array($item['selections'])) {
+                foreach ($item['selections'] as $selection) {
+                    $this->addOrderSelection($orderItemId, $selection);
+                }
+            }
+            
+        } catch (Exception $e) {
+            error_log("Add order item error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Add order selection
+     */
+    private function addOrderSelection($orderItemId, $selection)
+    {
+        try {
+            $sql = "INSERT INTO order_selections (order_item_id, selection_type, selection_name, selection_price, quantity, created_at) 
+                    VALUES (:order_item_id, :selection_type, :selection_name, :selection_price, :quantity, NOW())";
+            
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->execute([
+                ':order_item_id' => $orderItemId,
+                ':selection_type' => $selection['type'],
+                ':selection_name' => $selection['name'],
+                ':selection_price' => $selection['price'],
+                ':quantity' => $selection['quantity']
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("Add order selection error: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Get time ago string
      */
     private function getTimeAgo($datetime)

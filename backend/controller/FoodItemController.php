@@ -2620,5 +2620,174 @@ public function getCategoriesByStoreType($storeId)
         return $response;
     }
 
+    /**
+     * Get food items for customer with filtering and sorting
+     */
+    public function getFoodItemsForCustomer($user, $storeId, $categoryId = null, $search = null, $sort = 'popular')
+    {
+        try {
+            // Validate store exists and is active
+            $store = $this->foodItem->getStoreById($storeId);
+            if (!$store || $store['status'] !== 'active') {
+                http_response_code(404);
+                return ['status' => 'error', 'message' => 'Store not found or inactive'];
+            }
+            
+            // Get food items with filtering
+            $foodItems = $this->foodItem->getFoodItemsForCustomer($storeId, $categoryId, $search, $sort);
+            
+            // Format food items for response
+            $formattedItems = [];
+            foreach ($foodItems as $item) {
+                $formattedItem = [
+                    'id' => $item['id'],
+                    'name' => $item['name'],
+                    'price' => (float)$item['price'],
+                    'photo' => $item['photo'],
+                    'short_description' => $item['short_description'],
+                    'category' => $item['category_name'] ?? null,
+                    'section' => $item['section_name'] ?? null,
+                    'rating' => $item['rating'] ?? 0,
+                    'review_count' => $item['review_count'] ?? 0,
+                    'is_available' => $item['status'] === 'active'
+                ];
+                
+                // Add discount information if available
+                if (isset($item['discount_price']) && $item['discount_price'] > 0) {
+                    $formattedItem['original_price'] = (float)$item['price'];
+                    $formattedItem['price'] = (float)$item['discount_price'];
+                    $formattedItem['discount_percentage'] = (float)$item['percentage'];
+                }
+                
+                // Add selections (packs, sides, section items)
+                $formattedItem['selections'] = [
+                    'packs' => $this->getItemPacks($item['id']),
+                    'sides' => $this->getItemSides($item['id']),
+                    'section_items' => $this->getItemSectionItems($item['id'])
+                ];
+                
+                $formattedItems[] = $formattedItem;
+            }
+            
+            http_response_code(200);
+            return [
+                'status' => 'success',
+                'data' => $formattedItems,
+                'store' => [
+                    'id' => $store['id'],
+                    'name' => $store['store_name'],
+                    'logo' => $store['biz_logo'],
+                    'rating' => $store['rating'] ?? 0,
+                    'delivery_time' => $store['delivery_time'] ?? '20-30 mins'
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Get food items for customer error: " . $e->getMessage());
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to retrieve food items'];
+        }
+    }
+    
+    /**
+     * Get item packs
+     */
+    private function getItemPacks($itemId)
+    {
+        try {
+            $sql = "SELECT p.id, p.name, p.price, p.required, p.max_quantity 
+                    FROM food_packs p 
+                    INNER JOIN food_item_packs fip ON p.id = fip.pack_id 
+                    WHERE fip.item_id = :item_id AND p.status = 'active'";
+            
+            $stmt = $this->foodItem->getConnection()->prepare($sql);
+            $stmt->bindParam(':item_id', $itemId);
+            $stmt->execute();
+            
+            $packs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            return array_map(function($pack) {
+                return [
+                    'id' => $pack['id'],
+                    'name' => $pack['name'],
+                    'price' => (float)$pack['price'],
+                    'required' => (bool)$pack['required'],
+                    'max_quantity' => (int)$pack['max_quantity']
+                ];
+            }, $packs);
+            
+        } catch (Exception $e) {
+            error_log("Get item packs error: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get item sides
+     */
+    private function getItemSides($itemId)
+    {
+        try {
+            $sql = "SELECT fs.id, fs.name, fs.price, fis.extra_price, fis.required, fis.max_quantity 
+                    FROM food_sides fs 
+                    INNER JOIN food_item_sides fis ON fs.id = fis.side_id 
+                    WHERE fis.item_id = :item_id AND fs.status = 'active'";
+            
+            $stmt = $this->foodItem->getConnection()->prepare($sql);
+            $stmt->bindParam(':item_id', $itemId);
+            $stmt->execute();
+            
+            $sides = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            return array_map(function($side) {
+                return [
+                    'id' => $side['id'],
+                    'name' => $side['name'],
+                    'price' => (float)$side['price'],
+                    'extra_price' => (float)$side['extra_price'],
+                    'required' => (bool)$side['required'],
+                    'max_quantity' => (int)$side['max_quantity']
+                ];
+            }, $sides);
+            
+        } catch (Exception $e) {
+            error_log("Get item sides error: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get item section items
+     */
+    private function getItemSectionItems($itemId)
+    {
+        try {
+            $sql = "SELECT si.id, si.name, si.price, fisi.required, fisi.max_quantity 
+                    FROM section_items si 
+                    INNER JOIN food_item_section_items fisi ON si.id = fisi.section_item_id 
+                    WHERE fisi.item_id = :item_id AND si.status = 'active'";
+            
+            $stmt = $this->foodItem->getConnection()->prepare($sql);
+            $stmt->bindParam(':item_id', $itemId);
+            $stmt->execute();
+            
+            $sectionItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            return array_map(function($item) {
+                return [
+                    'id' => $item['id'],
+                    'name' => $item['name'],
+                    'price' => (float)$item['price'],
+                    'required' => (bool)$item['required'],
+                    'max_quantity' => (int)$item['max_quantity']
+                ];
+            }, $sectionItems);
+            
+        } catch (Exception $e) {
+            error_log("Get item section items error: " . $e->getMessage());
+            return [];
+        }
+    }
+
 }
 ?>

@@ -19,6 +19,77 @@ class User
     {
         return $this->conn;
     }
+    
+    /**
+     * Get user location
+     */
+    public function getUserLocation($userId)
+    {
+        try {
+            $sql = "SELECT * FROM user_locations WHERE user_id = :user_id LIMIT 1";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            error_log("Error getting user location: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Create user location
+     */
+    public function createUserLocation($userId, $latitude, $longitude, $address = null, $city = null, $state = null)
+    {
+        try {
+            $sql = "INSERT INTO user_locations (user_id, latitude, longitude, address, city, state, created_at, updated_at) 
+                    VALUES (:user_id, :latitude, :longitude, :address, :city, :state, NOW(), NOW())";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':user_id' => $userId,
+                ':latitude' => $latitude,
+                ':longitude' => $longitude,
+                ':address' => $address,
+                ':city' => $city,
+                ':state' => $state
+            ]);
+            
+            return true;
+        } catch (\PDOException $e) {
+            error_log("Error creating user location: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Update user location
+     */
+    public function updateUserLocation($userId, $latitude, $longitude, $address = null, $city = null, $state = null)
+    {
+        try {
+            $sql = "UPDATE user_locations 
+                    SET latitude = :latitude, longitude = :longitude, address = :address, 
+                        city = :city, state = :state, updated_at = NOW() 
+                    WHERE user_id = :user_id";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':user_id' => $userId,
+                ':latitude' => $latitude,
+                ':longitude' => $longitude,
+                ':address' => $address,
+                ':city' => $city,
+                ':state' => $state
+            ]);
+            
+            return true;
+        } catch (\PDOException $e) {
+            error_log("Error updating user location: " . $e->getMessage());
+            return false;
+        }
+    }
 
     private function generateReferralCode($email) {
         return substr(md5($email . time()), 0, 8);

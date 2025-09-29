@@ -2847,4 +2847,94 @@ private function createFoodItemSectionsWithItems($foodItemId, $sectionsArray)
         $stmt->execute();
         return $stmt->fetchColumn();
     }
+    
+    /**
+     * Get food items for customer with filtering and sorting
+     */
+    public function getFoodItemsForCustomer($storeId, $categoryId = null, $search = null, $sort = 'popular')
+    {
+        try {
+            $sql = "SELECT fi.*, c.name AS category_name, s.name AS section_name,
+                           COALESCE(AVG(r.rating), 0) AS rating,
+                           COUNT(r.id) AS review_count
+                    FROM food_items fi
+                    LEFT JOIN categories c ON fi.category_id = c.id
+                    LEFT JOIN sections s ON fi.section_id = s.id
+                    LEFT JOIN reviews r ON fi.id = r.item_id AND r.item_type = 'food_item'
+                    WHERE fi.store_id = :store_id AND fi.status = 'active'";
+            
+            $params = [':store_id' => $storeId];
+            
+            // Filter by category
+            if ($categoryId) {
+                $sql .= " AND fi.category_id = :category_id";
+                $params[':category_id'] = $categoryId;
+            }
+            
+            // Search filter
+            if ($search) {
+                $sql .= " AND (fi.name LIKE :search OR fi.short_description LIKE :search)";
+                $params[':search'] = "%$search%";
+            }
+            
+            $sql .= " GROUP BY fi.id";
+            
+            // Sorting
+            switch ($sort) {
+                case 'newest':
+                    $sql .= " ORDER BY fi.created_at DESC";
+                    break;
+                case 'price_low':
+                    $sql .= " ORDER BY fi.price ASC";
+                    break;
+                case 'price_high':
+                    $sql .= " ORDER BY fi.price DESC";
+                    break;
+                case 'popular':
+                default:
+                    $sql .= " ORDER BY rating DESC, review_count DESC";
+                    break;
+            }
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (\PDOException $e) {
+            error_log("Error getting food items for customer: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get store by ID
+     */
+    public function getStoreById($storeId)
+    {
+        try {
+            $sql = "SELECT s.*, st.name AS store_type_name 
+                    FROM stores s 
+                    LEFT JOIN store_types st ON s.store_type_id = st.id 
+                    WHERE s.id = :store_id";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam(':store_id', $storeId);
+            $stmt->execute();
+            
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+            
+        } catch (\PDOException $e) {
+            error_log("Error getting store by ID: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get connection for external use
+     */
+    public function getConnection()
+    {
+        return $this->conn;
+    }
 }

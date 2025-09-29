@@ -550,4 +550,79 @@ public function getActiveCategoriesByStoreType($user)
         }
     }
 
+    /**
+     * Get stores for customer with filtering and sorting
+     */
+    public function getStoresForCustomer($user, $storeTypeId = null, $search = null, $sort = 'popular', $page = 1, $limit = 20)
+    {
+        try {
+            $userId = $user['user_id'];
+            
+            // Get user location for distance calculation
+            $userLocation = $this->getUserLocation($userId);
+            
+            // Get stores with filtering
+            $stores = $this->store->getStoresForCustomer($storeTypeId, $search, $userLocation, $sort, $page, $limit);
+            
+            // Get total count for pagination
+            $totalCount = $this->store->getStoresForCustomerCount($storeTypeId, $search);
+            $totalPages = ceil($totalCount / $limit);
+            
+            // Format stores for response
+            $formattedStores = [];
+            foreach ($stores as $store) {
+                $formattedStores[] = [
+                    'id' => $store['id'],
+                    'store_name' => $store['store_name'],
+                    'store_type' => $store['store_type_name'],
+                    'rating' => $store['rating'] ?? 0,
+                    'review_count' => $store['review_count'] ?? 0,
+                    'delivery_time' => $store['delivery_time'] ?? '20-30 mins',
+                    'distance' => $store['distance'] ?? null,
+                    'is_favorite' => $store['is_favorite'] ?? false,
+                    'is_online' => $store['is_online'] ?? false,
+                    'logo' => $store['biz_logo'] ?? null,
+                    'address' => $store['biz_address'],
+                    'phone' => $store['biz_phone']
+                ];
+            }
+            
+            http_response_code(200);
+            return [
+                'status' => 'success',
+                'data' => $formattedStores,
+                'meta' => [
+                    'current_page' => $page,
+                    'per_page' => $limit,
+                    'total_count' => $totalCount,
+                    'total_pages' => $totalPages,
+                    'has_next' => $page < $totalPages,
+                    'has_prev' => $page > 1
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Get stores for customer error: " . $e->getMessage());
+            http_response_code(500);
+            return ['status' => 'error', 'message' => 'Failed to retrieve stores'];
+        }
+    }
+    
+    /**
+     * Get user location for distance calculation
+     */
+    private function getUserLocation($userId)
+    {
+        try {
+            $sql = "SELECT latitude, longitude FROM user_locations WHERE user_id = :user_id LIMIT 1";
+            $stmt = $this->store->getConnection()->prepare($sql);
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Get user location error: " . $e->getMessage());
+            return null;
+        }
+    }
+
 }

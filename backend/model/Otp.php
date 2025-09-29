@@ -145,6 +145,33 @@ class Otp
     return $record ? true : false;
 }
 
+    public function getOtpRecord($identifier, $purpose = 'signup')
+    {
+        // Normalize identifier
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            $normalized = strtolower(trim($identifier));
+        } else {
+            $normalized = preg_replace('/\D+/', '', (string)$identifier);
+        }
+
+        $sql = "SELECT * FROM {$this->table} WHERE purpose = :purpose";
+
+        if (filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
+            $sql .= " AND email = :identifier";
+        } else {
+            $sql .= " AND phone = :identifier";
+        }
+
+        $sql .= " ORDER BY id DESC LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":purpose", $purpose);
+        $stmt->bindParam(":identifier", $normalized);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
 
 /*public function OtpVerified($phone, $purpose)
 {

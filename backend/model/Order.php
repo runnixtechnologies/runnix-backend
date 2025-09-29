@@ -23,6 +23,103 @@ class Order
     {
         return $this->conn;
     }
+    
+    /**
+     * Create order
+     */
+    public function createOrder($orderData)
+    {
+        try {
+            $this->conn->beginTransaction();
+            
+            // Generate order number
+            $orderNumber = $this->generateOrderNumber();
+            
+            $sql = "INSERT INTO {$this->table} 
+                    (order_number, customer_id, store_id, merchant_id, total_amount, delivery_fee, 
+                     tax_amount, final_amount, payment_status, payment_method, delivery_address, 
+                     delivery_instructions, customer_note, status, created_at, updated_at) 
+                    VALUES (:order_number, :customer_id, :store_id, :merchant_id, :total_amount, 
+                            :delivery_fee, :tax_amount, :final_amount, :payment_status, :payment_method, 
+                            :delivery_address, :delivery_instructions, :customer_note, :status, NOW(), NOW())";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':order_number' => $orderNumber,
+                ':customer_id' => $orderData['customer_id'],
+                ':store_id' => $orderData['store_id'],
+                ':merchant_id' => $orderData['merchant_id'],
+                ':total_amount' => $orderData['total_amount'],
+                ':delivery_fee' => $orderData['delivery_fee'],
+                ':tax_amount' => $orderData['tax_amount'],
+                ':final_amount' => $orderData['final_amount'],
+                ':payment_status' => $orderData['payment_status'],
+                ':payment_method' => $orderData['payment_method'],
+                ':delivery_address' => $orderData['delivery_address'],
+                ':delivery_instructions' => $orderData['delivery_instructions'],
+                ':customer_note' => $orderData['customer_note'],
+                ':status' => $orderData['status']
+            ]);
+            
+            $orderId = $this->conn->lastInsertId();
+            
+            // Add status history
+            $this->addStatusHistory($orderId, $orderData['status'], $orderData['customer_id']);
+            
+            $this->conn->commit();
+            return $orderId;
+            
+        } catch (\PDOException $e) {
+            $this->conn->rollback();
+            error_log("Error creating order: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get store by ID
+     */
+    public function getStoreById($storeId)
+    {
+        try {
+            $sql = "SELECT s.*, st.name AS store_type_name 
+                    FROM stores s 
+                    LEFT JOIN store_types st ON s.store_type_id = st.id 
+                    WHERE s.id = :store_id";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam(':store_id', $storeId);
+            $stmt->execute();
+            
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+            
+        } catch (\PDOException $e) {
+            error_log("Error getting store by ID: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Add status history
+     */
+    private function addStatusHistory($orderId, $status, $userId)
+    {
+        try {
+            $sql = "INSERT INTO {$this->statusHistoryTable} 
+                    (order_id, status, user_id, created_at) 
+                    VALUES (:order_id, :status, :user_id, NOW())";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':order_id' => $orderId,
+                ':status' => $status,
+                ':user_id' => $userId
+            ]);
+            
+        } catch (\PDOException $e) {
+            error_log("Error adding status history: " . $e->getMessage());
+        }
+    }
 
     /**
      * Generate unique order number
@@ -35,75 +132,6 @@ class Order
         return $prefix . $timestamp . $random;
     }
 
-    /**
-     * Create a new order
-     */
-    public function createOrder($data)
-    {
-        try {
-            $this->conn->beginTransaction();
-
-            // Generate order number
-            $orderNumber = $this->generateOrderNumber();
-
-            // Insert main order - using existing table structure
-            $sql = "INSERT INTO {$this->table} 
-                    (order_number, user_id, customer_id, merchant_id, rider_id, store_id, total_amount, 
-                     delivery_fee, tax_amount, final_amount, delivery_address, 
-                     delivery_instructions, delivery_latitude, delivery_longitude, 
-                     customer_note, payment_method, payment_status, status)
-                    VALUES (:order_number, :user_id, :customer_id, :merchant_id, :rider_id, :store_id, :total_amount,
-                            :delivery_fee, :tax_amount, :final_amount, :delivery_address,
-                            :delivery_instructions, :delivery_latitude, :delivery_longitude,
-                            :customer_note, :payment_method, :payment_status, 'pending')";
-
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bindParam(':order_number', $orderNumber);
-            $stmt->bindParam(':user_id', $data['customer_id']); // Keep user_id for compatibility
-            $stmt->bindParam(':customer_id', $data['customer_id']);
-            $stmt->bindParam(':merchant_id', $data['merchant_id']);
-            $stmt->bindParam(':rider_id', $data['rider_id'] ?? null);
-            $stmt->bindParam(':store_id', $data['store_id']);
-            $stmt->bindParam(':total_amount', $data['total_amount']);
-            $stmt->bindParam(':delivery_fee', $data['delivery_fee'] ?? 0.00);
-            $stmt->bindParam(':tax_amount', $data['tax_amount'] ?? 0.00);
-            $stmt->bindParam(':final_amount', $data['final_amount']);
-            $stmt->bindParam(':delivery_address', $data['delivery_address']);
-            $stmt->bindParam(':delivery_instructions', $data['delivery_instructions'] ?? null);
-            $stmt->bindParam(':delivery_latitude', $data['delivery_latitude'] ?? null);
-            $stmt->bindParam(':delivery_longitude', $data['delivery_longitude'] ?? null);
-            $stmt->bindParam(':customer_note', $data['customer_note'] ?? null);
-            $stmt->bindParam(':payment_method', $data['payment_method'] ?? 'cash');
-            $stmt->bindParam(':payment_status', $data['payment_status'] ?? 'unpaid');
-
-            if (!$stmt->execute()) {
-                throw new \Exception("Failed to create order");
-            }
-
-            $orderId = $this->conn->lastInsertId();
-
-            // Insert order items
-            foreach ($data['items'] as $item) {
-                $this->addOrderItem($orderId, $item);
-            }
-
-            // Record initial status
-            $this->recordStatusChange($orderId, 'pending', $data['customer_id'], 'Order created');
-
-            // Create notification for merchant
-            $this->createNotification($orderId, $data['merchant_id'], 'new_order', 
-                'New Order Received', 
-                "You have received a new order #{$orderNumber}");
-
-            $this->conn->commit();
-            return $orderId;
-
-        } catch (\Exception $e) {
-            $this->conn->rollBack();
-            error_log("Order creation error: " . $e->getMessage());
-            return false;
-        }
-    }
 
     /**
      * Add item to order
