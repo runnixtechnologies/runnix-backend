@@ -3,6 +3,7 @@
 namespace Middleware;
 
 use Config\JwtHandler;
+use Controller\DeviceController;
 
 function authenticateRequest() {
     $headers = getallheaders();
@@ -63,8 +64,52 @@ function authenticateRequest() {
            " role=" . ($decoded['role'] ?? 'unknown');
     error_log("[" . date('Y-m-d H:i:s') . "] $msg\n", 3, $logFile);
 
+    // Auto-register device if device data is available
+    try {
+        autoRegisterDevice($decoded);
+    } catch (Exception $e) {
+        // Don't fail authentication if device registration fails
+        error_log("[" . date('Y-m-d H:i:s') . "] Auto device registration failed: " . $e->getMessage(), 3, __DIR__ . '/../php-error.log');
+    }
+
     // Return decoded payload (e.g., ['user_id' => ..., 'role' => ...])
     return $decoded;
+}
+
+function autoRegisterDevice($user) {
+    // Only register device if we have device data in headers or request
+    $headers = getallheaders();
+    $requestData = [];
+    
+    // Check for device data in headers
+    $hasDeviceData = false;
+    if (isset($headers['X-Device-ID']) || isset($headers['X-Device-Type'])) {
+        $hasDeviceData = true;
+    }
+    
+    // Check for device data in POST body
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $input = json_decode(file_get_contents("php://input"), true);
+        if (isset($input['device_id'])) {
+            $hasDeviceData = true;
+            $requestData = $input;
+        }
+    }
+    
+    if (!$hasDeviceData) {
+        return; // No device data to register
+    }
+    
+    try {
+        $deviceController = new DeviceController();
+        $deviceData = $deviceController->extractDeviceData($requestData);
+        
+        if (!empty($deviceData['device_id'])) {
+            $deviceController->registerDevice($user, $deviceData);
+        }
+    } catch (Exception $e) {
+        error_log("[" . date('Y-m-d H:i:s') . "] Auto device registration error: " . $e->getMessage(), 3, __DIR__ . '/../php-error.log');
+    }
 }
 
 function authorizeRoles(array $allowedRoles, $userRole) {
