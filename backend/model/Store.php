@@ -179,7 +179,8 @@ class Store
                     LEFT JOIN store_types st ON s.store_type_id = st.id 
                     LEFT JOIN reviews r ON s.id = r.store_id
                     LEFT JOIN store_status ss ON s.id = ss.store_id
-                    WHERE s.status = 'active'";
+                    WHERE (s.status = 'active' OR s.status = '1' OR s.status = 1)
+                      AND (st.status = '1' OR st.status = 1)";
             
             $params = [];
             
@@ -249,7 +250,9 @@ class Store
         try {
             $sql = "SELECT COUNT(DISTINCT s.id) as total
                     FROM stores s 
-                    WHERE s.status = 'active'";
+                    LEFT JOIN store_types st ON s.store_type_id = st.id
+                    WHERE (s.status = 'active' OR s.status = '1' OR s.status = 1)
+                      AND (st.status = '1' OR st.status = 1)";
             
             $params = [];
             
