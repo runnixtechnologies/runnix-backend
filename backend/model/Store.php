@@ -172,13 +172,11 @@ class Store
             $offset = ($page - 1) * $limit;
             
             $sql = "SELECT s.*, st.name AS store_type_name, 
-                           COALESCE(AVG(r.rating), 0) AS rating,
-                           COUNT(r.id) AS review_count,
-                           ss.is_online
+                           0 AS rating,
+                           0 AS review_count,
+                           1 AS is_online
                     FROM stores s 
                     LEFT JOIN store_types st ON s.store_type_id = st.id 
-                    LEFT JOIN reviews r ON s.id = r.store_id AND r.status = 1
-                    LEFT JOIN store_status ss ON s.id = ss.store_id
                     WHERE st.status = 1";
             
             $params = [];
