@@ -198,8 +198,8 @@ class Store
             
             $sql .= " GROUP BY s.id";
             
-            // Add distance calculation if user location is available
-            if ($userLocation && isset($userLocation['latitude']) && isset($userLocation['longitude'])) {
+            // Add distance calculation only when sorting by closest and user location is available
+            if ($sort === 'closest' && $userLocation && isset($userLocation['latitude']) && isset($userLocation['longitude'])) {
                 $sql = "SELECT *, 
                                (6371 * acos(cos(radians(:user_lat)) * cos(radians(s.latitude)) * 
                                 cos(radians(s.longitude) - radians(:user_lng)) + 
