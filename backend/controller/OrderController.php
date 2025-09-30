@@ -36,10 +36,14 @@ class OrderController
             $totalCount = $this->orderModel->getMerchantOrdersCount($merchantId, $status);
             $totalPages = ceil($totalCount / $limit);
             
-            // Format orders for response
+            // Format orders for response with detailed information
             $formattedOrders = [];
             foreach ($orders as $order) {
-                $formattedOrders[] = $this->formatOrderForList($order);
+                // Get detailed order information
+                $orderDetails = $this->orderModel->getOrderDetails($order['id']);
+                if ($orderDetails) {
+                    $formattedOrders[] = $this->formatOrderDetails($orderDetails);
+                }
             }
             
             http_response_code(200);
@@ -353,7 +357,7 @@ class OrderController
                 'name' => trim($order['rider_first_name'] . ' ' . $order['rider_last_name']),
                 'phone' => $order['rider_phone']
             ] : null,
-            'status_history' => $order['status_history'],
+            'status_history' => $this->formatStatusHistory($order['status_history']),
             'time_ago' => $timeAgo,
             'timestamps' => [
                 'accepted_at' => $order['accepted_at'],
@@ -435,6 +439,23 @@ class OrderController
         }
         
         return $formattedSelections;
+    }
+
+    /**
+     * Format status history for response
+     */
+    private function formatStatusHistory($statusHistory)
+    {
+        $formattedHistory = [];
+        
+        foreach ($statusHistory as $status) {
+            $formattedHistory[] = [
+                'status' => $status['status'],
+                'timestamp' => $status['created_at']
+            ];
+        }
+        
+        return $formattedHistory;
     }
 
     /**

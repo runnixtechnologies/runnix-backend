@@ -243,12 +243,16 @@ class Order
         // Get main order info
         $sql = "SELECT o.*, 
                        s.store_name,
+                       c.first_name as customer_first_name,
+                       c.last_name as customer_last_name,
                        c.phone as customer_phone,
                        c.email as customer_email,
+                       r.first_name as rider_first_name,
+                       r.last_name as rider_last_name,
                        r.phone as rider_phone
                 FROM {$this->table} o
                 LEFT JOIN stores s ON o.store_id = s.id
-                LEFT JOIN users c ON o.customer_id = c.id
+                LEFT JOIN users c ON o.user_id = c.id
                 LEFT JOIN users r ON o.rider_id = r.id
                 WHERE o.id = :order_id";
         
