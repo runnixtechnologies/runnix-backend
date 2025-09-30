@@ -534,7 +534,10 @@ class OrderController
             // Add selections total
             if (isset($item['selections']) && is_array($item['selections'])) {
                 foreach ($item['selections'] as $selection) {
-                    $itemTotal += $selection['price'] * $selection['quantity'];
+                    $selectionDetails = $this->getSelectionDetails($selection['selection_id'], $selection['selection_type']);
+                    if ($selectionDetails) {
+                        $itemTotal += $selectionDetails['price'] * $selection['quantity'];
+                    }
                 }
             }
             
@@ -589,7 +592,10 @@ class OrderController
             // Add selections total
             if (isset($item['selections']) && is_array($item['selections'])) {
                 foreach ($item['selections'] as $selection) {
-                    $itemTotal += $selection['price'] * $selection['quantity'];
+                    $selectionDetails = $this->getSelectionDetails($selection['selection_id'], $selection['selection_type']);
+                    if ($selectionDetails) {
+                        $itemTotal += $selectionDetails['price'] * $selection['quantity'];
+                    }
                 }
             }
             
@@ -626,20 +632,61 @@ class OrderController
     private function addOrderSelection($orderItemId, $selection)
     {
         try {
+            // Get selection details from database using ID
+            $selectionDetails = $this->getSelectionDetails($selection['selection_id'], $selection['selection_type']);
+            
+            if (!$selectionDetails) {
+                error_log("Selection not found: ID " . $selection['selection_id'] . ", Type: " . $selection['selection_type']);
+                return;
+            }
+            
             $sql = "INSERT INTO order_selections (order_item_id, selection_type, selection_name, selection_price, quantity, created_at) 
                     VALUES (:order_item_id, :selection_type, :selection_name, :selection_price, :quantity, NOW())";
             
             $stmt = $this->orderModel->getConnection()->prepare($sql);
             $stmt->execute([
                 ':order_item_id' => $orderItemId,
-                ':selection_type' => $selection['type'],
-                ':selection_name' => $selection['name'],
-                ':selection_price' => $selection['price'],
+                ':selection_type' => $selection['selection_type'],
+                ':selection_name' => $selectionDetails['name'],
+                ':selection_price' => $selectionDetails['price'],
                 ':quantity' => $selection['quantity']
             ]);
             
         } catch (Exception $e) {
             error_log("Add order selection error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get selection details by ID and type
+     */
+    private function getSelectionDetails($selectionId, $selectionType)
+    {
+        try {
+            $sql = "";
+            $params = [':id' => $selectionId];
+            
+            switch ($selectionType) {
+                case 'pack':
+                    $sql = "SELECT name, price FROM packages WHERE id = :id";
+                    break;
+                case 'side':
+                    $sql = "SELECT name, price FROM food_sides WHERE id = :id";
+                    break;
+                case 'section_item':
+                    $sql = "SELECT name, price FROM food_sections WHERE id = :id";
+                    break;
+                default:
+                    return null;
+            }
+            
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            error_log("Get selection details error: " . $e->getMessage());
+            return null;
         }
     }
 
