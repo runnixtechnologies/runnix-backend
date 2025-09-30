@@ -674,27 +674,29 @@ class OrderController
             // Insert order item
             // Check if this is a food item or regular item to use correct column
             $isFoodItem = $this->isFoodItem($item['item_id']);
+            $itemType = $isFoodItem ? 'food_item' : 'item';
             
             if ($isFoodItem) {
                 // Use food_item_id column for food items
-                $sql = "INSERT INTO order_items (order_id, food_item_id, quantity, price, total_price, created_at) 
-                        VALUES (:order_id, :item_id, :quantity, :price, :total_price, NOW())";
+                $sql = "INSERT INTO order_items (order_id, food_item_id, item_type, quantity, price, total_price, created_at) 
+                        VALUES (:order_id, :item_id, :item_type, :quantity, :price, :total_price, NOW())";
             } else {
                 // Use item_id column for regular items
-                $sql = "INSERT INTO order_items (order_id, item_id, quantity, price, total_price, created_at) 
-                        VALUES (:order_id, :item_id, :quantity, :price, :total_price, NOW())";
+                $sql = "INSERT INTO order_items (order_id, item_id, item_type, quantity, price, total_price, created_at) 
+                        VALUES (:order_id, :item_id, :item_type, :quantity, :price, :total_price, NOW())";
             }
             
             $stmt = $this->orderModel->getConnection()->prepare($sql);
             $stmt->execute([
                 ':order_id' => $orderId,
                 ':item_id' => $item['item_id'],
+                ':item_type' => $itemType,
                 ':quantity' => $item['quantity'],
                 ':price' => $itemPrice,
                 ':total_price' => $itemTotal
             ]);
             
-            error_log("[" . date('Y-m-d H:i:s') . "] Inserted as " . ($isFoodItem ? "food_item_id" : "item_id") . " = " . $item['item_id'], 3, __DIR__ . '/../php-error.log');
+            error_log("[" . date('Y-m-d H:i:s') . "] Inserted as item_type=" . $itemType . ", " . ($isFoodItem ? "food_item_id" : "item_id") . " = " . $item['item_id'], 3, __DIR__ . '/../php-error.log');
             
             $orderItemId = $this->orderModel->getConnection()->lastInsertId();
             

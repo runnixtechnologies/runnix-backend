@@ -270,10 +270,6 @@ class Order
         $sql = "SELECT oi.*, 
                        COALESCE(fi.name, i.name) as name,
                        COALESCE(fi.image, i.image) as photo,
-                       CASE 
-                           WHEN oi.food_item_id IS NOT NULL THEN 'food_item'
-                           ELSE 'item'
-                       END as item_type,
                        GROUP_CONCAT(
                            CONCAT(os.selection_type, ':', os.selection_name, ':', os.selection_price, ':', os.quantity)
                            SEPARATOR '|'
