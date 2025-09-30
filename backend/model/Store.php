@@ -179,8 +179,7 @@ class Store
                     LEFT JOIN store_types st ON s.store_type_id = st.id 
                     LEFT JOIN reviews r ON s.id = r.store_id AND r.status = 1
                     LEFT JOIN store_status ss ON s.id = ss.store_id
-                    WHERE s.status = 1
-                      AND st.status = 1";
+                    WHERE st.status = 1";
             
             $params = [];
             
@@ -209,13 +208,13 @@ class Store
                 $params[':user_lng'] = $userLocation['longitude'];
             }
             
-            // Sorting
+            // Sorting (if closest and we computed distance, use it; otherwise fall back)
             switch ($sort) {
                 case 'newest':
                     $sql .= " ORDER BY s.created_at DESC";
                     break;
                 case 'closest':
-                    if ($userLocation) {
+                    if ($sort === 'closest' && $userLocation && isset($params[':user_lat'])) {
                         $sql .= " ORDER BY distance ASC";
                     } else {
                         $sql .= " ORDER BY s.created_at DESC";
@@ -261,8 +260,7 @@ class Store
             $sql = "SELECT COUNT(DISTINCT s.id) as total
                     FROM stores s 
                     LEFT JOIN store_types st ON s.store_type_id = st.id
-                    WHERE s.status = 1
-                      AND st.status = 1";
+                    WHERE st.status = 1";
             
             $params = [];
             
