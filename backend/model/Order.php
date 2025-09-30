@@ -266,12 +266,21 @@ class Order
         }
         
         // Get order items with selections
+        // Join with both items and food_items tables to get item details
         $sql = "SELECT oi.*, 
+                       COALESCE(fi.name, i.name) as name,
+                       COALESCE(fi.image, i.image) as photo,
+                       CASE 
+                           WHEN oi.food_item_id IS NOT NULL THEN 'food_item'
+                           ELSE 'item'
+                       END as item_type,
                        GROUP_CONCAT(
                            CONCAT(os.selection_type, ':', os.selection_name, ':', os.selection_price, ':', os.quantity)
                            SEPARATOR '|'
                        ) as selections
                 FROM {$this->itemsTable} oi
+                LEFT JOIN food_items fi ON oi.food_item_id = fi.id
+                LEFT JOIN items i ON oi.item_id = i.id
                 LEFT JOIN {$this->selectionsTable} os ON oi.id = os.order_item_id
                 WHERE oi.order_id = :order_id
                 GROUP BY oi.id";

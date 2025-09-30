@@ -672,13 +672,15 @@ class OrderController
             }
             
             // Insert order item
-            // Check if this is a food item or regular item
+            // Check if this is a food item or regular item to use correct column
             $isFoodItem = $this->isFoodItem($item['item_id']);
             
             if ($isFoodItem) {
+                // Use food_item_id column for food items
                 $sql = "INSERT INTO order_items (order_id, food_item_id, quantity, price, total_price, created_at) 
                         VALUES (:order_id, :item_id, :quantity, :price, :total_price, NOW())";
             } else {
+                // Use item_id column for regular items
                 $sql = "INSERT INTO order_items (order_id, item_id, quantity, price, total_price, created_at) 
                         VALUES (:order_id, :item_id, :quantity, :price, :total_price, NOW())";
             }
@@ -691,6 +693,8 @@ class OrderController
                 ':price' => $itemPrice,
                 ':total_price' => $itemTotal
             ]);
+            
+            error_log("[" . date('Y-m-d H:i:s') . "] Inserted as " . ($isFoodItem ? "food_item_id" : "item_id") . " = " . $item['item_id'], 3, __DIR__ . '/../php-error.log');
             
             $orderItemId = $this->orderModel->getConnection()->lastInsertId();
             
@@ -888,29 +892,32 @@ class OrderController
             
             switch ($selectionType) {
                 case 'pack':
-                    // Check packages table for max_qty
-                    $sql = "SELECT max_qty FROM packages WHERE id = :selection_id";
-                    break;
+                    // Packages table doesn't have max_qty column
+                    return null;
                     
                 case 'side':
-                    // Check food_sides table for max_qty
-                    $sql = "SELECT max_qty FROM food_sides WHERE id = :selection_id";
-                    break;
+                    // Food_sides table doesn't have max_qty column
+                    return null;
                     
                 case 'section_item':
-                    // Check food_sections for max_qty
-                    $sql = "SELECT max_qty FROM food_sections WHERE id = :selection_id";
+                    // Check food_sections for max_quantity (note: column is max_quantity, not max_qty)
+                    $sql = "SELECT max_quantity FROM food_sections WHERE id = :selection_id";
                     break;
                     
                 default:
                     return null;
             }
             
+            if (!$sql) {
+                return null;
+            }
+            
             $stmt = $this->orderModel->getConnection()->prepare($sql);
             $stmt->execute($params);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $result ? (int)$result['max_qty'] : null;
+            // food_sections uses max_quantity column
+            return $result && isset($result['max_quantity']) ? (int)$result['max_quantity'] : null;
         } catch (Exception $e) {
             error_log("Get selection max quantity error: " . $e->getMessage());
             return null;
