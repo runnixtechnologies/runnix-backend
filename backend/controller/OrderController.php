@@ -25,12 +25,16 @@ class OrderController
         try {
             $merchantId = $user['user_id'];
             
+            error_log("[" . date('Y-m-d H:i:s') . "] Getting merchant orders for merchant_id: $merchantId, status: " . ($status ?? 'all'), 3, __DIR__ . '/../php-error.log');
+            
             // Validate pagination parameters
             $page = max(1, (int)$page);
             $limit = min(50, max(1, (int)$limit)); // Max 50 items per page
             
             // Get orders
             $orders = $this->orderModel->getMerchantOrders($merchantId, $status, $page, $limit);
+            
+            error_log("[" . date('Y-m-d H:i:s') . "] Found " . count($orders) . " orders for merchant", 3, __DIR__ . '/../php-error.log');
             
             // Get total count for pagination
             $totalCount = $this->orderModel->getMerchantOrdersCount($merchantId, $status);
@@ -42,7 +46,10 @@ class OrderController
                 // Get detailed order information
                 $orderDetails = $this->orderModel->getOrderDetails($order['id']);
                 if ($orderDetails) {
+                    error_log("[" . date('Y-m-d H:i:s') . "] Formatting order: " . $order['order_number'], 3, __DIR__ . '/../php-error.log');
                     $formattedOrders[] = $this->formatOrderDetails($orderDetails);
+                } else {
+                    error_log("[" . date('Y-m-d H:i:s') . "] Failed to get details for order ID: " . $order['id'], 3, __DIR__ . '/../php-error.log');
                 }
             }
             
@@ -61,7 +68,7 @@ class OrderController
             ];
             
         } catch (Exception $e) {
-            error_log("Get merchant orders error: " . $e->getMessage());
+            error_log("[" . date('Y-m-d H:i:s') . "] Get merchant orders error: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString(), 3, __DIR__ . '/../php-error.log');
             http_response_code(500);
             return [
                 'status' => 'error',
@@ -515,12 +522,16 @@ class OrderController
             $orderId = $this->orderModel->createOrder($orderData);
             
             if (!$orderId) {
+                error_log("[" . date('Y-m-d H:i:s') . "] Failed to create order for customer: $customerId", 3, __DIR__ . '/../php-error.log');
                 http_response_code(500);
                 return ['status' => 'error', 'message' => 'Failed to create order'];
             }
             
+            error_log("[" . date('Y-m-d H:i:s') . "] Order created successfully with ID: $orderId, adding " . count($items) . " items", 3, __DIR__ . '/../php-error.log');
+            
             // Add order items
             foreach ($items as $item) {
+                error_log("[" . date('Y-m-d H:i:s') . "] Adding item to order: item_id=" . $item['item_id'] . ", quantity=" . $item['quantity'], 3, __DIR__ . '/../php-error.log');
                 $this->addOrderItem($orderId, $item);
             }
             
@@ -618,12 +629,15 @@ class OrderController
             $itemPrice = $this->getItemPrice($item['item_id']);
             $itemTotal = $itemPrice * $item['quantity'];
             
+            error_log("[" . date('Y-m-d H:i:s') . "] Item price: $itemPrice, quantity: " . $item['quantity'] . ", subtotal: $itemTotal", 3, __DIR__ . '/../php-error.log');
+            
             // Add selections total
             if (isset($item['selections']) && is_array($item['selections'])) {
                 foreach ($item['selections'] as $selection) {
                     $selectionDetails = $this->getSelectionDetails($selection['selection_id'], $selection['selection_type']);
                     if ($selectionDetails) {
                         $itemTotal += $selectionDetails['price'] * $selection['quantity'];
+                        error_log("[" . date('Y-m-d H:i:s') . "] Adding selection: " . $selectionDetails['name'] . ", price: " . $selectionDetails['price'], 3, __DIR__ . '/../php-error.log');
                     }
                 }
             }
@@ -643,6 +657,8 @@ class OrderController
             
             $orderItemId = $this->orderModel->getConnection()->lastInsertId();
             
+            error_log("[" . date('Y-m-d H:i:s') . "] Order item inserted successfully with ID: $orderItemId", 3, __DIR__ . '/../php-error.log');
+            
             // Add selections
             if (isset($item['selections']) && is_array($item['selections'])) {
                 foreach ($item['selections'] as $selection) {
@@ -651,7 +667,8 @@ class OrderController
             }
             
         } catch (Exception $e) {
-            error_log("Add order item error: " . $e->getMessage());
+            error_log("[" . date('Y-m-d H:i:s') . "] Add order item error: " . $e->getMessage() . " | SQL State: " . ($stmt->errorInfo()[0] ?? 'N/A') . " | Trace: " . $e->getTraceAsString(), 3, __DIR__ . '/../php-error.log');
+            throw $e; // Re-throw to see the error in order creation
         }
     }
     
@@ -665,7 +682,7 @@ class OrderController
             $selectionDetails = $this->getSelectionDetails($selection['selection_id'], $selection['selection_type']);
             
             if (!$selectionDetails) {
-                error_log("Selection not found: ID " . $selection['selection_id'] . ", Type: " . $selection['selection_type']);
+                error_log("[" . date('Y-m-d H:i:s') . "] Selection not found: ID " . $selection['selection_id'] . ", Type: " . $selection['selection_type'], 3, __DIR__ . '/../php-error.log');
                 return;
             }
             
@@ -681,8 +698,11 @@ class OrderController
                 ':quantity' => $selection['quantity']
             ]);
             
+            error_log("[" . date('Y-m-d H:i:s') . "] Order selection added: " . $selectionDetails['name'] . " for order_item_id: $orderItemId", 3, __DIR__ . '/../php-error.log');
+            
         } catch (Exception $e) {
-            error_log("Add order selection error: " . $e->getMessage());
+            error_log("[" . date('Y-m-d H:i:s') . "] Add order selection error: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString(), 3, __DIR__ . '/../php-error.log');
+            throw $e; // Re-throw to see the error
         }
     }
     
