@@ -177,7 +177,7 @@ class Store
                            ss.is_online
                     FROM stores s 
                     LEFT JOIN store_types st ON s.store_type_id = st.id 
-                    LEFT JOIN reviews r ON s.id = r.store_id
+                    LEFT JOIN reviews r ON s.id = r.store_id AND r.status = 1
                     LEFT JOIN store_status ss ON s.id = ss.store_id
                     WHERE s.status = 1
                       AND st.status = 1";
