@@ -232,7 +232,17 @@ class Store
             $params[':offset'] = $offset;
             
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute($params);
+
+            // Bind parameters with correct types (especially for LIMIT/OFFSET)
+            foreach ($params as $name => $value) {
+                if ($name === ':limit' || $name === ':offset') {
+                    $stmt->bindValue($name, (int)$value, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($name, $value);
+                }
+            }
+
+            $stmt->execute();
             
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
             
