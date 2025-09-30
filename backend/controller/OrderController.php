@@ -771,17 +771,28 @@ class OrderController
     }
     
     /**
-     * Get maximum quantity for an item
+     * Get maximum quantity for an item (both food_items and items tables)
      */
     private function getItemMaxQuantity($itemId)
     {
         try {
-            $sql = "SELECT max_quantity FROM food_items WHERE id = :item_id AND deleted = 0";
+            // First check food_items table
+            $sql = "SELECT max_qty FROM food_items WHERE id = :item_id AND deleted = 0";
             $stmt = $this->orderModel->getConnection()->prepare($sql);
             $stmt->execute([':item_id' => $itemId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $result ? (int)$result['max_quantity'] : null;
+            if ($result && $result['max_qty'] !== null) {
+                return (int)$result['max_qty'];
+            }
+            
+            // If not found in food_items, check items table
+            $sql = "SELECT max_qty FROM items WHERE id = :item_id AND deleted = 0";
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->execute([':item_id' => $itemId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ? (int)$result['max_qty'] : null;
         } catch (Exception $e) {
             error_log("Get item max quantity error: " . $e->getMessage());
             return null;
@@ -799,8 +810,8 @@ class OrderController
             
             switch ($selectionType) {
                 case 'pack':
-                    // Check food_item_packs_config for max_quantity
-                    $sql = "SELECT fic.max_quantity 
+                    // Check food_item_packs_config for max_qty
+                    $sql = "SELECT fic.max_qty 
                             FROM food_item_packs_config fic
                             INNER JOIN food_item_packs fip ON fic.item_id = fip.item_id
                             WHERE fip.pack_id = :selection_id AND fip.item_id = :item_id";
@@ -808,8 +819,8 @@ class OrderController
                     break;
                     
                 case 'side':
-                    // Check food_item_sides_config for max_quantity
-                    $sql = "SELECT fic.max_quantity 
+                    // Check food_item_sides_config for max_qty
+                    $sql = "SELECT fic.max_qty 
                             FROM food_item_sides_config fic
                             INNER JOIN food_item_sides fis ON fic.item_id = fis.item_id
                             WHERE fis.side_id = :selection_id AND fis.item_id = :item_id";
@@ -817,8 +828,8 @@ class OrderController
                     break;
                     
                 case 'section_item':
-                    // Check food_sections for max_quantity
-                    $sql = "SELECT max_quantity FROM food_sections WHERE id = :selection_id";
+                    // Check food_sections for max_qty
+                    $sql = "SELECT max_qty FROM food_sections WHERE id = :selection_id";
                     break;
                     
                 default:
@@ -829,7 +840,7 @@ class OrderController
             $stmt->execute($params);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $result ? (int)$result['max_quantity'] : null;
+            return $result ? (int)$result['max_qty'] : null;
         } catch (Exception $e) {
             error_log("Get selection max quantity error: " . $e->getMessage());
             return null;
