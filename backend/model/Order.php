@@ -18,12 +18,12 @@ class Order
     {
         $this->conn = (new Database())->getConnection();
     }
-    
+
     public function getConnection()
     {
         return $this->conn;
     }
-    
+
     /**
      * Create order
      */
@@ -31,10 +31,10 @@ class Order
     {
         try {
             $this->conn->beginTransaction();
-            
+
             // Generate order number
             $orderNumber = $this->generateOrderNumber();
-            
+
             $sql = "INSERT INTO {$this->table} 
                     (order_number, customer_id, store_id, merchant_id, total_amount, delivery_fee, 
                      tax_amount, final_amount, payment_status, payment_method, delivery_address, 
@@ -42,7 +42,7 @@ class Order
                     VALUES (:order_number, :customer_id, :store_id, :merchant_id, :total_amount, 
                             :delivery_fee, :tax_amount, :final_amount, :payment_status, :payment_method, 
                             :delivery_address, :delivery_instructions, :customer_note, :status, NOW(), NOW())";
-            
+
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
                 ':order_number' => $orderNumber,
@@ -60,15 +60,15 @@ class Order
                 ':customer_note' => $orderData['customer_note'],
                 ':status' => $orderData['status']
             ]);
-            
+
             $orderId = $this->conn->lastInsertId();
-            
+
             // Add status history
             $this->addStatusHistory($orderId, $orderData['status'], $orderData['customer_id']);
-            
+
             $this->conn->commit();
             return $orderId;
-            
+
         } catch (\PDOException $e) {
             $this->conn->rollback();
             error_log("Error creating order: " . $e->getMessage());

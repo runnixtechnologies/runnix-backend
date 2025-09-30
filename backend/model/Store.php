@@ -162,7 +162,7 @@ class Store
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    
+
     /**
      * Get stores for customer with filtering and sorting
      */
