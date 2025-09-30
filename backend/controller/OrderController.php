@@ -457,6 +457,13 @@ class OrderController
                 return ['status' => 'error', 'message' => 'Items are required'];
             }
             
+            // Validate quantities against max limits
+            $quantityValidation = $this->validateItemQuantities($items);
+            if ($quantityValidation['status'] === 'error') {
+                http_response_code(400);
+                return $quantityValidation;
+            }
+            
             // Validate store exists
             $store = $this->orderModel->getStoreById($storeId);
             if (!$store) {
@@ -714,6 +721,117 @@ class OrderController
 
         } catch (Exception $e) {
             error_log("Get selection details error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Validate item quantities against max limits
+     */
+    private function validateItemQuantities($items)
+    {
+        try {
+            foreach ($items as $item) {
+                $itemId = $item['item_id'];
+                $itemQuantity = (int)$item['quantity'];
+                
+                // Check if item exists and get its max quantity
+                $itemMaxQty = $this->getItemMaxQuantity($itemId);
+                if ($itemMaxQty !== null && $itemQuantity > $itemMaxQty) {
+                    return [
+                        'status' => 'error',
+                        'message' => "Item quantity ({$itemQuantity}) exceeds maximum allowed ({$itemMaxQty})"
+                    ];
+                }
+                
+                // Validate selections quantities
+                if (isset($item['selections']) && is_array($item['selections'])) {
+                    foreach ($item['selections'] as $selection) {
+                        $selectionId = $selection['selection_id'];
+                        $selectionType = $selection['selection_type'];
+                        $selectionQuantity = (int)$selection['quantity'];
+                        
+                        $selectionMaxQty = $this->getSelectionMaxQuantity($selectionId, $selectionType, $itemId);
+                        if ($selectionMaxQty !== null && $selectionQuantity > $selectionMaxQty) {
+                            return [
+                                'status' => 'error',
+                                'message' => "Selection quantity ({$selectionQuantity}) exceeds maximum allowed ({$selectionMaxQty}) for {$selectionType}"
+                            ];
+                        }
+                    }
+                }
+            }
+            
+            return ['status' => 'success'];
+            
+        } catch (Exception $e) {
+            error_log("Quantity validation error: " . $e->getMessage());
+            return ['status' => 'error', 'message' => 'Quantity validation failed'];
+        }
+    }
+    
+    /**
+     * Get maximum quantity for an item
+     */
+    private function getItemMaxQuantity($itemId)
+    {
+        try {
+            $sql = "SELECT max_quantity FROM food_items WHERE id = :item_id AND deleted = 0";
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->execute([':item_id' => $itemId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ? (int)$result['max_quantity'] : null;
+        } catch (Exception $e) {
+            error_log("Get item max quantity error: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Get maximum quantity for a selection
+     */
+    private function getSelectionMaxQuantity($selectionId, $selectionType, $itemId)
+    {
+        try {
+            $sql = "";
+            $params = [':selection_id' => $selectionId];
+            
+            switch ($selectionType) {
+                case 'pack':
+                    // Check food_item_packs_config for max_quantity
+                    $sql = "SELECT fic.max_quantity 
+                            FROM food_item_packs_config fic
+                            INNER JOIN food_item_packs fip ON fic.item_id = fip.item_id
+                            WHERE fip.pack_id = :selection_id AND fip.item_id = :item_id";
+                    $params[':item_id'] = $itemId;
+                    break;
+                    
+                case 'side':
+                    // Check food_item_sides_config for max_quantity
+                    $sql = "SELECT fic.max_quantity 
+                            FROM food_item_sides_config fic
+                            INNER JOIN food_item_sides fis ON fic.item_id = fis.item_id
+                            WHERE fis.side_id = :selection_id AND fis.item_id = :item_id";
+                    $params[':item_id'] = $itemId;
+                    break;
+                    
+                case 'section_item':
+                    // Check food_sections for max_quantity
+                    $sql = "SELECT max_quantity FROM food_sections WHERE id = :selection_id";
+                    break;
+                    
+                default:
+                    return null;
+            }
+            
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ? (int)$result['max_quantity'] : null;
+        } catch (Exception $e) {
+            error_log("Get selection max quantity error: " . $e->getMessage());
             return null;
         }
     }
