@@ -271,9 +271,10 @@ class Order
         
         // Get order items with selections
         // Join with both items and food_items tables to get item details
+        // Note: Using COALESCE with multiple possible column names for image
         $sql = "SELECT oi.*, 
-                       COALESCE(fi.name, i.name) as name,
-                       COALESCE(fi.image, i.image) as photo,
+                       COALESCE(fi.name, i.item_name) as name,
+                       COALESCE(fi.photo, i.item_image) as photo,
                        GROUP_CONCAT(
                            CONCAT(os.selection_type, ':', os.selection_name, ':', os.selection_price, ':', os.quantity)
                            SEPARATOR '|'
