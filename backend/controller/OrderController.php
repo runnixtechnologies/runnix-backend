@@ -469,7 +469,7 @@ class OrderController
             
             // Create order
             $orderData = [
-                'customer_id' => $customerId,
+                'user_id' => $customerId,
                 'store_id' => $storeId,
                 'merchant_id' => $store['user_id'],
                 'total_amount' => $orderTotals['subtotal'],
@@ -669,13 +669,13 @@ class OrderController
             
             switch ($selectionType) {
                 case 'pack':
-                    $sql = "SELECT name, price FROM packages WHERE id = :id";
+                    $sql = "SELECT pack_name as name, price FROM packages WHERE id = :id";
                     break;
                 case 'side':
-                    $sql = "SELECT name, price FROM food_sides WHERE id = :id";
+                    $sql = "SELECT side_name as name, price FROM food_sides WHERE id = :id";
                     break;
                 case 'section_item':
-                    $sql = "SELECT name, price FROM food_sections WHERE id = :id";
+                    $sql = "SELECT section_name as name, price FROM food_sections WHERE id = :id";
                     break;
                 default:
                     return null;
