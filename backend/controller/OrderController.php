@@ -344,7 +344,8 @@ class OrderController
             'status' => $order['status'],
             'date_time' => $order['created_at'],
             'customer' => [
-                'name' => trim($order['customer_first_name'] . ' ' . $order['customer_last_name']),
+                'name' => trim(($order['customer_first_name'] ?? '') . ' ' . ($order['customer_last_name'] ?? '')) 
+                          ?: ($order['customer_email'] ?? $order['customer_phone'] ?? 'Customer'),
                 'phone' => $order['customer_phone'],
                 'email' => $order['customer_email'],
                 'delivery_address' => $order['delivery_address']
@@ -361,7 +362,8 @@ class OrderController
             'delivery_instructions' => $order['delivery_instructions'],
             'merchant_note' => $order['merchant_note'],
             'rider' => $order['rider_id'] ? [
-                'name' => trim($order['rider_first_name'] . ' ' . $order['rider_last_name']),
+                'name' => trim(($order['rider_first_name'] ?? '') . ' ' . ($order['rider_last_name'] ?? '')) 
+                          ?: ($order['rider_email'] ?? $order['rider_phone'] ?? 'Rider'),
                 'phone' => $order['rider_phone']
             ] : null,
             'status_history' => $this->formatStatusHistory($order['status_history']),
