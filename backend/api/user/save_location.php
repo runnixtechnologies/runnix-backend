@@ -6,6 +6,11 @@ require_once '../../../vendor/autoload.php';
 require_once '../../config/cors.php';
 require_once '../../middleware/authMiddleware.php';
 
+// Route-level logging to backend/php-error.log
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../php-error.log');
+
 use Controller\UserController;
 use function Middleware\authenticateRequest;
 
