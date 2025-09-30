@@ -664,27 +664,54 @@ class OrderController
     private function getSelectionDetails($selectionId, $selectionType)
     {
         try {
-            $sql = "";
-            $params = [':id' => $selectionId];
-            
+            $table = '';
             switch ($selectionType) {
                 case 'pack':
-                    $sql = "SELECT pack_name as name, price FROM packages WHERE id = :id";
+                    $table = 'packages';
                     break;
                 case 'side':
-                    $sql = "SELECT side_name as name, price FROM food_sides WHERE id = :id";
+                    $table = 'food_sides';
                     break;
                 case 'section_item':
-                    $sql = "SELECT section_name as name, price FROM food_sections WHERE id = :id";
+                    $table = 'food_sections';
                     break;
                 default:
                     return null;
             }
-            
+
+            $sql = "SELECT * FROM {$table} WHERE id = :id";
             $stmt = $this->orderModel->getConnection()->prepare($sql);
-            $stmt->execute($params);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-            
+            $stmt->execute([':id' => $selectionId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
+
+            // Determine name field dynamically based on existing columns
+            $candidateNameFields = ['name', 'pack_name', 'side_name', 'section_name', 'title'];
+            $candidatePriceFields = ['price', 'extra_price', 'amount'];
+
+            $name = null;
+            foreach ($candidateNameFields as $field) {
+                if (array_key_exists($field, $row) && $row[$field] !== null && $row[$field] !== '') {
+                    $name = $row[$field];
+                    break;
+                }
+            }
+
+            $price = null;
+            foreach ($candidatePriceFields as $field) {
+                if (array_key_exists($field, $row) && $row[$field] !== null && $row[$field] !== '') {
+                    $price = (float)$row[$field];
+                    break;
+                }
+            }
+
+            if ($name === null) { $name = 'Selection'; }
+            if ($price === null) { $price = 0.0; }
+
+            return ['name' => $name, 'price' => $price];
+
         } catch (Exception $e) {
             error_log("Get selection details error: " . $e->getMessage());
             return null;

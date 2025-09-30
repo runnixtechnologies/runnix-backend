@@ -36,17 +36,17 @@ class Order
             $orderNumber = $this->generateOrderNumber();
 
             $sql = "INSERT INTO {$this->table} 
-                    (order_number, customer_id, store_id, merchant_id, total_amount, delivery_fee, 
+                    (order_number, user_id, store_id, merchant_id, total_amount, delivery_fee, 
                      tax_amount, final_amount, payment_status, payment_method, delivery_address, 
                      delivery_instructions, customer_note, status, created_at, updated_at) 
-                    VALUES (:order_number, :customer_id, :store_id, :merchant_id, :total_amount, 
+                    VALUES (:order_number, :user_id, :store_id, :merchant_id, :total_amount, 
                             :delivery_fee, :tax_amount, :final_amount, :payment_status, :payment_method, 
                             :delivery_address, :delivery_instructions, :customer_note, :status, NOW(), NOW())";
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
                 ':order_number' => $orderNumber,
-                ':customer_id' => $orderData['customer_id'],
+                ':user_id' => $orderData['user_id'],
                 ':store_id' => $orderData['store_id'],
                 ':merchant_id' => $orderData['merchant_id'],
                 ':total_amount' => $orderData['total_amount'],
@@ -64,7 +64,7 @@ class Order
             $orderId = $this->conn->lastInsertId();
 
             // Add status history
-            $this->addStatusHistory($orderId, $orderData['status'], $orderData['customer_id']);
+            $this->addStatusHistory($orderId, $orderData['status'], $orderData['user_id']);
 
             $this->conn->commit();
             return $orderId;
