@@ -149,8 +149,8 @@ function collectBasicDeviceInfo() {
         'network_type' => null,
         'carrier_name' => null,
         'timezone' => date_default_timezone_get(),
-        'language' => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ? substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2) : 'en',
-        'locale' => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ? substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 5) : 'en-US',
+        'language' => isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2) : 'en',
+        'locale' => isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 5) : 'en-US',
         'user_agent' => $userAgent,
         'ip_address' => $ipAddress
     ];
