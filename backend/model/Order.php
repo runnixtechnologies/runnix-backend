@@ -106,14 +106,14 @@ class Order
     {
         try {
             $sql = "INSERT INTO {$this->statusHistoryTable} 
-                    (order_id, status, user_id, created_at) 
-                    VALUES (:order_id, :status, :user_id, NOW())";
+                    (order_id, status, changed_by, created_at) 
+                    VALUES (:order_id, :status, :changed_by, NOW())";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
                 ':order_id' => $orderId,
                 ':status' => $status,
-                ':user_id' => $userId
+                ':changed_by' => $userId
             ]);
             
         } catch (\PDOException $e) {

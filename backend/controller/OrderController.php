@@ -602,12 +602,41 @@ class OrderController
     }
     
     /**
+     * Check if item is a food item
+     */
+    private function isFoodItem($itemId)
+    {
+        try {
+            $sql = "SELECT id FROM food_items WHERE id = :item_id";
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->bindParam(':item_id', $itemId);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC) !== false;
+        } catch (Exception $e) {
+            error_log("Check food item error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
      * Get item price
      */
     private function getItemPrice($itemId)
     {
         try {
+            // Try food_items first
             $sql = "SELECT price FROM food_items WHERE id = :item_id AND status = 'active'";
+            $stmt = $this->orderModel->getConnection()->prepare($sql);
+            $stmt->bindParam(':item_id', $itemId);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                return (float)$result['price'];
+            }
+            
+            // Try regular items table
+            $sql = "SELECT price FROM items WHERE id = :item_id AND status = 'active'";
             $stmt = $this->orderModel->getConnection()->prepare($sql);
             $stmt->bindParam(':item_id', $itemId);
             $stmt->execute();
@@ -643,8 +672,16 @@ class OrderController
             }
             
             // Insert order item
-            $sql = "INSERT INTO order_items (order_id, item_id, quantity, price, total_price, created_at) 
-                    VALUES (:order_id, :item_id, :quantity, :price, :total_price, NOW())";
+            // Check if this is a food item or regular item
+            $isFoodItem = $this->isFoodItem($item['item_id']);
+            
+            if ($isFoodItem) {
+                $sql = "INSERT INTO order_items (order_id, food_item_id, quantity, price, total_price, created_at) 
+                        VALUES (:order_id, :item_id, :quantity, :price, :total_price, NOW())";
+            } else {
+                $sql = "INSERT INTO order_items (order_id, item_id, quantity, price, total_price, created_at) 
+                        VALUES (:order_id, :item_id, :quantity, :price, :total_price, NOW())";
+            }
             
             $stmt = $this->orderModel->getConnection()->prepare($sql);
             $stmt->execute([
@@ -851,21 +888,13 @@ class OrderController
             
             switch ($selectionType) {
                 case 'pack':
-                    // Check food_item_packs_config for max_qty
-                    $sql = "SELECT fic.max_qty 
-                            FROM food_item_packs_config fic
-                            INNER JOIN food_item_packs fip ON fic.item_id = fip.item_id
-                            WHERE fip.pack_id = :selection_id AND fip.item_id = :item_id";
-                    $params[':item_id'] = $itemId;
+                    // Check packages table for max_qty
+                    $sql = "SELECT max_qty FROM packages WHERE id = :selection_id";
                     break;
                     
                 case 'side':
-                    // Check food_item_sides_config for max_qty
-                    $sql = "SELECT fic.max_qty 
-                            FROM food_item_sides_config fic
-                            INNER JOIN food_item_sides fis ON fic.item_id = fis.item_id
-                            WHERE fis.side_id = :selection_id AND fis.item_id = :item_id";
-                    $params[':item_id'] = $itemId;
+                    // Check food_sides table for max_qty
+                    $sql = "SELECT max_qty FROM food_sides WHERE id = :selection_id";
                     break;
                     
                 case 'section_item':
