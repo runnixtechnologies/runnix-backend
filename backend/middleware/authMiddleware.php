@@ -77,32 +77,35 @@ function authenticateRequest() {
 }
 
 function autoRegisterDevice($user) {
-    // Only register device if we have device data in headers or request
     $headers = getallheaders();
     $requestData = [];
+    $deviceData = [];
     
-    // Check for device data in headers
-    $hasDeviceData = false;
+    // Check for mobile app device data in headers
+    $hasMobileDeviceData = false;
     if (isset($headers['X-Device-ID']) || isset($headers['X-Device-Type'])) {
-        $hasDeviceData = true;
+        $hasMobileDeviceData = true;
     }
     
-    // Check for device data in POST body
+    // Check for mobile app device data in POST body
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $input = json_decode(file_get_contents("php://input"), true);
         if (isset($input['device_id'])) {
-            $hasDeviceData = true;
+            $hasMobileDeviceData = true;
             $requestData = $input;
         }
     }
     
-    if (!$hasDeviceData) {
-        return; // No device data to register
-    }
-    
     try {
         $deviceController = new DeviceController();
-        $deviceData = $deviceController->extractDeviceData($requestData);
+        
+        if ($hasMobileDeviceData) {
+            // Mobile app - extract full device data
+            $deviceData = $deviceController->extractDeviceData($requestData);
+        } else {
+            // Web/Postman - collect basic info automatically
+            $deviceData = collectBasicDeviceInfo();
+        }
         
         if (!empty($deviceData['device_id'])) {
             $deviceController->registerDevice($user, $deviceData);
@@ -110,6 +113,47 @@ function autoRegisterDevice($user) {
     } catch (Exception $e) {
         error_log("[" . date('Y-m-d H:i:s') . "] Auto device registration error: " . $e->getMessage(), 3, __DIR__ . '/../php-error.log');
     }
+}
+
+function collectBasicDeviceInfo() {
+    // Collect basic device info automatically for web/Postman requests
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    
+    // Generate a basic device ID from IP + User Agent hash
+    $deviceId = 'web_' . md5($ipAddress . $userAgent);
+    
+    // Detect basic device type from User Agent
+    $deviceType = 'web';
+    if (strpos($userAgent, 'Mobile') !== false || strpos($userAgent, 'Android') !== false || strpos($userAgent, 'iPhone') !== false) {
+        $deviceType = 'mobile_web';
+    }
+    
+    // Extract basic OS info from User Agent
+    $osVersion = 'unknown';
+    if (preg_match('/Windows NT ([0-9.]+)/', $userAgent, $matches)) {
+        $osVersion = 'Windows ' . $matches[1];
+    } elseif (preg_match('/Mac OS X ([0-9_]+)/', $userAgent, $matches)) {
+        $osVersion = 'macOS ' . str_replace('_', '.', $matches[1]);
+    } elseif (preg_match('/Linux/', $userAgent)) {
+        $osVersion = 'Linux';
+    }
+    
+    return [
+        'device_id' => $deviceId,
+        'device_type' => $deviceType,
+        'device_model' => 'Web Browser',
+        'os_version' => $osVersion,
+        'app_version' => '1.0.0',
+        'screen_resolution' => null,
+        'network_type' => null,
+        'carrier_name' => null,
+        'timezone' => date_default_timezone_get(),
+        'language' => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ? substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2) : 'en',
+        'locale' => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ? substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 5) : 'en-US',
+        'user_agent' => $userAgent,
+        'ip_address' => $ipAddress
+    ];
 }
 
 function authorizeRoles(array $allowedRoles, $userRole) {

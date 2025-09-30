@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS user_devices (
     timezone VARCHAR(50), -- Africa/Lagos, etc.
     language VARCHAR(10), -- en, fr, etc.
     locale VARCHAR(10), -- en-US, fr-FR, etc.
+    user_agent TEXT, -- For web requests
+    ip_address VARCHAR(45), -- For web requests
     is_active BOOLEAN DEFAULT TRUE,
     last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

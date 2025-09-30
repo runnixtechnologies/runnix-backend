@@ -53,10 +53,10 @@ class Device
         $sql = "INSERT INTO {$this->table} 
                 (user_id, user_type, device_id, device_type, device_model, os_version, 
                  app_version, screen_resolution, network_type, carrier_name, timezone, 
-                 language, locale, is_active, last_active_at, first_seen_at) 
+                 language, locale, user_agent, ip_address, is_active, last_active_at, first_seen_at) 
                 VALUES (:user_id, :user_type, :device_id, :device_type, :device_model, :os_version, 
                         :app_version, :screen_resolution, :network_type, :carrier_name, :timezone, 
-                        :language, :locale, :is_active, NOW(), NOW())";
+                        :language, :locale, :user_agent, :ip_address, :is_active, NOW(), NOW())";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
@@ -73,6 +73,8 @@ class Device
             ':timezone' => $deviceData['timezone'] ?? null,
             ':language' => $deviceData['language'] ?? null,
             ':locale' => $deviceData['locale'] ?? null,
+            ':user_agent' => $deviceData['user_agent'] ?? null,
+            ':ip_address' => $deviceData['ip_address'] ?? null,
             ':is_active' => true
         ]);
 
@@ -95,6 +97,8 @@ class Device
                 timezone = :timezone,
                 language = :language,
                 locale = :locale,
+                user_agent = :user_agent,
+                ip_address = :ip_address,
                 is_active = :is_active,
                 last_active_at = NOW(),
                 updated_at = NOW()
@@ -113,6 +117,8 @@ class Device
             ':timezone' => $deviceData['timezone'] ?? null,
             ':language' => $deviceData['language'] ?? null,
             ':locale' => $deviceData['locale'] ?? null,
+            ':user_agent' => $deviceData['user_agent'] ?? null,
+            ':ip_address' => $deviceData['ip_address'] ?? null,
             ':is_active' => true
         ]);
 

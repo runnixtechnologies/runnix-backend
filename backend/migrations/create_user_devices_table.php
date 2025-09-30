@@ -20,6 +20,8 @@ try {
         timezone VARCHAR(50),
         language VARCHAR(10),
         locale VARCHAR(10),
+        user_agent TEXT,
+        ip_address VARCHAR(45),
         is_active BOOLEAN DEFAULT TRUE,
         last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
