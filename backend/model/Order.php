@@ -241,7 +241,7 @@ class Order
     public function getOrderDetails($orderId)
     {
         // Get main order info
-        // Get name from user_profile table
+        // Get name from user_profiles table (plural)
         $sql = "SELECT o.*, 
                        s.store_name,
                        cp.first_name as customer_first_name,
@@ -255,9 +255,9 @@ class Order
                 FROM {$this->table} o
                 LEFT JOIN stores s ON o.store_id = s.id
                 LEFT JOIN users c ON o.user_id = c.id
-                LEFT JOIN user_profile cp ON c.id = cp.user_id
+                LEFT JOIN user_profiles cp ON c.id = cp.user_id
                 LEFT JOIN users r ON o.rider_id = r.id
-                LEFT JOIN user_profile rp ON r.id = rp.user_id
+                LEFT JOIN user_profiles rp ON r.id = rp.user_id
                 WHERE o.id = :order_id";
         
         $stmt = $this->conn->prepare($sql);
