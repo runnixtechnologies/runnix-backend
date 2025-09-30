@@ -126,7 +126,12 @@ class UserController
         }
         
         if (!empty($deviceData['device_id'])) {
-            $deviceController->registerDevice($user, $deviceData);
+            // Convert user array to match DeviceController expectations
+            $userForDevice = [
+                'user_id' => $user['id'],
+                'role' => $user['role']
+            ];
+            $deviceController->registerDevice($userForDevice, $deviceData);
         }
     } catch (Exception $e) {
         error_log("[" . date('Y-m-d H:i:s') . "] Login device registration error: " . $e->getMessage(), 3, __DIR__ . '/../php-error.log');
