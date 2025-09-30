@@ -4,6 +4,7 @@ namespace Controller;
 use Model\Order;
 use Model\User;
 use Exception;
+use PDO;
 
 class OrderController
 {
