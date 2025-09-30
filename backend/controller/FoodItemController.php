@@ -2626,9 +2626,14 @@ public function getCategoriesByStoreType($storeId)
     public function getFoodItemsForCustomer($user, $storeId, $categoryId = null, $search = null, $sort = 'popular')
     {
         try {
-            // Validate store exists and is active
+            // Validate store exists and is active (accept numeric 1 or text 'active')
             $store = $this->foodItem->getStoreById($storeId);
-            if (!$store || $store['status'] !== 'active') {
+            $isActive = false;
+            if ($store) {
+                $status = $store['status'] ?? null;
+                $isActive = ($status === 'active' || $status === 1 || $status === '1');
+            }
+            if (!$store || !$isActive) {
                 http_response_code(404);
                 return ['status' => 'error', 'message' => 'Store not found or inactive'];
             }
