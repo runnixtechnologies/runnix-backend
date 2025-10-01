@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         $data = json_decode(file_get_contents("php://input"), true);
         
-        // Validate required fields
+        // Validate required field: order_id (ONLY required parameter)
         if (empty($data['order_id'])) {
             http_response_code(400);
             echo json_encode([
@@ -36,12 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
         
-        // Validate order ID
+        // Validate order_id format
         if (!is_numeric($data['order_id']) || $data['order_id'] <= 0) {
             http_response_code(400);
             echo json_encode([
                 "status" => "error",
-                "message" => "Invalid order ID."
+                "message" => "Invalid order ID. Must be a positive integer."
             ]);
             exit;
         }
