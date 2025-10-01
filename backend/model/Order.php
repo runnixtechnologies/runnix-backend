@@ -292,18 +292,22 @@ class Order
         
         // Parse selections
         foreach ($items as &$item) {
+            $selectionsString = $item['selections'];
             $item['selections'] = [];
-            if ($item['selections']) {
-                $selections = explode('|', $item['selections']);
+            
+            if ($selectionsString && !empty($selectionsString)) {
+                $selections = explode('|', $selectionsString);
                 foreach ($selections as $selection) {
                     if ($selection) {
                         $parts = explode(':', $selection);
-                        $item['selections'][] = [
-                            'type' => $parts[0],
-                            'name' => $parts[1],
-                            'price' => $parts[2],
-                            'quantity' => $parts[3]
-                        ];
+                        if (count($parts) >= 4) {
+                            $item['selections'][] = [
+                                'type' => $parts[0],
+                                'name' => $parts[1],
+                                'price' => $parts[2],
+                                'quantity' => $parts[3]
+                            ];
+                        }
                     }
                 }
             }
