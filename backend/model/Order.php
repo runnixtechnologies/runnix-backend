@@ -290,6 +290,9 @@ class Order
         $stmt->execute();
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        error_log("[" . date('Y-m-d H:i:s') . "] Order items query returned " . count($items) . " items for order_id: $orderId", 3, __DIR__ . '/../php-error.log');
+        error_log("[" . date('Y-m-d H:i:s') . "] Raw items data: " . json_encode($items), 3, __DIR__ . '/../php-error.log');
+        
         // Parse selections
         foreach ($items as &$item) {
             $selectionsString = $item['selections'];
@@ -316,7 +319,11 @@ class Order
         $order['items'] = $items;
         
         // Get status history
-        $order['status_history'] = $this->getOrderStatusHistory($orderId);
+        $statusHistory = $this->getOrderStatusHistory($orderId);
+        error_log("[" . date('Y-m-d H:i:s') . "] Status history query returned " . count($statusHistory) . " records for order_id: $orderId", 3, __DIR__ . '/../php-error.log');
+        error_log("[" . date('Y-m-d H:i:s') . "] Raw status history: " . json_encode($statusHistory), 3, __DIR__ . '/../php-error.log');
+        
+        $order['status_history'] = $statusHistory;
         
         return $order;
     }
