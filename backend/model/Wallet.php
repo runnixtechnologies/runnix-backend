@@ -5,11 +5,11 @@ namespace Model;
 use Config\Database;
 use PDO;
 use PDOException;
-class Wallet
+class Wallet extends BaseModel
 {
     private $conn;
 
-    private $table = "wallets";
+    protected $table = "wallets";
     public function __construct()
     {
         $this->conn = (new Database())->getConnection(); // Matches your model pattern

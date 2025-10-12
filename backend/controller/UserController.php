@@ -215,6 +215,11 @@ public function setupUserRider($data)
     if ($userId) {
         $profileCreated = $this->userModel->createUserProfile($userId, $first_name, $last_name);
         if ($profileCreated) {
+            $walletModel = new \Model\Wallet();
+            $walletModel->create([
+                "user_id" => $userId,
+                "role" => "rider"
+            ]);
             $riderModel = new \Model\Rider();
             $riderModel->create([
                 "user_id" => $userId,
