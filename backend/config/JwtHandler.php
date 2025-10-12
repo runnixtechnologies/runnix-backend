@@ -25,7 +25,7 @@ class JwtHandler {
             }
         }
 
-        $this->secret = "fvdhgfhdfhdvhfdhfdhfdhfhdfdvhfgdvfhdvfghdvhfdvhfdvhfdvhfd";// $_ENV['JWT_SECRET'] ?? 'fallback_secret_key';
+        $this->secret = $_ENV['JWT_SECRET'] ?? 'fallback_secret_key';
         $this->issuedAt = time();
         $this->expire = $this->issuedAt + (30 * 24 * 60 * 60); // 30 days (no timeout)
 
