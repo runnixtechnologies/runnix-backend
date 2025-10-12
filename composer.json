@@ -7,10 +7,18 @@
     "autoload": {
         "psr-4": {
             "Controller\\": "backend/controller/",
+            "Controller\\Riders\\": "backend/controller/riders",
             "Model\\": "backend/model/",
+            "App\\Class\\": "backend/class",
+            "App\\Requests\\": "backend/requests",
+            "App\\Requests\\Riders\\": "backend/requests/riders",
             "Config\\": "backend/config/",
             "Middleware\\": "backend/middleware/",
-            "Service\\": "backend/service/"
-        }
+            "Service\\": "backend/service/",
+            "App\\Facades\\": "backend/facades/"
+        },
+        "files": [
+            "backend/helpers/app_helpers.php"
+        ]
     }
 }

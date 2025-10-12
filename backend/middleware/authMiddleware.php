@@ -5,7 +5,7 @@ namespace Middleware;
 use Config\JwtHandler;
 use Controller\DeviceController;
 
-function authenticateRequest() {
+function authenticateRequest($forceValidate = false) {
     $headers = getallheaders();
 
     // Handle case where getallheaders() might not work
@@ -49,7 +49,6 @@ function authenticateRequest() {
 
     $jwt = new JwtHandler();
     $decoded = $jwt->decode($token);
-
     if (!$decoded) {
         $msg = "[AUTH] Invalid or expired token. Token=$token";
         error_log("[" . date('Y-m-d H:i:s') . "] $msg\n", 3, $logFile);
@@ -73,6 +72,8 @@ function authenticateRequest() {
     }
 
     // Return decoded payload (e.g., ['user_id' => ..., 'role' => ...])
+    if(!$decoded)
+        abort(401, "Unauthenticated");
     return $decoded;
 }
 

@@ -42,6 +42,7 @@ try {
     
     $conn->exec($createRiderVehiclesTable);
     echo "✅ Created rider_vehicles table\n";
+
     
     // 2. Create rider_withdrawal_requests table
     $createRiderWithdrawalRequestsTable = "

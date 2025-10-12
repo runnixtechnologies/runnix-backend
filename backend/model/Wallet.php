@@ -5,10 +5,11 @@ namespace Model;
 use Config\Database;
 use PDO;
 use PDOException;
-class Wallet
+class Wallet extends BaseModel
 {
     private $conn;
 
+    protected $table = "wallets";
     public function __construct()
     {
         $this->conn = (new Database())->getConnection(); // Matches your model pattern
@@ -16,7 +17,7 @@ class Wallet
 
     public function getWalletByUserId($userId)
     {
-        $sql = "SELECT * FROM wallet WHERE user_id = :user_id";
+        $sql = "SELECT * FROM $this->table WHERE user_id = :user_id";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([':user_id' => $userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);

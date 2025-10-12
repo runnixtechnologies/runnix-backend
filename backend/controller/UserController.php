@@ -94,6 +94,14 @@ class UserController
         } else {
             $user['store_setup'] = false;
         }
+    }elseif ($user['role'] === 'rider') {
+        $riderDetails = $this->userModel->getRiderDetails($user['id']);
+        if($riderDetails) {
+            $user["rider_id"]  = $riderDetails["id"];
+            $user["rider_code"] = $riderDetails["rider_code"];
+            $user["rider_firstname"] = $riderDetails["first_name"];
+            $user["rider_lastname"] = $riderDetails["last_name"];
+        }
     }
 
     $jwt = new JwtHandler();
@@ -101,6 +109,7 @@ class UserController
         "user_id" => $user['id'],
         "role"    => $user['role'],
         "store_id" => $user['store_id'] ?? null,
+        "rider_id" => $user["rider_id"] ?? null,
         "store_type_id" => $user['store_type_id'] ?? null
     ];
 
@@ -191,6 +200,7 @@ public function setupUserRider($data)
 
     // Referral logic
     $referrer_id = null;
+    $refCode = strtoupper(randomStr(7));
     if (!empty($data['referral_code'])) {
         $referrer = $this->userModel->getUserByReferralCode($data['referral_code']);
         if (!$referrer) {
@@ -205,6 +215,19 @@ public function setupUserRider($data)
     if ($userId) {
         $profileCreated = $this->userModel->createUserProfile($userId, $first_name, $last_name);
         if ($profileCreated) {
+            $walletModel = new \Model\Wallet();
+            $walletModel->create([
+                "user_id" => $userId,
+                "role" => "rider"
+            ]);
+            $riderModel = new \Model\Rider();
+            $riderModel->create([
+                "user_id" => $userId,
+                "first_name" => $first_name,
+                "last_name" => $last_name,
+                "phone" => $phone,
+                "rider_code" => $refCode
+            ]);
             return [
                 'status' => 'success',
                 'message' => 'User setup completed successfully',
@@ -1063,6 +1086,9 @@ public function getStatus($user) {
                 'created_at' => $userData['created_at'],
                 'updated_at' => $userData['updated_at'] ?? null
             ];
+
+            $walletModel = new \Model\Wallet();
+            $fullProfile["wallet"] = $walletModel->getWalletByUserId($userId);
             
             // If user is a merchant, add business information
             if ($userData['role'] === 'merchant') {
@@ -1084,6 +1110,9 @@ public function getStatus($user) {
                     // Merchant but no store setup
                     $fullProfile['business'] = null;
                 }
+            }elseif ($userData['role'] === 'rider'){
+                $riderMd = new \Model\Rider();
+                $fullProfile["rider"] = $riderMd->find($user["rider_id"]);
             }
             
             http_response_code(200);

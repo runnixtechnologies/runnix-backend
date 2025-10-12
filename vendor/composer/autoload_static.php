@@ -18,6 +18,7 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
         'b067bc7112e384b61c701452d53a14a8' => __DIR__ . '/..' . '/mtdowling/jmespath.php/src/JmesPath.php',
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
         '23c18046f52bef3eea034657bafda50f' => __DIR__ . '/..' . '/symfony/polyfill-php81/bootstrap.php',
+        'f186ce5cc3317ce44a3897ab8c519b61' => __DIR__ . '/../..' . '/backend/helpers/app_helpers.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -28,6 +29,7 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
             'Symfony\\Polyfill\\Mbstring\\' => 26,
             'Symfony\\Polyfill\\Ctype\\' => 23,
             'StellaMaris\\Clock\\' => 18,
+            'Service\\' => 8,
         ),
         'R' => 
         array (
@@ -109,12 +111,20 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
         ),
         'C' => 
         array (
+            'Controller\\Riders\\' => 18,
             'Controller\\' => 11,
             'Config\\' => 7,
         ),
         'B' => 
         array (
             'Brick\\Math\\' => 11,
+        ),
+        'A' => 
+        array (
+            'App\\Requests\\Riders\\' => 20,
+            'App\\Requests\\' => 13,
+            'App\\Facades\\' => 12,
+            'App\\Class\\' => 10,
         ),
     );
 
@@ -138,6 +148,10 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
         'StellaMaris\\Clock\\' => 
         array (
             0 => __DIR__ . '/..' . '/stella-maris/clock/src',
+        ),
+        'Service\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/backend/service',
         ),
         'Rize\\' => 
         array (
@@ -165,8 +179,8 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
         ),
         'Psr\\Http\\Message\\' => 
         array (
-            0 => __DIR__ . '/..' . '/psr/http-message/src',
-            1 => __DIR__ . '/..' . '/psr/http-factory/src',
+            0 => __DIR__ . '/..' . '/psr/http-factory/src',
+            1 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
         'Psr\\Http\\Client\\' => 
         array (
@@ -344,6 +358,10 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
         array (
             0 => __DIR__ . '/..' . '/vlucas/phpdotenv/src',
         ),
+        'Controller\\Riders\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/backend/controller/riders',
+        ),
         'Controller\\' => 
         array (
             0 => __DIR__ . '/../..' . '/backend/controller',
@@ -355,6 +373,22 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
         'Brick\\Math\\' => 
         array (
             0 => __DIR__ . '/..' . '/brick/math/src',
+        ),
+        'App\\Requests\\Riders\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/backend/requests/riders',
+        ),
+        'App\\Requests\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/backend/requests',
+        ),
+        'App\\Facades\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/backend/facades',
+        ),
+        'App\\Class\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/backend/class',
         ),
     );
 
