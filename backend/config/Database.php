@@ -1,17 +1,27 @@
 <?php
 namespace Config;
 
+use Dotenv\Dotenv;
+
+
 class Database
 {
-    private $host = "localhost";
-    private $db_name = "u232647434_db";
-    private $username = "u232647434_user";
-    private $password = "#Uti*odpl4B8";
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     public $conn;
 
     public function getConnection()
     {
+        $dotenv = Dotenv::createImmutable(__DIR__."/../../");
+        $dotenv->load();
+
         $this->conn = null;
+        $this->host = $_ENV["DB_HOST"];
+        $this->db_name = $_ENV["DB_NAME"];
+        $this->username = $_ENV["DB_USERNAME"];
+        $this->password = $_ENV["DB_PASSWORD"];
 
         try {
             $this->conn = new \PDO("mysql:host={$this->host};dbname={$this->db_name}", $this->username, $this->password);

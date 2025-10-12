@@ -348,6 +348,20 @@ public function getUserByEmail($email)
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+    public function getRiderDetails($userId)
+{
+    $sql = "SELECT 
+                *
+            FROM riders 
+            WHERE user_id = :user_id
+            LIMIT 1";
+
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(':user_id', $userId);
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
 
     public function resetPasswordByPhone($phone, $plainPassword)
     {
