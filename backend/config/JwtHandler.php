@@ -15,17 +15,19 @@ class JwtHandler {
 
     public function __construct() {
         // Load .env file with error handling
-        if (file_exists(__DIR__ . '/../.env')) {
+        // if (file_exists(__DIR__ . '/../.env')) {
             try {
-                $dotenv = Dotenv::createImmutable(dirname(__DIR__));
+                $dotenv = Dotenv::createImmutable(__DIR__."/../../");
                 $dotenv->load();
             } catch (\Exception $e) {
                 error_log("Failed to load .env file in JwtHandler: " . $e->getMessage());
                 // Continue without .env file - use default values
             }
-        }
+        // }else{
+        //     // echo "No file found";
+        // }
 
-        $this->secret = $_ENV['JWT_SECRET'] ?? 'fallback_secret_key';
+        $this->secret = $_ENV['JWT_SECRET'];// ?? 'fallback_secret_key';
         $this->issuedAt = time();
         $this->expire = $this->issuedAt + (30 * 24 * 60 * 60); // 30 days (no timeout)
 
