@@ -11,11 +11,16 @@ class BaseModel{
     protected $fields = [];
     private $dataFields = [];
     private $dataValues = [];
+    private $offDataFields = [];
+    private $offDataValues = [];
     protected $primaryKey = "id";
     private $dbConnect;
+    private $sqlQuery;
+    private $sqlQueryBuild;
 
     private function connectToDB(){
         $this->dbConnect = (new Database)->getConnection();
+
     }
 
     private function includeCreateDefaults($data = []){
@@ -36,7 +41,7 @@ class BaseModel{
         if($action == "create")
             $data = $this->includeCreateDefaults($data);
         if($action == "update")
-            $data = $this->includeCreateDefaults($data);
+            $data = $this->includeUpdateDefaults($data);
         $this->dataFields = array_keys($data);
         $this->dataValues = array_values($data);
     }
@@ -45,6 +50,32 @@ class BaseModel{
     private function bindDbValues(&$stmt){
         foreach($this->dataFields as $key => $fl)
             $stmt->bindParam(":$fl", $this->dataValues[$key]);
+        foreach($this->offDataFields as $key => $fl)
+            $stmt->bindParam(":$fl", $this->offDataValues[$key]);
+    }
+
+    public function buildQuery($query, $col, $value){
+        $this->sqlQueryBuild .= $query;
+        $this->sqlQueryBuild = trim($this->sqlQueryBuild, "AND");
+        $this->sqlQueryBuild = str_replace("AND WHERE", "AND", $this->sqlQueryBuild);
+        array_push($this->offDataFields, $col);
+        array_push($this->offDataValues, $value);
+        
+        return $this;
+    }
+
+    public function where($col, $operand, $value){
+        $sql = "AND WHERE {$col}{$operand}:{$col} ";
+        return $this->buildQuery($sql, $col, $value);
+    }
+
+    public function getRawSql(){
+        return $this->sqlQuery. $this->sqlQueryBuild;
+    }
+
+    public function orWhere($col, $operand, $value){
+        $sql = "OR {$col}{$operand}:{$col} ";
+        return $this->buildQuery($sql, $col, $value);
     }
 
     // protected function get
@@ -56,16 +87,32 @@ class BaseModel{
             return ":".$item;
         }, $this->dataFields);
         $colParams = implode(",", $newArray);
-        $sql = "INSERT INTO $this->table($cols) VALUES($colParams)";
-        $stmt = $this->dbConnect->prepare($sql);
+        $this->queryBuilder("INSERT INTO $this->table($cols) VALUES($colParams)");
+        $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
     }
 
-    public function update($id, $data){
+    public function update($data){
         $this->connectToDB();
-        $data["id"] = $id;
         $this->getFieldsData($data, "update");
+        $upq = "";
+        foreach($this->dataFields as $key => $val){
+            $upq.= " `$val`=:$val,";
+        }
+        $upq = trim($upq, ",");
+        $this->queryBuilder("UPDATE $this->table SET $upq");
+        $stmt = $this->dbConnect->prepare($this->sqlQuery);
+        $this->bindDbValues($stmt);
+        $stmt->execute();
+    }
+
+    private function queryBuilder($query){
+        $this->sqlQuery = $query. $this->sqlQueryBuild.";";
+        return $this->sqlQuery;
+    }
+
+    private function sendQuery(){
 
     }
 
@@ -74,8 +121,8 @@ class BaseModel{
         $dl = ["pk" => $id];
         $this->getFieldsData($params);
         $cols = $this->dataFields ? implode(",", $this->dataFields): "*";
-        $sql = "SELECT $cols FROM $this->table WHERE $this->primaryKey = '$id'";
-        $stmt = $this->dbConnect->prepare($sql);
+        $this->queryBuilder("SELECT $cols FROM $this->table WHERE $this->primaryKey = '$id'");
+        $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -85,11 +132,22 @@ class BaseModel{
         $this->connectToDB();
         $this->getFieldsData($params);
         $cols = $this->dataFields ? implode(",", $this->dataFields): "*";
-        $sql = "SELECT $cols FROM $this->table;";
-        $stmt = $this->dbConnect->prepare($sql);
+        $this->queryBuilder("SELECT $cols FROM $this->table");
+        $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function first($params = []){
+        $this->connectToDB();
+        $this->getFieldsData($params);
+        $cols = $this->dataFields ? implode(",", $this->dataFields): "*";
+        $this->queryBuilder("SELECT $cols FROM $this->table");
+        $stmt = $this->dbConnect->prepare($this->sqlQuery);
+        $this->bindDbValues($stmt);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
 

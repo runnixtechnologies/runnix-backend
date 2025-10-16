@@ -15,17 +15,27 @@ class RiderVehicleController extends BaseController{
 
 
     public $httpRequestHandler;
+    public $model;
     public function __construct()
     {
         $this->httpRequestHandler = new HttpRequestHandler();
+        $this->model = new RiderVehicle();
+    }
+
+    public function getVehicles($id = null){
+        $rider_id = $this->authUser["rider_id"];
+        if($id)
+            $dt = $this->model->where("rider_id", "=", $rider_id)->where("id", "=", $id)->first();
+        else        
+            $dt = $this->model->where("rider_id", "=", $rider_id)->get();
+        \json_success_response("Vehicles Fetched", $dt);
     }
 
     public function registerVehicle(){
         $req = new RegisterVehicleRequest();
         $data = $req->validate($this->httpRequestHandler->all());
         $data["rider_id"] = $this->authUser["rider_id"];
-        $model = new RiderVehicle();
-        $model->create($data);
+        $this->model->create($data);
         return json_success_response("Vehicle registered successfully", $data);
     }
 

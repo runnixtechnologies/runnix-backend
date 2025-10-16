@@ -4,10 +4,10 @@ namespace Model;
 use Config\Database;
 use PDO;
 
-class User
+class User extends BaseModel
 {
     private $conn;
-    private $table = "users";
+    protected $table = "users";
     private $profileTable = "user_profiles";  // Assuming this is your profile table
 
     public function __construct()

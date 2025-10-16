@@ -12,9 +12,31 @@ class RiderController extends BaseController{
 
 
     public $httpRequestHandler;
+    public $model;
+    public $docModel;
     public function __construct()
     {
         $this->httpRequestHandler = new HttpRequestHandler();
+        $this->model = new \Model\Rider();
+        $this->docModel = new \Model\RiderDocument();
+    }
+
+
+    public function updateAddress(){
+        $req = new \App\Requests\Riders\UpdateAddressRequest();
+        $resp = $req->validate($this->httpRequestHandler->all());
+        $rid = $this->authUser["rider_id"];
+        $this->model->where("id", "=", $rid)->update($resp);
+        return \json_success_response("Address updated", $resp);
+    }
+
+    public function updateNotificationPreference()
+    {
+        $req = new \App\Requests\Riders\UpdateAddressRequest();
+        $resp = $this->httpRequestHandler->all();
+        $rid = $this->authUser["user_id"];
+        (new \Model\UserNotificationPreference)->where("user_id", "=", $rid)->update($resp);
+        return \json_success_response("Notification preference updated", $resp);
     }
 
     public function uploadDocuments(){
@@ -37,5 +59,14 @@ class RiderController extends BaseController{
             ]);
         }
         \json_success_response("Files uploaded", $docs);
+    }
+
+    public function getDocuments($id = null){
+        $rid =$this->authUser["rider_id"];
+        if($id)
+            $resp = $this->docModel->where("rider_id", "=", $rid)->where("id", "=", $id)->first();
+        else 
+            $resp = $this->docModel->where("rider_id", "=", $rid)->get();
+        return \json_success_response("Documents fetched", $resp);
     }
 }

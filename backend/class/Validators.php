@@ -27,7 +27,8 @@ class Validators{
         "mimetype" => ":attribute must be of type :param",
         "mime" => ":attribute must be :param",
         "in" => ":attribute must be any of the items :param",
-        "array" => ":attribute must be of type array"
+        "array" => ":attribute must be of type array",
+        "numeric" => ":attribute must be numeric"
     ];
     public function __construct()
     {
@@ -102,6 +103,17 @@ class Validators{
             $elvar = $this->requestFields[$key][$this->multiIndex];
         if(!in_array($elvar, $param2))
             $this->addError($key, "in", $param);
+    }
+
+    private function validateNumeric($key, $param = null){
+        $vl = $this->validateRequired($key);
+        if(!$vl) return;
+        if(is_null($this->multiIndex))
+            $elvar = $this->requestFields[$key];
+        else 
+            $elvar = $this->requestFields[$key][$this->multiIndex];
+        if(!is_numeric($elvar))
+            $this->addError($key, "numeric", $param);
     }
 
     private function validateArray($key, $param = null){

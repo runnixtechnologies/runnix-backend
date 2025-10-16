@@ -79,6 +79,10 @@ class UserController
     unset($user['password']);
 
     // Attach store details for merchants
+    $user["verification_details"] = [
+        "kyc_verified" => false,
+        "profile_completed" => true
+    ];
     if ($user['role'] === 'merchant') {
         $storeDetails = $this->userModel->getMerchantStore($user['id']);
         $store = $this->storeModel->getStoreByUserId($user['id']);
@@ -95,12 +99,12 @@ class UserController
             $user['store_setup'] = false;
         }
     }elseif ($user['role'] === 'rider') {
-        $riderDetails = $this->userModel->getRiderDetails($user['id']);
+        $riderDetails = (new \Model\Rider)->where("user_id", "=", $user["id"])->first();
         if($riderDetails) {
-            $user["rider_id"]  = $riderDetails["id"];
-            $user["rider_code"] = $riderDetails["rider_code"];
-            $user["rider_firstname"] = $riderDetails["first_name"];
-            $user["rider_lastname"] = $riderDetails["last_name"];
+            $user["rider_details"] = $riderDetails;
+            $user["rider_vehicle"] = (new \Model\RiderVehicle())->where("rider_id", "=", $riderDetails["id"])->first();
+            $user["rider_documents"] = (new \Model\RiderDocument)->where("rider_id", "=", $riderDetails["id"])->get();
+            $user["verification_details"]["kyc_verified"] = $riderDetails["is_verified"];
         }
     }
 
@@ -109,7 +113,7 @@ class UserController
         "user_id" => $user['id'],
         "role"    => $user['role'],
         "store_id" => $user['store_id'] ?? null,
-        "rider_id" => $user["rider_id"] ?? null,
+        "rider_id" => $user["rider_details"]["id"] ?? null,
         "store_type_id" => $user['store_type_id'] ?? null
     ];
 
@@ -215,6 +219,7 @@ public function setupUserRider($data)
     if ($userId) {
         $profileCreated = $this->userModel->createUserProfile($userId, $first_name, $last_name);
         if ($profileCreated) {
+            (new \Model\UserNotificationPreference())->create(["user_id" => $userId, "user_type" => "rider"]);
             $walletModel = new \Model\Wallet();
             $walletModel->create([
                 "user_id" => $userId,
@@ -1114,6 +1119,8 @@ public function getStatus($user) {
                 $riderMd = new \Model\Rider();
                 $fullProfile["rider"] = $riderMd->find($user["rider_id"]);
             }
+
+            $fullProfile["notification_preference"] = (new \Model\UserNotificationPreference())->where("user_id", "=", $userId)->first();
             
             http_response_code(200);
             return [
