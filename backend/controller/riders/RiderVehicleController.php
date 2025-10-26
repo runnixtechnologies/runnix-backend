@@ -8,6 +8,7 @@ use Model\RiderVehicle;
 use App\Requests\Riders\UploadVehicleAttachmentRequest;
 use Controller\BaseController;
 use App\Facades\FileProcessor;
+use Model\RiderVehicleAttachment;
 
 use function Middleware\authenticateRequest;
 
@@ -24,8 +25,11 @@ class RiderVehicleController extends BaseController{
 
     public function getVehicles($id = null){
         $rider_id = $this->authUser["rider_id"];
-        if($id)
+        if($id){
             $dt = $this->model->where("rider_id", "=", $rider_id)->where("id", "=", $id)->first();
+            $attaches = (new RiderVehicleAttachment)->where("vehicle_id", "=", $id)->get();
+            $dt["attachments"] = $attaches;
+        }
         else        
             $dt = $this->model->where("rider_id", "=", $rider_id)->get();
         \json_success_response("Vehicles Fetched", $dt);
@@ -35,8 +39,8 @@ class RiderVehicleController extends BaseController{
         $req = new RegisterVehicleRequest();
         $data = $req->validate($this->httpRequestHandler->all());
         $data["rider_id"] = $this->authUser["rider_id"];
-        $this->model->create($data);
-        return json_success_response("Vehicle registered successfully", $data);
+        $resp = $this->model->create($data);
+        return json_success_response("Vehicle registered successfully", $resp);
     }
 
     public function uploadAttachements(){

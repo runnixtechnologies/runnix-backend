@@ -79,10 +79,7 @@ class UserController
     unset($user['password']);
 
     // Attach store details for merchants
-    $user["verification_details"] = [
-        "kyc_verified" => false,
-        "profile_completed" => true
-    ];
+
     if ($user['role'] === 'merchant') {
         $storeDetails = $this->userModel->getMerchantStore($user['id']);
         $store = $this->storeModel->getStoreByUserId($user['id']);
@@ -102,9 +99,6 @@ class UserController
         $riderDetails = (new \Model\Rider)->where("user_id", "=", $user["id"])->first();
         if($riderDetails) {
             $user["rider_details"] = $riderDetails;
-            $user["rider_vehicle"] = (new \Model\RiderVehicle())->where("rider_id", "=", $riderDetails["id"])->first();
-            $user["rider_documents"] = (new \Model\RiderDocument)->where("rider_id", "=", $riderDetails["id"])->get();
-            $user["verification_details"]["kyc_verified"] = $riderDetails["is_verified"];
         }
     }
 

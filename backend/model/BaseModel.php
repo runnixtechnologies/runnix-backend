@@ -15,6 +15,7 @@ class BaseModel{
     private $offDataValues = [];
     protected $primaryKey = "id";
     private $dbConnect;
+    private $processedData = [];
     private $sqlQuery;
     private $sqlQueryBuild;
 
@@ -42,6 +43,7 @@ class BaseModel{
             $data = $this->includeCreateDefaults($data);
         if($action == "update")
             $data = $this->includeUpdateDefaults($data);
+        $this->processedData = $data;
         $this->dataFields = array_keys($data);
         $this->dataValues = array_values($data);
     }
@@ -91,6 +93,8 @@ class BaseModel{
         $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
+        $lstId = $this->dbConnect->lastInsertId();
+        return $this->processedData + ["id" => $lstId];
     }
 
     public function update($data){
@@ -136,7 +140,7 @@ class BaseModel{
         $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return ($stmt->fetchAll(PDO::FETCH_ASSOC) ?? []);
     }
 
     public function first($params = []){

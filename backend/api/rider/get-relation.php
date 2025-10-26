@@ -23,9 +23,16 @@ switch($relation){
         $riderController->authUser = $user;
         $riderController->getDocuments($relationId);
         break;
+    case "verifications":
+        $riderController = new \Controller\Riders\RiderController();
+        $riderController->authUser = $user;
+        $riderController->verifications();
+        break;
+    case "required-docs":
+        $riderController = new \Controller\Riders\RiderController();
+        $riderController->authUser = $user;
+        $riderController->requiredDocuments();
+        break;
     default:
         return abort(400, "Invalid relation");
 }
-$riderController = new \Controller\Riders\RiderController();
-$riderController->authUser = $user;
-$riderController->uploadDocuments();

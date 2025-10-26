@@ -5,6 +5,8 @@ namespace Controller\Riders;
 use App\Requests\HttpRequestHandler;
 use Controller\BaseController;
 use App\Facades\FileProcessor;
+use Model\RiderDocument;
+use Model\RiderVehicle;
 
 use function Middleware\authenticateRequest;
 
@@ -14,6 +16,17 @@ class RiderController extends BaseController{
     public $httpRequestHandler;
     public $model;
     public $docModel;
+
+    private $requiredDocs = [
+        [
+            "label" => "Drivers Licence",
+            "key" => "license"
+        ],
+        [
+            "label" => "Operation Permit",
+            "key" => "operation_permit",
+        ]
+    ];
     public function __construct()
     {
         $this->httpRequestHandler = new HttpRequestHandler();
@@ -21,6 +34,69 @@ class RiderController extends BaseController{
         $this->docModel = new \Model\RiderDocument();
     }
 
+    public function requiredDocuments(){
+        return json_success_response("Data fetched", $this->requiredDocs);
+    }
+
+    public function verifications(){
+        $resp = [
+            "kyc_verification" => $this->kycVerification(),
+            "vehicle_verification" => $this->vehicleVerification(),
+            "documents_verification" => $this->documentVerification(),
+            "address_verification" => $this->addressVerification(),
+            "profile_verification" => $this->profileVerification()
+        ];
+        return json_success_response("Verification details fetched", $resp);
+    }
+
+    private function profileVerification(){
+        $user = $this->authUser;
+        $rider = $this->model->where("user_id", "=", $user["user_id"])->first();
+        return [
+            "status" => "approved",
+            "data" => $rider
+        ];
+    }
+
+    private function kycVerification(){
+        $user = $this->authUser;
+        $rider = $this->model->where("user_id", "=", $user["user_id"])->first();
+        return [
+            "status" => $rider["verification_status"] ?? "not_started",
+            "data" => $rider ?? []
+        ];
+    }
+
+    private function vehicleVerification(){
+        $user = $this->authUser;
+        $vehicle = (new RiderVehicle)->where("rider_id", "=", $user["rider_id"])->first();
+        return [
+            "status" => ($vehicle) ? "approved" : "not_started",
+            "data" => $vehicle ?? []
+        ]; 
+    }
+
+    private function addressVerification(){
+        $user = $this->authUser;
+        $rider = $this->model->where("user_id", "=", $user["user_id"])->first();
+        $st = ($rider["current_address"] ?? false) ? "approved" : "not_started";
+        return [
+            "status" => $st,
+            "data" => $rider ?? []
+        ];
+    }
+
+    private function documentVerification(){
+        $user = $this->authUser;
+        $st = "pending";
+        $docs = (new RiderDocument)->where("rider_id", "=", $user["rider_id"])->where("status", "<>", "rejected")->get();
+        if(count($docs) == 0)
+            $st = "not_started";
+        return [
+            "status" => $st,
+            "data" => $docs
+        ];
+    }
 
     public function updateAddress(){
         $req = new \App\Requests\Riders\UpdateAddressRequest();
