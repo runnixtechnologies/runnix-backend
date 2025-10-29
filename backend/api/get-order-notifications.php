@@ -90,9 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
             'status' => 'success',
             'data' => $formattedNotifications,
             'meta' => [
-                'current_page' => $page,
-                'per_page' => $limit,
-                'total_count' => $totalCount,
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $totalCount,
                 'total_pages' => $totalPages,
                 'has_next' => $page < $totalPages,
                 'has_prev' => $page > 1

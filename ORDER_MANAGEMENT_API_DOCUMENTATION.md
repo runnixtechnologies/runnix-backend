@@ -336,9 +336,9 @@ Authorization: Bearer YOUR_JWT_TOKEN
         }
     ],
     "meta": {
-        "current_page": 1,
-        "per_page": 20,
-        "total_count": 45,
+        "page": 1,
+        "limit": 20,
+        "total": 45,
         "total_pages": 3,
         "has_next": true,
         "has_prev": false

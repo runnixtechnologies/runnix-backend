@@ -14,8 +14,9 @@ class JwtHandler {
     private $conn;
 
     public function __construct() {
-        // Load .env file with error handling
-        // if (file_exists(__DIR__ . '/../.env')) {
+        // Try to load .env file, but don't fail if it doesn't exist
+        $envPath = __DIR__."/../../.env";
+        if (file_exists($envPath)) {
             try {
                 $dotenv = Dotenv::createImmutable(__DIR__."/../../");
                 $dotenv->load();
@@ -23,11 +24,10 @@ class JwtHandler {
                 error_log("Failed to load .env file in JwtHandler: " . $e->getMessage());
                 // Continue without .env file - use default values
             }
-        // }else{
-        //     // echo "No file found";
-        // }
+        }
 
-        $this->secret = $_ENV['JWT_SECRET'];// ?? 'fallback_secret_key';
+        // Use environment variable if available, otherwise use fallback
+        $this->secret = $_ENV['JWT_SECRET'] ?? '56f466728dbf879d9c7d83cb095d0d32b9209ef6bddaebdf2b08e05bbf90d05f97b77cbe9ee059e6dcceb051901e0d51fe4eba16f71241347c702173169ddb8a';
         $this->issuedAt = time();
         $this->expire = $this->issuedAt + (30 * 24 * 60 * 60); // 30 days (no timeout)
 

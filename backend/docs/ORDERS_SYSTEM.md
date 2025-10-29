@@ -57,9 +57,9 @@ The Orders System provides comprehensive order management for the multivendor ma
         }
     ],
     "meta": {
-        "current_page": 1,
-        "per_page": 20,
-        "total_count": 45,
+        "page": 1,
+        "limit": 20,
+        "total": 45,
         "total_pages": 3,
         "has_next": true,
         "has_prev": false
@@ -292,9 +292,9 @@ The Orders System provides comprehensive order management for the multivendor ma
         }
     ],
     "meta": {
-        "current_page": 1,
-        "per_page": 20,
-        "total_count": 5,
+        "page": 1,
+        "limit": 20,
+        "total": 5,
         "total_pages": 1,
         "has_next": false,
         "has_prev": false

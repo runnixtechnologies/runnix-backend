@@ -17,14 +17,15 @@ class Database
         $dotenv = Dotenv::createImmutable(__DIR__."/../../");
         $dotenv->load();
     }
-
     public function getConnection()
     {
         $this->conn = null;
-        $this->host = $_ENV["DB_HOST"];
-        $this->db_name = $_ENV["DB_NAME"];
-        $this->username = $_ENV["DB_USERNAME"];
-        $this->password = $_ENV["DB_PASSWORD"];
+        
+        // Use environment variables if available, otherwise use fallback values
+        $this->host = $_ENV["DB_HOST"] ?? "localhost";
+        $this->db_name = $_ENV["DB_NAME"] ?? "u232647434_db";
+        $this->username = $_ENV["DB_USERNAME"] ?? "u232647434_user";
+        $this->password = $_ENV["DB_PASSWORD"] ?? "#Uti*odpl4B8";
 
         try {
             $this->conn = new \PDO("mysql:host={$this->host};dbname={$this->db_name}", $this->username, $this->password);
