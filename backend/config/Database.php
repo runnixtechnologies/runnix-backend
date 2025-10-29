@@ -12,11 +12,14 @@ class Database
     private $password;
     public $conn;
 
-    public function getConnection()
+    public function __construct()
     {
         $dotenv = Dotenv::createImmutable(__DIR__."/../../");
         $dotenv->load();
+    }
 
+    public function getConnection()
+    {
         $this->conn = null;
         $this->host = $_ENV["DB_HOST"];
         $this->db_name = $_ENV["DB_NAME"];

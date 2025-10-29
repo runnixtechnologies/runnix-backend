@@ -121,6 +121,7 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
         ),
         'A' => 
         array (
+            'App\\Traits\\' => 11,
             'App\\Requests\\Riders\\' => 20,
             'App\\Requests\\' => 13,
             'App\\Facades\\' => 12,
@@ -373,6 +374,10 @@ class ComposerStaticInitea242ea82dd51c3c3eaa9425aac7dd43
         'Brick\\Math\\' => 
         array (
             0 => __DIR__ . '/..' . '/brick/math/src',
+        ),
+        'App\\Traits\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/backend/traits',
         ),
         'App\\Requests\\Riders\\' => 
         array (

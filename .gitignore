@@ -1,7 +1,6 @@
 vendor/
 .env
 node_modules/
-.htaccess
 firebase-service-account.json
 backend/google-services.json
 backend/GoogleService-Info.plist

@@ -3,6 +3,7 @@
 namespace Model;
 
 use Config\Database;
+use Exception;
 use PDO;
 
 class BaseModel{
@@ -17,6 +18,7 @@ class BaseModel{
     private $dbConnect;
     private $processedData = [];
     private $sqlQuery;
+    public $appends = [];
     private $sqlQueryBuild;
 
     private function connectToDB(){
@@ -120,6 +122,32 @@ class BaseModel{
 
     }
 
+    private function processResponseData($data){
+        if($data){
+            foreach($this->appends as $val){
+                $method = "append_$val";
+                if(is_array($data)){
+                    foreach($data as $key => $dval){
+                        try{
+                            $resp = $this->$method($dval);
+                            $data[$key][$val] = $resp;
+                        }catch(Exception $ex){
+
+                        }
+                    }
+                }else{
+                    try{
+                        $resp = $this->$method($data);
+                        $data[$val] = $resp;
+                    }catch(Exception $ex){
+
+                    }
+                }
+            }
+        }
+        return $data;
+    }
+
     public function find($id, $params = []){
         $this->connectToDB();
         $dl = ["pk" => $id];
@@ -129,7 +157,7 @@ class BaseModel{
         $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $this->processResponseData($stmt->fetch(PDO::FETCH_ASSOC));
     }
 
     public function get($params = []){
@@ -140,7 +168,7 @@ class BaseModel{
         $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
-        return ($stmt->fetchAll(PDO::FETCH_ASSOC) ?? []);
+        return $this->processResponseData(($stmt->fetchAll(PDO::FETCH_ASSOC) ?? []));
     }
 
     public function first($params = []){
@@ -151,7 +179,7 @@ class BaseModel{
         $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $this->processResponseData($stmt->fetch(PDO::FETCH_ASSOC));
     }
 
 

@@ -7,6 +7,7 @@ use Controller\BaseController;
 use App\Facades\FileProcessor;
 use Model\RiderDocument;
 use Model\RiderVehicle;
+use Model\RiderVehicleAttachment;
 
 use function Middleware\authenticateRequest;
 
@@ -44,7 +45,8 @@ class RiderController extends BaseController{
             "vehicle_verification" => $this->vehicleVerification(),
             "documents_verification" => $this->documentVerification(),
             "address_verification" => $this->addressVerification(),
-            "profile_verification" => $this->profileVerification()
+            "profile_verification" => $this->profileVerification(),
+            "vehicle_photos_verification" => $this->vehiclePhotosVerification()
         ];
         return json_success_response("Verification details fetched", $resp);
     }
@@ -73,6 +75,15 @@ class RiderController extends BaseController{
         return [
             "status" => ($vehicle) ? "approved" : "not_started",
             "data" => $vehicle ?? []
+        ]; 
+    }
+
+    private function vehiclePhotosVerification(){
+        $user = $this->authUser;
+        $atts = (new RiderVehicleAttachment)->where("rider_id", "=", $user["rider_id"])->get();
+        return [
+            "status" => ($atts) ? "approved" : "not_started",
+            "data" => $atts ?? []
         ]; 
     }
 

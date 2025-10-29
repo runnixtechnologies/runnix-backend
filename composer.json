@@ -15,7 +15,8 @@
             "Config\\": "backend/config/",
             "Middleware\\": "backend/middleware/",
             "Service\\": "backend/service/",
-            "App\\Facades\\": "backend/facades/"
+            "App\\Facades\\": "backend/facades/",
+            "App\\Traits\\": "backend/traits/"
         },
         "files": [
             "backend/helpers/app_helpers.php"

@@ -67,6 +67,7 @@ return array(
     'Controller\\' => array($baseDir . '/backend/controller'),
     'Config\\' => array($baseDir . '/backend/config'),
     'Brick\\Math\\' => array($vendorDir . '/brick/math/src'),
+    'App\\Traits\\' => array($baseDir . '/backend/traits'),
     'App\\Requests\\Riders\\' => array($baseDir . '/backend/requests/riders'),
     'App\\Requests\\' => array($baseDir . '/backend/requests'),
     'App\\Facades\\' => array($baseDir . '/backend/facades'),
