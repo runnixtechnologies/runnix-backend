@@ -45,7 +45,6 @@ class RiderController extends BaseController{
             "vehicle_verification" => $this->vehicleVerification(),
             "documents_verification" => $this->documentVerification(),
             "address_verification" => $this->addressVerification(),
-            "profile_verification" => $this->profileVerification(),
             "vehicle_photos_verification" => $this->vehiclePhotosVerification()
         ];
         return json_success_response("Verification details fetched", $resp);
@@ -65,7 +64,7 @@ class RiderController extends BaseController{
         $rider = $this->model->where("user_id", "=", $user["user_id"])->first();
         return [
             "status" => $rider["verification_status"] ?? "not_started",
-            "data" => $rider ?? []
+            "data" => $rider ?? null
         ];
     }
 
@@ -74,7 +73,7 @@ class RiderController extends BaseController{
         $vehicle = (new RiderVehicle)->where("rider_id", "=", $user["rider_id"])->first();
         return [
             "status" => ($vehicle) ? "approved" : "not_started",
-            "data" => $vehicle ?? []
+            "data" => $vehicle ?? null
         ]; 
     }
 
@@ -83,7 +82,7 @@ class RiderController extends BaseController{
         $atts = (new RiderVehicleAttachment)->where("rider_id", "=", $user["rider_id"])->get();
         return [
             "status" => ($atts) ? "approved" : "not_started",
-            "data" => $atts ?? []
+            "data" => $atts ?? null
         ]; 
     }
 
@@ -93,7 +92,7 @@ class RiderController extends BaseController{
         $st = ($rider["current_address"] ?? false) ? "approved" : "not_started";
         return [
             "status" => $st,
-            "data" => $rider ?? []
+            "data" => $rider ?? null
         ];
     }
 
@@ -105,7 +104,7 @@ class RiderController extends BaseController{
             $st = "not_started";
         return [
             "status" => $st,
-            "data" => $docs
+            "data" => $docs ?? null
         ];
     }
 
