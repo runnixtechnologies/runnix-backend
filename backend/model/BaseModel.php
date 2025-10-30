@@ -145,7 +145,7 @@ class BaseModel{
                 }
             }
         }
-        return $data;
+        return $data ? $data : null;
     }
 
     public function find($id, $params = []){
