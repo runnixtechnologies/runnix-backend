@@ -95,7 +95,7 @@ class BaseModel{
         $stmt = $this->dbConnect->prepare($this->sqlQuery);
         $this->bindDbValues($stmt);
         $stmt->execute();
-        $lstId = $this->dbConnect->lastInsertId();
+        $lstId = (int)$this->dbConnect->lastInsertId();
         return $this->processedData + ["id" => $lstId];
     }
 

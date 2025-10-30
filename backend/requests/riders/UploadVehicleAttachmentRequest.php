@@ -10,6 +10,6 @@ class UploadVehicleAttachmentRequest extends FormRequests{
         "document_type" => ["required", "array"],
         "document_type.*" => ["required"],
         "file" => ["required", "array"],
-        "file.*" => ["required", "file", "mime:jpn,png,jpeg,pdf"],
+        "file.*" => ["required", "file", "mime:jpg,png,jpeg,pdf"],
     ];
 }
