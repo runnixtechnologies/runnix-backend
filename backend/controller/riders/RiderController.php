@@ -21,10 +21,12 @@ class RiderController extends BaseController{
     private $requiredDocs = [
         [
             "label" => "Drivers Licence",
+            "description" => "Upload government-issued driver's license",
             "key" => "license"
         ],
         [
             "label" => "Operation Permit",
+            "description" => "Upload government-issued operation permit",
             "key" => "operation_permit",
         ]
     ];

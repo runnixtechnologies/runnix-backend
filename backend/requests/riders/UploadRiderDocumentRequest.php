@@ -8,7 +8,7 @@ class UploadRiderDocumentRequest extends FormRequests{
 
     public $formRules = [
         "document_type" => ["required", "array"],
-        "document_type.*" => ["required", "in:id_card,license,insurance"],
+        "document_type.*" => ["required", "in:id_card,license,insurance,operation_permit"],
         "file" => ["required", "array"],
         "file.*" => ["required", "mime:jpg,png", "maxsize:500"]
     ];
